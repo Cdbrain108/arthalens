@@ -74,3 +74,11 @@ wordmarks, optical small-size favicon, PNG/ICO set and sharing card. Shared Logo
 PDF reader, report cover, README and browser metadata use the new identity.
 The export script uses existing WeasyPrint/PyMuPDF/Pillow dependencies. The old
 asset files are historical exports; active components use the new asset names.
+
+## Phase 4 — entry motion
+
+Native modal dialog, original SVG characters, charging/rearing motion, opposing
+chart strokes and a logo resolve over 3.6 seconds. Skip/Escape, sessionStorage,
+reduced-motion 400ms logo fade and focus restoration. App mounts alongside the
+intro, so history/registry/data loading is independent. Shared artwork also appears
+in both result panels with restrained hover motion.

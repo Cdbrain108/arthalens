@@ -21,6 +21,7 @@ import {
 import { api } from '../api/client'
 import PdfViewerModal from './PdfViewerModal'
 import Logo from './Logo'
+import MarketAnimal from './MarketAnimal'
 
 /* ---------------------------------------------------------------------------
  * Rendering rules for this component
@@ -1726,7 +1727,8 @@ export default function ReportPreview({
   const bullBearTab = (
     <div className="mt-5 space-y-6 animate-fade-up">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-[#4285f4]/30 bg-[#1e2026] p-5">
+        <div className="case-panel rounded-xl border border-green-600/30 bg-[#1e2026] p-5">
+          <div className="w-24"><MarketAnimal side="bull" /></div>
           <span className="block text-[12px] font-bold uppercase tracking-wider text-[#8ab4f8]">
             Bull Case &amp; Upside Catalysts
           </span>
@@ -1739,7 +1741,8 @@ export default function ReportPreview({
           />
         </div>
 
-        <div className="rounded-xl border border-[#ea4335]/30 bg-[#241719] p-5">
+        <div className="case-panel rounded-xl border border-[#ea4335]/30 bg-[#241719] p-5">
+          <div className="w-24"><MarketAnimal side="bear" /></div>
           <span className="block text-[12px] font-bold uppercase tracking-wider text-[#ea4335]">
             Bear Case &amp; Downside Risks
           </span>
