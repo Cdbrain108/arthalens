@@ -68,7 +68,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose }) {
           <div className="flex min-w-0 items-center gap-2.5">
             <Logo size={32} />
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold text-white">ArthaAI research brief</p>
+              <p className="truncate text-[13px] font-semibold text-white">Bullseye research brief</p>
               <p className="text-[10.5px] font-mono text-[#9aa0a6]">Read inside the workspace · press Esc to close</p>
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose }) {
 
         <div className="min-h-0 flex-1 bg-[#0f1117] p-2 sm:p-3">
           {viewerUrl ? (
-            <iframe title="ArthaAI PDF research report" src={viewerUrl} className="h-full w-full rounded-lg bg-white" />
+            <iframe title="Bullseye PDF research report" src={viewerUrl} className="h-full w-full rounded-lg bg-white" />
           ) : error ? (
             <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-center text-[13px] text-rose-300">
               <FileText size={30} />

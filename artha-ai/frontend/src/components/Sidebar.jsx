@@ -46,7 +46,7 @@ export default function Sidebar({ open, onClose, user, onLogout, onNew, running,
     <aside ref={ref} id="workspace-navigation" aria-label="Workspace navigation" className={`app-sidebar ${open ? 'is-open' : ''}`}>
       <div className="sidebar-brand">
         <Logo size={28} />
-        <span>ArthaAI<span className="brand-dot">.</span></span>
+        <span>Bullseye<span className="brand-dot">.</span></span>
         <span className="beta-tag">INSTITUTIONAL</span>
         <button onClick={onClose} aria-label="Close navigation" className="mobile-close"><X size={20} /></button>
       </div>

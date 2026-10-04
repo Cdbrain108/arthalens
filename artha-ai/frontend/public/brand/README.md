@@ -1,55 +1,22 @@
-# Signal Aperture — ArthaAI / Bulls Eye
+# Bullseye / Charging conviction
 
-Custom vector identity for the equity research workspace.
+Original vector artwork drawn for this project. The charging bull is primary;
+an ascending line and an open target connect markets and the Bullseye name.
+The opposing red bear represents critical research, not a secondary brand.
 
-## Concept
+- `logo-mark.svg`: transparent icon
+- `logo-full.svg`: primary icon and wordmark
+- `logo-dark.svg`, `logo-light.svg`: wordmarks for their named backgrounds
+- `bull.svg`, `bear.svg`: shared illustration assets for intro, landing, results
+- `favicon.svg`: optically simplified small-size mark
+- `favicon-{16,32,180,512}.png`, `favicon.ico`: browser/device exports
+- `social-card.png`: sharing image
 
-- **Open target:** focused research and the Bulls Eye name.
-- **Angular A:** the ArthaAI initial, drawn as an ascending peak.
-- **Northeast diamond:** a distinct insight emerging from the research.
-- **Mint crossbar:** visually connects the letter to the signal accent.
+Primary green `#16a34a`; light-on-dark green `#4ade80`; bear red `#dc2626`.
+Keep one-quarter of the icon's width as clear space. Use the favicon master for
+16px display. Export with `python3 scripts/export_brand_assets.py`.
 
-The master symbol is hand-authored SVG geometry, without stock icons, external
-images, fonts, scripts, filters, or animation. The editable wordmark uses Inter
-with DejaVu Sans / Arial fallbacks. Prefer the PNG wordmark when exact typography
-must remain fixed on a machine without those fonts.
-
-## Files
-
-| Asset | Intended surface |
-| --- | --- |
-| `arthaai-mark.svg` | Dark UI / navy backgrounds, transparent |
-| `arthaai-mark-light.svg` | White paper / light backgrounds, transparent |
-| `arthaai-mark-mono.svg` | Single-colour ink applications |
-| `arthaai-mark-white.svg` | Reversed white applications |
-| `arthaai-wordmark.svg` | Horizontal dark-surface brand lockup |
-| `arthaai-wordmark-light.svg` | Horizontal light-surface brand lockup |
-| `favicon.svg` | Small-size symbol on a navy app tile |
-| `app-icon.png` | 512 × 512 app / avatar tile |
-| `apple-touch-icon.png` | 180 × 180 home-screen icon |
-| `brand-preview.png` / `.svg` | Logo presentation board |
-
-PNG exports of the marks are 1024 × 1024 with transparency. Wordmark PNGs are
-2240 × 576. Preview and download the family at `/brand/` while the frontend runs.
-
-## Usage
-
-- Preserve the square aspect ratio of the mark; do not stretch it.
-- Leave at least 8 units of clear space around a 64-unit master mark.
-- Use the master at 24 px or larger; use `favicon.svg` for smaller sizes.
-- Primary palette: blue `#5B8CFF`, mint `#45E0C0`, ice `#EDF5FF`, navy `#0D1726`.
-- Print palette: blue `#315ED8`, teal `#087F72`, ink `#102139`.
-- `Logo.jsx` uses these static assets, so repeated logos share the same geometry
-  and never create conflicting inline SVG gradient IDs.
-- When changing the shape, update each SVG variant and regenerate the exports.
-
-## Rebuild PNGs and the presentation board
-
-From the `artha-ai` directory, using the backend Python environment:
-
-```bash
-python scripts/export_brand_assets.py
-```
-
-The exporter uses the existing WeasyPrint and PyMuPDF dependencies. It performs no network calls
-and writes only generated brand images into this directory.
+Reference study: Vecteezy's forward charging posture and upward composition;
+LinkedIn article's market symbolism; REtipster bull/bear contrast via the supplied
+Google link. No paths, licensed assets, or third-party images were copied into
+the product. Reference images used for study remain outside the project.

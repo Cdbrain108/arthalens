@@ -66,3 +66,11 @@ the prototype and its sample investment recommendations are references only.
 
 Later phase details and measured verification results are recorded below as work
 is completed.
+
+## Phase 3 — original identity
+
+Original charging bull, opposing bear, target/chart mark, full/dark/light SVG
+wordmarks, optical small-size favicon, PNG/ICO set and sharing card. Shared Logo,
+PDF reader, report cover, README and browser metadata use the new identity.
+The export script uses existing WeasyPrint/PyMuPDF/Pillow dependencies. The old
+asset files are historical exports; active components use the new asset names.

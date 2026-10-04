@@ -14,7 +14,9 @@ _TEMPLATES = Path(__file__).parent / "templates"
 def render_html(report: ReportJSON, charts=None) -> str:
     env = Environment(loader=FileSystemLoader(str(_TEMPLATES)), autoescape=select_autoescape(["html", "j2"]))
     name = "news_report.html.j2" if report.overall_assessment.get("report_type") == "news" else "report.html.j2"
-    return env.get_template(name).render(report=report.model_dump(), charts=charts or {})
+    logo = Path(__file__).resolve().parents[3] / "frontend/public/brand/logo-dark.svg"
+    return env.get_template(name).render(report=report.model_dump(), charts=charts or {},
+                                         logo_uri=logo.as_uri())
 
 
 def _safe(value):
@@ -26,6 +28,10 @@ def _render_pdf_fallback(report: ReportJSON, path: str) -> str:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
+    logo = Path(__file__).resolve().parents[3] / "frontend/public/brand/logo-mark.png"
+    if logo.exists():
+        pdf.image(str(logo), x=pdf.l_margin, y=pdf.get_y(), w=16)
+        pdf.ln(18)
     pdf.set_title("Bullseye research: " + report.query)
     pdf.set_author("Bullseye")
 

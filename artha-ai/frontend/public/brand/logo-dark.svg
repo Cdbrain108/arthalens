@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 128" fill="none">
+  <title>Bullseye — for dark backgrounds</title>
+  <g stroke="#4ade80" stroke-linecap="round" stroke-linejoin="round"><path d="M17 101L43 84L61 94L96 49" stroke-width="7"/><path d="M100 23A42 42 0 1 0 109 80" stroke-width="4" opacity=".38"/></g>
+  <g fill="#4ade80"><path d="M87 49L106 38L102 61Z"/><path d="M27 55C21 53 18 45 12 47C16 40 24 46 26 50L31 51ZM31 51C40 40 54 40 65 44C73 33 86 34 92 43L100 55L111 61L115 74L107 80L94 76L86 67C77 76 65 78 54 72L44 71L30 80L23 77L28 67C22 62 25 56 31 51Z"/><path d="M42 67L38 84L24 91H14L29 78L30 65ZM54 71L51 83L62 94H72L61 79L66 72ZM82 67L84 83L101 92H112L94 77L94 67Z"/><path d="M99 59C105 53 106 46 104 38C112 44 115 53 110 63ZM105 63C118 63 122 55 125 47C126 61 120 73 111 72Z"/></g>
+  <text x="145" y="86" font-family="DejaVu Sans,Arial,sans-serif" font-size="61" font-weight="700" letter-spacing="-3" fill="#f3f5ef">Bullseye</text>
+</svg>

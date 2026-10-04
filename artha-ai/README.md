@@ -1,4 +1,6 @@
-# Bulls Eye — Research Beyond the Noise
+![Bullseye](frontend/public/brand/logo-full.svg)
+
+# Bullseye — Research Beyond the Noise
 
 One natural-language company/investment question → dynamically routed specialist agents → evidence validation → synthesized research → professional PDF.
 

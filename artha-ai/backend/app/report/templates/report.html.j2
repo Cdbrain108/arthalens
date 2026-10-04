@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ArthaAI Research Brief</title>
+<title>Bullseye Research Brief</title>
 <style>
   @page {
     size: A4;
     margin: 14mm 15mm 16mm;
-    @bottom-left { content: "ARTHAAI  /  EVIDENCE-FIRST RESEARCH"; font-size: 7pt; color: #64748b; }
+    @bottom-left { content: "BULLSEYE  /  EVIDENCE-FIRST RESEARCH"; font-size: 7pt; color: #64748b; }
     @bottom-right { content: "Page " counter(page); font-size: 7pt; color: #64748b; }
   }
   * { box-sizing: border-box; }
@@ -92,7 +92,7 @@
 {% set currency = market.get('currency') or (market.get('quote') or {}).get('currency') or '—' %}
 
 <section class="cover">
-  <div class="brand">ARTHAAI  /  EVIDENCE-FIRST EQUITY RESEARCH</div>
+  <img src="{{ logo_uri }}" width="200" alt="Bullseye">
   <div class="pill" style="margin-top: 13pt;">RESEARCH BRIEF</div>
   <h1>{{ company.get('name', 'Company Research') }}</h1>
   <div class="company">{% if company.get('ticker') %}{{ company.get('ticker') }}{% if company.get('exchange') %} · {{ company.get('exchange') }}{% endif %}{% else %}Research scope{% endif %}</div>

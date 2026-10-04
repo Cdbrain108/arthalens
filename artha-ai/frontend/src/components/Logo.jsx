@@ -1,17 +1,10 @@
 // One shared SVG asset for every instance: no duplicate gradient IDs in the DOM.
 // The default is decorative because the surrounding UI already names the brand.
-const variants = {
-  dark: 'arthaai-mark.svg',
-  light: 'arthaai-mark-light.svg',
-  mono: 'arthaai-mark-mono.svg',
-  white: 'arthaai-mark-white.svg',
-}
-
-export default function Logo({ size = 26, className = '', variant = 'dark', label = '' }) {
+export default function Logo({ size = 26, className = '', variant = 'dark', label = '', full = false }) {
   return (
     <img
-      src={`/brand/${variants[variant] || variants.dark}`}
-      width={size}
+      src={`/brand/${full ? (variant === 'light' ? 'logo-light.svg' : 'logo-dark.svg') : 'logo-mark.svg'}`}
+      width={full ? size * 460 / 128 : size}
       height={size}
       alt={label}
       aria-hidden={label ? undefined : true}
