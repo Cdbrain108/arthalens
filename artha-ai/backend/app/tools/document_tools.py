@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from .base import NativeFunctionTool
 
 
-def _source(title: str = "Bulls Eye document store") -> dict:
+def _source(title: str = "Bullseye document store") -> dict:
     return {"title": title, "url": None, "provider": "faiss",
             "retrieved_at": datetime.now(timezone.utc).isoformat()}
 

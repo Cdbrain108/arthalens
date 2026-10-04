@@ -157,7 +157,7 @@ def _openrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
         temperature=temperature,
         max_retries=1,  # fast-fail; wrapper retries rotate keys AND models
         timeout=60,
-        default_headers={"X-Title": "Bulls Eye"},
+        default_headers={"X-Title": "Bullseye"},
     )
 
 
@@ -175,7 +175,7 @@ def _agentrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
         # Thinking models spend tokens before answering; headroom required.
         max_tokens=6000,
         # Gateway allowlists known client UAs; default httpx UA is rejected.
-        default_headers={"X-Title": "Bulls Eye",
+        default_headers={"X-Title": "Bullseye",
                          "User-Agent": "Claude-Desktop/1.0.0"},
     )
 

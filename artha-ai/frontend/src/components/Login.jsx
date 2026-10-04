@@ -61,7 +61,7 @@ export default function Login({ onLogin }) {
       <span className="absolute right-[-12rem] top-1/3 h-[34rem] w-[34rem] rounded-full bg-[#4285f4]/10 blur-3xl" />
     </div>
     <header className="welcome-header relative z-10 flex items-center justify-between border-b border-white/[0.08] px-6 py-5 lg:px-12">
-      <a className="welcome-logo flex items-center gap-2.5 text-lg font-semibold tracking-[-0.03em] text-white" href="#welcome-title" aria-label="Bulls Eye home"><Logo size={34} /><span>Bulls Eye<span className="brand-dot text-[#9cee69]">.</span></span><span className="welcome-beta rounded-full border border-white/10 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] text-[#9aa0a6]">BETA</span></a>
+      <a className="welcome-logo flex items-center gap-2.5 text-lg font-semibold tracking-[-0.03em] text-white" href="#welcome-title" aria-label="Bullseye home"><Logo size={34} /><span>Bullseye<span className="brand-dot text-[#9cee69]">.</span></span><span className="welcome-beta rounded-full border border-white/10 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] text-[#9aa0a6]">BETA</span></a>
       <nav className="hidden items-center gap-6 text-xs text-[#9aa0a6] sm:flex" aria-label="Welcome navigation"><a className="transition-colors hover:text-white" href="#welcome-features">The advantage</a><a className="flex items-center gap-1 transition-colors hover:text-white" href="#welcome-access">Your workspace <ArrowUpRight size={14} /></a></nav>
     </header>
     <main className="welcome-main relative z-10 mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:gap-20 lg:px-12 lg:pt-16">
@@ -99,10 +99,10 @@ export default function Login({ onLogin }) {
         </form>
         <div className="access-bottom mt-5 flex items-center justify-center gap-2 text-xs text-[#7d8590]"><span className="signal-dot h-1.5 w-1.5 rounded-full bg-[#9cee69]" /> Curiosity looks good on you.<span className="text-[#9cee69]">↗</span></div>
       </section>
-      <section id="welcome-features" className="welcome-features grid gap-4 border-t border-white/[0.08] pt-8 sm:grid-cols-3 lg:col-span-2" aria-label="The Bulls Eye advantage">
+      <section id="welcome-features" className="welcome-features grid gap-4 border-t border-white/[0.08] pt-8 sm:grid-cols-3 lg:col-span-2" aria-label="The Bullseye advantage">
         {[{ icon: Layers3, label: '01 / GO DEEPER', title: 'One question. Every angle.', text: 'Explore the fundamentals, valuation, growth drivers, and risks that matter.' }, { icon: ShieldCheck, label: '02 / STAY GROUNDED', title: 'Evidence over opinion.', text: 'Follow the sources. See what is known, and where the gaps remain.' }, { icon: ArrowUpRight, label: '03 / THINK CLEARER', title: 'Your thesis, sharpened.', text: 'Bring the research together in a cited report you can revisit and challenge.' }].map(({ icon: Icon, label, title, text }) => <article className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 transition-colors hover:border-white/20 hover:bg-white/[0.045]" key={label}><div className="flex items-center justify-between text-[10px] font-semibold tracking-[0.14em] text-[#7d8590]"><span>{label}</span><Icon size={19} className="text-[#9cee69]" /></div><h3 className="mt-5 text-base font-medium text-white">{title}</h3><p className="mt-2 text-xs leading-5 text-[#8f98a3]">{text}</p></article>)}
       </section>
     </main>
-    <footer className="welcome-footer relative z-10 flex flex-col gap-2 border-t border-white/[0.08] px-6 py-6 text-[10px] tracking-[0.14em] text-[#66707c] sm:flex-row sm:items-center sm:justify-between lg:px-12"><span>INDEPENDENT MINDS. INFORMED MOVES.</span><p className="tracking-normal">Built for research. Not investment advice.</p><span>Bulls Eye © {new Date().getFullYear()}</span></footer>
+    <footer className="welcome-footer relative z-10 flex flex-col gap-2 border-t border-white/[0.08] px-6 py-6 text-[10px] tracking-[0.14em] text-[#66707c] sm:flex-row sm:items-center sm:justify-between lg:px-12"><span>INDEPENDENT MINDS. INFORMED MOVES.</span><p className="tracking-normal">Built for research. Not investment advice.</p><span>Bullseye © {new Date().getFullYear()}</span></footer>
   </div>
 }

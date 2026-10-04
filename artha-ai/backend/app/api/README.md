@@ -4,7 +4,7 @@
 
 The backend exposes a clean, asynchronous REST API contract used by the React frontend (`frontend/src/api/client.js`).
 
-Base URL: `http://localhost:8000/api` (or `http://localhost:8001/api`)
+Base URL: `http://localhost:8000/api`
 
 ---
 
@@ -44,7 +44,7 @@ Base URL: `http://localhost:8000/api` (or `http://localhost:8001/api`)
 
 ```bash
 # 1. Start a research job
-curl -X POST http://localhost:8001/api/research \
+curl -X POST http://localhost:8000/api/research \
      -H "Content-Type: application/json" \
      -d '{"query": "Should I hold TCS for the next 5 years?"}'
 
@@ -52,7 +52,7 @@ curl -X POST http://localhost:8001/api/research \
 # {"job_id": "c1f7a2b9-...", "status": "queued"}
 
 # 2. Poll job status (React polls every 2 seconds)
-curl http://localhost:8001/api/research/c1f7a2b9-.../status
+curl http://localhost:8000/api/research/c1f7a2b9-.../status
 
 # Response:
 # {
@@ -65,5 +65,5 @@ curl http://localhost:8001/api/research/c1f7a2b9-.../status
 # }
 
 # 3. Download final PDF when status is "succeeded"
-curl http://localhost:8001/api/research/c1f7a2b9-.../pdf --output TCS_Research.pdf
+curl http://localhost:8000/api/research/c1f7a2b9-.../pdf --output TCS_Research.pdf
 ```

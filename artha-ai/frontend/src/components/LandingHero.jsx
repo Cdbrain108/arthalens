@@ -44,7 +44,7 @@ export default function LandingHero({ onRun, running, submitting, initialQuery =
         Explore the evidence with <span className="font-serif italic text-[#a5d99d]">Bullseye</span>
       </h1>
       <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-muted sm:text-[16px]">
-        Autonomous institutional research. Ask any company question and a roster of 9 specialist AI agents is routed to the ones it needs — to challenge, verify, and synthesize evidence.
+        Evidence-first stock research. Ask any company question and Bullseye routes the relevant configured specialists — to challenge, audit, and synthesize the available evidence.
       </p>
 
       {/* Google AI Studio Rotating RGB Neon Input Box */}

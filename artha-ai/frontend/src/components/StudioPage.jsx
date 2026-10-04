@@ -741,7 +741,7 @@ export default function StudioPage({
 
             <div className="flex items-center gap-3 text-[#9aa0a6]">
               <span className="text-[11px] font-mono text-[#bdc1c6]">
-                {isDone ? '100% Evidence Verified' : running ? 'Synthesizing...' : 'Report Ready'}
+                 {isDone ? 'Evidence audit complete' : running ? 'Synthesizing...' : 'Report ready'}
               </span>
               <button type="button" className="hover:text-white transition p-1" title="Fullscreen">
                 <Maximize2 size={14} />
@@ -773,7 +773,7 @@ export default function StudioPage({
                 </div>
                 <h3 className="text-xl font-bold text-white tracking-tight">Institutional Research Workspace</h3>
                 <p className="mt-2 text-[13px] text-[#9aa0a6] leading-relaxed">
-                  Enter an investment question in the command bar below to trigger our autonomous 9-agent pipeline.
+                   Enter a research question in the command bar below to trigger the configured specialist pipeline.
                 </p>
                 <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
                   {[

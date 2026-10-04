@@ -102,11 +102,11 @@ def _calculate_ratio(name: str, inputs: dict | str, **_kwargs) -> dict:
             inputs = json.loads(inputs)
         except Exception as exc:
             return {"ok": False, "error": f"Invalid inputs JSON: {exc}", "data": None,
-                    "source": _source("Bulls Eye deterministic calculation layer",
+                    "source": _source("Bullseye deterministic calculation layer",
                                       provider="deterministic_calculation")}
     if not isinstance(inputs, dict):
         return {"ok": False, "error": f"inputs must be a dictionary, got {type(inputs).__name__}", "data": None,
-                "source": _source("Bulls Eye deterministic calculation layer",
+                "source": _source("Bullseye deterministic calculation layer",
                                   provider="deterministic_calculation")}
 
     if name not in RATIO_FORMULAS:
@@ -121,10 +121,10 @@ def _calculate_ratio(name: str, inputs: dict | str, **_kwargs) -> dict:
             raise ValueError("ratio result is not finite")
     except (KeyError, ZeroDivisionError, TypeError, ValueError) as exc:
         return {"ok": False, "error": f"Missing/invalid input: {exc}", "data": None,
-                "source": _source("Bulls Eye deterministic calculation layer",
+                "source": _source("Bullseye deterministic calculation layer",
                                   provider="deterministic_calculation")}
     return {"ok": True, "data": {"ratio": name, "value": value, "inputs": inputs},
-            "source": _source("Bulls Eye deterministic calculation layer",
+            "source": _source("Bullseye deterministic calculation layer",
                               provider="deterministic_calculation"),
             "error": None}
 

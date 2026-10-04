@@ -1,4 +1,4 @@
-"""LangGraph orchestration framework for Bulls Eye / Artha-AI.
+"""LangGraph orchestration framework for Bullseye.
 
 Provides a cyclical, deterministic, typed StateGraph for stock research.
 """

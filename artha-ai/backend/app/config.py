@@ -1,4 +1,4 @@
-"""Bulls Eye configuration — provider-agnostic, env-driven, ₹0-friendly."""
+"""Bullseye configuration — provider-agnostic and env-driven."""
 from pathlib import Path
 
 from pydantic import model_validator
@@ -87,7 +87,7 @@ class Settings(BaseSettings):
 
     @property
     def edgar_user_agent(self) -> str:
-        return f"ArthaAI {self.edgar_contact_email}"
+        return f"Bullseye {self.edgar_contact_email}"
 
     @model_validator(mode="after")
     def _anchor_relative_paths(self):
