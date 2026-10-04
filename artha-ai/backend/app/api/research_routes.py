@@ -155,7 +155,7 @@ def _answer_report_question(question: str, report: dict, context: dict | None) -
 
 
 async def _run_job(job_id: str, query: str, document_ids: list[str]):
-    """Execute via the CrewAI pipeline; translate crew events to JobStatus."""
+    """Execute the compiled LangGraph and persist progress events."""
     status = jobs.get(job_id)
     if status is None:
         return
@@ -211,6 +211,14 @@ async def _run_job(job_id: str, query: str, document_ids: list[str]):
                 status.failed_agents.append(agent)
             status.errors.append({"node": f"{agent}_agent",
                                   "error": payload.get("error", "")})
+            status.agent_statuses[agent] = 'timed_out' if 'timed out' in payload.get('error', '') else 'failed'
+        elif kind == "agent_status" and payload:
+            agent = payload['agent']
+            status.agent_statuses[agent] = payload['status']
+            status.agent_details[agent] = payload
+            for step in status.steps:
+                if step['node'] == f'{agent}_agent':
+                    step.update(state='done' if payload['status'] == 'completed' else payload['status'], at=_now())
         elif kind == "report":
             status.status = "rendering"
         jobs.update(status)
@@ -222,6 +230,7 @@ async def _run_job(job_id: str, query: str, document_ids: list[str]):
         status.status = "succeeded"
         status.current_node = "done"
         status.failed_agents = list(final.get("failed_agents", []))
+        status.agent_statuses.update(final.get('agent_statuses') or {})
         finish_running_steps()
         if not report_attached:
             status.errors.append({"node": "attach_report",

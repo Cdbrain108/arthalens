@@ -19,6 +19,7 @@ def _source(title: str, provider: str = "yfinance", url: str | None = None) -> d
             "retrieved_at": datetime.now(timezone.utc).isoformat()}
 
 RATIO_FORMULAS = {
+    "margin_pct": lambda i: i["numerator"] / i["denominator"] * 100,
     "pe": lambda i: i["price"] / i["eps"],                       # Price / EPS
     "pb": lambda i: i["price"] / i["book_value_per_share"],      # Price / BVPS
     "ps": lambda i: i["market_cap"] / i["revenue"],              # MktCap / Revenue
@@ -134,9 +135,6 @@ def _resolve_symbol(ticker: str, exchange: str) -> str:
     from .base import clean_str
     ticker = (clean_str(ticker, "") or "").lstrip("$").strip()
     exchange = clean_str(exchange, "NSE") or "NSE"
-    INDIAN_NSE_TICKERS = {"INFY", "TCS", "RELIANCE", "WIPRO", "HDFCBANK", "ICICIBANK", "BHARTIARTL", "SBIN", "TATAMOTORS", "ITC", "LT"}
-    if ticker.upper() in INDIAN_NSE_TICKERS and exchange.upper() in ("NYSE", "NASDAQ", "US"):
-        exchange = "NSE"
     if "." in ticker or ticker.startswith("^") or not exchange:
         return ticker
     ex = exchange.upper()
@@ -171,10 +169,8 @@ def _get_financials(ticker: str, statement: str = "income", period: str = "annua
         }
         stmt = getattr(t, fields[statement], None)
         if stmt is None or getattr(stmt, "empty", True) or len(getattr(stmt, "columns", [])) == 0:
-            # Retry the bare symbol (US listings carry no exchange suffix).
-            if symbol != ticker:
-                t = yf.Ticker(ticker)
-                stmt = getattr(t, fields[statement], None)
+            # Do not substitute a different listing/currency after a failure.
+            pass
         if stmt is None or getattr(stmt, "empty", True) or len(getattr(stmt, "columns", [])) == 0:
             return {"ok": False, "error": "statement unavailable (empty provider response)",
                     "data": {"ticker": ticker, "statement": statement, "line_items": {}},
@@ -189,7 +185,7 @@ def _get_financials(ticker: str, statement: str = "income", period: str = "annua
         return {"ok": True, "data": {"ticker": ticker, "statement": statement,
                 "period": period, "currency": currency,
                 "basis": "provider-reported", "line_items": data},
-                "source": _source(f"yfinance {statement} statement {ticker}"),
+                "source": _source(f"yfinance {statement} statement {ticker}", url=f'https://finance.yahoo.com/quote/{symbol}/financials/'),
                 "error": None}
     except Exception as exc:
         return {"ok": False, "error": str(exc), "data": None,
@@ -203,9 +199,6 @@ def _get_company_metrics(ticker: str, exchange: str = "NSE") -> dict:
         symbol = _resolve_symbol(ticker, exchange)
         try:
             info = yf.Ticker(symbol).info or {}
-            # Bare-symbol retry for US listings + guard against silent null payloads.
-            if not info.get("longName") and not info.get("shortName") and symbol != ticker:
-                info = yf.Ticker(ticker).info or {}
         except Exception as exc:
             return {"ok": False, "error": f"info unavailable: {exc}",
                     "data": {"ticker": ticker},
@@ -216,6 +209,7 @@ def _get_company_metrics(ticker: str, exchange: str = "NSE") -> dict:
                     "source": _source(f"yfinance info {ticker}")}
         return {"ok": True, "data": {
             "ticker": ticker,
+            "currency": info.get("financialCurrency") or info.get("currency"),
             "market_cap": info.get("marketCap"),
             "shares_outstanding": info.get("sharesOutstanding"),
             "eps_trailing": info.get("trailingEps"),
@@ -237,7 +231,7 @@ def _get_company_metrics(ticker: str, exchange: str = "NSE") -> dict:
             "debt_to_equity": info.get("debtToEquity"),
             "trailing_pe": info.get("trailingPE"),
             "sector": info.get("sector"), "industry": info.get("industry"),
-        }, "source": _source(f"yfinance info {ticker}"),
+        }, "source": _source(f"yfinance info {ticker}", url=f'https://finance.yahoo.com/quote/{symbol}/key-statistics/'),
             "error": None}
     except Exception as exc:
         return {"ok": False, "error": str(exc), "data": {"ticker": ticker},
@@ -258,8 +252,6 @@ def _peer_row(ticker: str, exchange: str) -> dict | None:
     symbol = _resolve_symbol(ticker, exchange)
     try:
         info = yf.Ticker(symbol).info or {}
-        if not info.get("longName") and not info.get("shortName") and symbol != ticker:
-            info = yf.Ticker(ticker).info or {}
     except Exception:
         return None
     if not info.get("longName") and not info.get("shortName"):

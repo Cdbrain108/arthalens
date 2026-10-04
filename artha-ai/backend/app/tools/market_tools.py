@@ -61,9 +61,6 @@ def _suffix(ticker: str, exchange: str) -> str:
         pass
     else:
         exchange = clean_str(exchange, "NSE") or "NSE"
-    INDIAN_NSE_TICKERS = {"INFY", "TCS", "RELIANCE", "WIPRO", "HDFCBANK", "ICICIBANK", "BHARTIARTL", "SBIN", "TATAMOTORS", "ITC", "LT"}
-    if ticker.upper() in INDIAN_NSE_TICKERS and exchange and exchange.upper() in ("NYSE", "NASDAQ", "US"):
-        exchange = "NSE"
     if not ticker or "." in ticker or ticker.startswith("^") or not exchange:
         return ticker
     ex = exchange.upper()
@@ -75,8 +72,10 @@ def _get_quote(ticker: str, exchange: str = "NSE") -> dict:
     try:
         import yfinance as yf
 
-        t = yf.Ticker(_suffix(ticker, exchange))
-        price, chg, curr = None, None, None
+        symbol = _suffix(ticker, exchange)
+        t = yf.Ticker(symbol)
+        price, chg, curr, as_of = None, None, None, None
+        quote_type = 'provider quote; timestamp unavailable'
         try:
             fi = t.fast_info
             price = fi.get("lastPrice") if hasattr(fi, "get") else getattr(fi, "last_price", None)
@@ -89,7 +88,8 @@ def _get_quote(ticker: str, exchange: str = "NSE") -> dict:
                 hist = t.history(period="5d")
                 if hist is not None and len(hist):
                     price = float(hist["Close"].iloc[-1])
-                    curr = curr or "INR"
+                    as_of = str(hist.index[-1].date())
+                    quote_type = 'historical daily close'
             except Exception:
                 pass
         if price is None:
@@ -97,8 +97,8 @@ def _get_quote(ticker: str, exchange: str = "NSE") -> dict:
         return _envelope({
             "ticker": ticker, "price": float(price),
             "change_pct": float(chg) if chg is not None else None,
-            "currency": curr or "INR", "as_of": datetime.now(timezone.utc).isoformat(),
-        }, source_title=f"yfinance quote {ticker}")
+            "currency": curr, "as_of": as_of, "quote_type": quote_type,
+        }, source_title=f"yfinance quote {ticker}", source_url=f'https://finance.yahoo.com/quote/{symbol}/')
     except Exception as exc:
         return _stooq_quote(ticker, exchange, reason=str(exc))
 
@@ -195,7 +195,7 @@ def _get_technicals(ticker: str, period: str = "1y", exchange: str = "NSE",
     computation). No invented indicators.
     """
     try:
-        hist = _get_price_history(ticker, period=period, exchange=exchange)
+        hist = get_price_history.invoke({'ticker': ticker, 'period': period, 'exchange': exchange})
         if not isinstance(hist, dict) or not hist.get("ok"):
             return _envelope({"ticker": ticker, "period": period},
                              source_title=f"yfinance technicals {ticker}",

@@ -94,17 +94,17 @@ function getCopilotResponse(rawQuery = '', user) {
   if (nameMatch) {
     const saidName = nameMatch[1].trim().replace(/[?.!]+$/, '')
     const display = saidName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    return `Nice to meet you, **${display}!** 👋\n\nI'm **ArthaAI**, your equity research copilot for NSE/BSE stocks.\n\nNow that we're introduced — want to try some real research?\n• *"Should I invest in TCS?"*\n• *"Compare HDFC Bank vs ICICI Bank"*\n• *"Explain PE ratio simply"*`
+    return `Nice to meet you, **${display}!** I'm **Bullseye**, a stock research aid. Ask about a company or compare two tickers to get started.`
   }
 
   // 2. Creator / maker — handles typo "creater" too
   if (/(creater|creator|created|who made|who built|who developed|built you|made you|developed you|your founder|your maker|your developer|your team|your company|your owner|behind you)/.test(qLower)) {
-    return `I was built as **ArthaAI** — an institutional-grade equity research copilot for Indian markets. 🇮🇳\n\nUnder the hood I have a roster of 9 specialist agents and route only the ones each question needs. Every result is evidence-first, validated, and disclosed when data is missing.\n\nWant to see what I can do? Try *"Analyze TCS fundamentals"*`
+    return `I'm **Bullseye**, a research application using specialist tools and optional language models. The landing page shows the configured agent registry. Try *"Analyze TCS fundamentals"*.`
   }
 
   // 3. Identity
   if (qLower.includes('your name') || qLower.includes('who are you') || qLower === 'who r u') {
-    return `I'm **ArthaAI Copilot** — your institutional-grade equity research assistant. 🤖\n\nI have 9 specialist agents and route each question to the ones it needs, then validate every claim against a source before it reaches your report.\n\nAsk me *"What can you do?"* for the full menu, or jump straight in with *"Compare Infosys vs Wipro"*`
+    return `I'm **Bullseye**, your stock research assistant. I collect evidence, check provenance and show gaps. Verify important claims against original sources. Try *"Compare Infosys vs Wipro"*.`
   }
 
   // 4. Capabilities
@@ -114,7 +114,7 @@ function getCopilotResponse(rawQuery = '', user) {
 
   // 5. How are you
   if (qLower.includes('how are you') || qLower.includes('how r u') || qLower.includes("how's it going") || qLower.includes('how are u')) {
-    return `I'm running at **full capacity** — all 9 research agents are on standby! 🚀\n\nReady when you are. Try:\n*"Analyze Infosys Q4 results"* or *"Is Bajaj Finance fairly valued?"*`
+    return `Ready for your next question. Provider availability is checked during research. Try *"Analyze Infosys results"*.`
   }
 
   // 6. Thanks
@@ -129,12 +129,12 @@ function getCopilotResponse(rawQuery = '', user) {
 
   // 8. Time-of-day greetings
   if (/(good morning|good afternoon|good evening|namaste|sat sri akal|ram ram)/.test(qLower)) {
-    return `Namaste${userName ? `, **${userName}**` : ''}! 🙏 I'm **ArthaAI**, ready to research.\n\nWhat's on your watchlist today? Try *"Should I invest in TCS?"*`
+    return `Namaste${userName ? `, **${userName}**` : ''}! I'm **Bullseye**. What's on your watchlist today? Try *"Research TCS"*.`
   }
 
   // 9. Plain hi/hello/hey
   if (['hi', 'hello', 'hey', 'hey there', 'hii', 'hiii', 'hello there', 'greetings'].some(g => qLower === g || qLower.startsWith(g + ' ') || qLower.startsWith(g + '!') || qLower.startsWith(g + ','))) {
-    return `Hey there${userName ? `, **${userName}**` : ''}! 👋 I'm **ArthaAI**, your institutional-grade equity research copilot.\n\nI can help with:\n• **Deep-dive fundamental analysis** on any NSE/BSE listed company\n• **Side-by-side peer comparisons** (e.g. TCS vs Infosys)\n• **Investment thesis** — buy, hold or sell decisions with evidence\n• **Simplified explainers** for financial concepts\n\nJust type your question below — like *"Should I hold TCS for 5 years?"* or *"Compare Reliance vs HDFC"*`
+    return `Hello${userName ? `, **${userName}**` : ''}! I'm **Bullseye**. Explore company research, comparisons and opposing perspectives. This is a research aid, not financial advice. Try *"Research TCS"* or *"Compare AAPL and MSFT"*.`
   }
 
   // 10. Contextual fallback — echo the actual query so it never feels "fixed"
@@ -146,12 +146,17 @@ function ConversationalCopilot({ query, onStartResearch, user }) {
   const [typedText, setTypedText] = useState('')
   const [isDone, setIsDone] = useState(false)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const userName = user?.name
   useEffect(() => {
     setTypedText('')
     setIsDone(false)
     let i = 0
-    const plain = getCopilotResponse(query, user)
+    const plain = getCopilotResponse(query, { name: userName })
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setTypedText(plain)
+      setIsDone(true)
+      return undefined
+    }
     const timer = setInterval(() => {
       if (i < plain.length) {
         // type 2 chars per tick for snappier feel
@@ -163,7 +168,7 @@ function ConversationalCopilot({ query, onStartResearch, user }) {
       }
     }, 8)
     return () => clearInterval(timer)
-  }, [query, user?.name])
+  }, [query, userName])
 
   // Simple markdown-ish renderer
   const renderText = (text) => {
@@ -186,7 +191,7 @@ function ConversationalCopilot({ query, onStartResearch, user }) {
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#4285f4] to-[#1a73e8]">
             <Bot size={14} className="text-white" />
           </div>
-          <span className="text-[12px] font-semibold text-[#8ab4f8]">ArthaAI Copilot</span>
+          <span className="text-[12px] font-semibold text-[#a5d99d]">Bullseye Copilot</span>
           {!isDone && (
             <span className="flex gap-0.5 ml-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#4285f4] animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -240,7 +245,7 @@ function StudioTopHeader({
   // "Infosys Research Workspace" and every other company read as generic.
   const resolved = (entities || []).map((e) => e.name || e.ticker).filter(Boolean)
   const workspaceTitle = isConversational
-    ? 'ArthaAI Copilot'
+    ? 'Bullseye Copilot'
     : resolved.length === 1
     ? `${resolved[0]} Research Workspace`
     : resolved.length > 1
@@ -260,7 +265,7 @@ function StudioTopHeader({
         <div className="hidden sm:flex items-center gap-2 text-[12.5px] font-mono text-[#9aa0a6]">
           <span>/</span>
           <span className="text-[#8ab4f8] font-medium truncate max-w-[280px]">
-            {activeQuery || 'ArthaAI Chat'}
+            {activeQuery || 'Bullseye Research'}
           </span>
         </div>
       </div>

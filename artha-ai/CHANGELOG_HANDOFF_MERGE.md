@@ -96,3 +96,32 @@ Standardized Vite defaults to 5173 and backend proxy to 8000.
 Browser coverage includes both themes at 360/390/768/1024/1280/1440/1920px and
 844px landscape, WCAG AA axe checks, intro/session/focus and real submission
 contract (stubbed providers). Full live-provider verification is a later phase.
+
+## Phase 5 — registry and real execution
+
+- Eleven executable specialists share one registry, including industry and
+  management. Broad research runs nine core specialists; documents/social add
+  relevant coverage. Focused news stays news-only. Concurrency no longer drops
+  required specialists (four slots by default; six-thread shared ceiling).
+- The HTTP runner now invokes the compiled LangGraph. Stage and specialist events
+  persist through the existing SQLite/polling contract.
+- Replaced canned deterministic findings with tool-owned evidence collection.
+  Financial statements include income, balance sheet, cash flow and quarters;
+  growth/margins retain Python inputs; market calls actual technical/volume/
+  benchmark tools; workforce invokes official ATS; documents filter selected IDs.
+- Models can add evidence-linked explanations but cannot replace source records.
+  Removed forced fiscal years, sector-specific prompt assumptions and arbitrary
+  P/E thresholds. Source dates are never substituted with retrieval dates.
+- Empty, partial, timed-out and failed runs are distinct in progress and reports.
+  Registry health checks local initialization, explicitly not provider connectivity.
+- Cross-listing fallback was removed: a failed Indian quote/statement cannot
+  silently become a US ADR with a different currency.
+- Known limits are surfaced: qualitative web coverage is search-snippet based;
+  ATS coverage requires registered boards; point-in-time EPS cannot establish
+  historical P/E; provider statements still need original-filing verification.
+
+Verification: 100 backend tests pass, including provider-outage HTTP/PDF lifecycle,
+tool provenance, document isolation, bounded concurrency and model evidence
+ownership. Live LLM-free AAPL research ran all nine core specialists, retained 85
+evidence items and produced a PDF; industry was correctly unavailable. TCS news
+ran only news and retained eight sourced reports. Neither run invents a rating.

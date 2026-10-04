@@ -78,6 +78,7 @@ class Settings(BaseSettings):
 
     # Runtime
     agent_timeout_s: int = 240
+    agent_concurrency: int = 4
     max_agent_retries: int = 2
 
     # SEC EDGAR requires a User-Agent with app name + contact email for

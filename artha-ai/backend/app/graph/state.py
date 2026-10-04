@@ -30,6 +30,7 @@ class ResearchState(TypedDict, total=False):
     evidence_gaps: list[str]
     completed_agents: list[str]
     failed_agents: list[str]
+    agent_statuses: dict[str, str]
     errors: list[dict[str, Any]]
 
     # Evidence validation & Thesis challenge

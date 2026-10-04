@@ -16,6 +16,8 @@ _AGENT_ROLES = {
     "document": ("Filings & Document Specialist", "Retrieve and verify ground-truth disclosures from uploaded PDFs and regulatory submissions."),
     "industry": ("Industry & Sector Specialist", "Benchmark sector tailwinds, cyclical positioning, and competitive moats."),
     "workforce": ("Workforce & Talent Analyst", "Track hiring velocity, attrition, key personnel departures, and employee sentiment."),
+    "management": ("Management & Governance", "Collect management, governance and capital allocation disclosures."),
+    "social": ("Public Discussion", "Collect qualitative public discussion; search snippets are not a representative sentiment survey."),
 }
 
 AGENT_DEFS: list[dict] = [
@@ -30,3 +32,16 @@ AGENT_DEFS: list[dict] = [
 ]
 
 DEF_BY_NAME: dict[str, dict] = {d["name"]: d for d in AGENT_DEFS}
+
+
+def registry_health():
+    """Local initialization checks only; does not claim provider availability."""
+    entries = []
+    for name, cls in AGENT_REGISTRY.items():
+        try:
+            instance = cls()
+            valid = instance.name == name and callable(instance.run) and all(callable(t.invoke) for t in instance.tools)
+            entries.append({"name": name, "status": "configured" if valid else "unavailable"})
+        except Exception:
+            entries.append({"name": name, "status": "unavailable"})
+    return entries

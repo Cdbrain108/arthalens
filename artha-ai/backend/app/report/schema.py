@@ -98,8 +98,8 @@ def _agent_notes(state, citations):
         evidence = result.get("evidence") or []
         by_claim = {e["claim"].lower(): citations[e["evidence_id"]]
                     for e in evidence if e.get("evidence_id") in citations}
-        status = "failed" if name in state.get("failed_agents", []) else (
-            "completed" if evidence else "unavailable")
+        status = (state.get('agent_statuses') or {}).get(name) or ("failed" if name in state.get("failed_agents", []) else (
+            "partial" if evidence and result.get('data_gaps') else "completed" if evidence else "unavailable"))
         notes.append({
             "agent": name, "label": AGENT_LABELS.get(name, name.replace("_", " ").title()),
             "mandate": result.get("description", ""), "status": status,

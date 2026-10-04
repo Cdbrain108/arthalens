@@ -1,19 +1,14 @@
-"""Agent registry route — the UI's Agents page renders from this."""
+"""Public capabilities derived from the executable specialist registry."""
 from fastapi import APIRouter
-
-from ..graph.definitions import DEF_BY_NAME
-from ..graph.routing import ALL_AGENTS
+from ..graph.definitions import DEF_BY_NAME, registry_health
 
 router = APIRouter(prefix="/agents", tags=["agents"])
-
-OPTIONAL = {"workforce", "social"}
 
 
 @router.get("")
 async def list_agents():
-    return [{
-        "name": name,
-        "description": DEF_BY_NAME[name]["goal"],
-        "tools": [t.name for t in DEF_BY_NAME[name]["tools"]],
-        "status": "optional" if name in OPTIONAL else "core",
-    } for name in ALL_AGENTS if name in DEF_BY_NAME]
+    return [{**entry, "label": DEF_BY_NAME[entry['name']]['role'],
+             "description": DEF_BY_NAME[entry['name']]['goal'],
+             "tools": [t.name for t in DEF_BY_NAME[entry['name']]['tools']],
+             "limitations": "Configured means local tools initialize. External provider coverage is assessed per research run."}
+            for entry in registry_health()]

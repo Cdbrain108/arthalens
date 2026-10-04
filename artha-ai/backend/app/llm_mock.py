@@ -76,7 +76,8 @@ def mock_analyze(query: str) -> dict:
 
 
 def mock_plan(intent: str, compare_mode: bool = False) -> dict:
-    selected = MOCK_PLAN.get(intent, MOCK_PLAN["general"])
+    from .graph.routing import ALL_AGENTS, ROUTING_TABLE
+    selected = [a for a in ALL_AGENTS if a in ROUTING_TABLE.get(intent, ROUTING_TABLE['general'])['min']]
     return {"steps": [f"Run {name} agent" for name in selected], "selected_agents": selected,
             "required_evidence": [], "rationale": "Deterministic routing; no language model required."}
 

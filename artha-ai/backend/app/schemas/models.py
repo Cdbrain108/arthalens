@@ -146,6 +146,7 @@ class EvidenceItem(BaseModel):
 
 class AgentResult(BaseModel):
     agent: str
+    status: Literal["completed", "partial", "unavailable"] = "completed"
     company: str
     timestamp: str
     # The specialist's own account of how it worked the question: what it
@@ -353,5 +354,7 @@ class JobStatus(BaseModel):
     selected_agents: list[str] = Field(default_factory=list)
     completed_agents: list[str] = Field(default_factory=list)
     failed_agents: list[str] = Field(default_factory=list)
+    agent_statuses: dict[str, str] = Field(default_factory=dict)
+    agent_details: dict[str, dict] = Field(default_factory=dict)
     steps: list[dict] = Field(default_factory=list)
     errors: list[dict] = Field(default_factory=list)

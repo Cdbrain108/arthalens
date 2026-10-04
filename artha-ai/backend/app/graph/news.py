@@ -297,7 +297,10 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
     # Fetch a bounded set in parallel. A blocked publisher remains headline-only.
     from concurrent.futures import ThreadPoolExecutor
     def fetch_article(item):
-        out = news_tools.fetch_news.invoke({"url": item["source_url"]})
+        try:
+            out = news_tools.fetch_news.invoke({"url": item["source_url"]}) or {}
+        except Exception:
+            out = {}
         body = ((out or {}).get("data") or {}).get("text") or ""
         if out.get("ok") and len(body) >= 200 and "news.google.com" not in item["source_url"]:
             item["excerpt"] += "\nArticle excerpt: " + body[:2400]

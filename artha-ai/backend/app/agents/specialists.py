@@ -5,13 +5,13 @@ Used across both deterministic mock mode and live LLM tool-calling execution.
 """
 from .base import BaseSpecialistAgent
 from ..tools import (market_tools, financial_tools, news_tools, web_tools,
-                     document_tools, filings_tools, jobs_tools)
+                     document_tools, jobs_tools)
 
 
 class FinancialAgent(BaseSpecialistAgent):
     name = "financial"
     tools = [financial_tools.get_financials, financial_tools.get_company_metrics,
-             financial_tools.calculate_ratio, filings_tools.get_quarterly_results]
+             financial_tools.calculate_ratio, financial_tools.compute_growth]
     system_prompt = (
         "You are Bulls Eye's Financial Agent. Analyze revenue, profit, margins, EPS, "
         "free cash flow, debt, ROE/ROCE and multi-year trends. State the fiscal basis "
@@ -24,7 +24,7 @@ class ValuationAgent(BaseSpecialistAgent):
     name = "valuation"
     tools = [market_tools.get_quote, financial_tools.get_company_metrics,
              financial_tools.calculate_ratio, financial_tools.get_peer_multiples,
-             financial_tools.get_historical_multiples, web_tools.search_web]
+             financial_tools.get_historical_multiples]
     system_prompt = (
         "You are Bulls Eye's Valuation Agent. First collect inputs via get_company_metrics "
         "+ get_quote, then get_peer_multiples + get_historical_multiples for context. "
@@ -38,7 +38,7 @@ class MarketAgent(BaseSpecialistAgent):
     name = "market"
     tools = [market_tools.get_quote, market_tools.get_price_history,
              market_tools.get_volume, market_tools.get_benchmark_history,
-             market_tools.get_technicals, news_tools.search_news]
+             market_tools.get_technicals]
     system_prompt = (
         "You are Bulls Eye's Market Agent. Report actual price/volume/history and market or "
         "sector context. Technical observations only when actually computed by a tool — "
@@ -58,8 +58,7 @@ class NewsAgent(BaseSpecialistAgent):
 
 class GrowthAgent(BaseSpecialistAgent):
     name = "growth"
-    tools = [web_tools.search_web, web_tools.fetch_page, document_tools.search_documents,
-             news_tools.search_news]
+    tools = [web_tools.search_web]
     system_prompt = (
         "You are Bulls Eye's Growth & Projects Agent. Cover capex, expansion, products, "
         "partnerships. Tag every initiative: announced / started / executing / completed. "
@@ -69,10 +68,7 @@ class GrowthAgent(BaseSpecialistAgent):
 
 class RiskAgent(BaseSpecialistAgent):
     name = "risk"
-    tools = [web_tools.search_web, web_tools.fetch_page, news_tools.search_news,
-             document_tools.search_documents, financial_tools.get_financials,
-             financial_tools.get_company_metrics, market_tools.get_quote,
-             market_tools.get_technicals]
+    tools = [web_tools.search_web]
     system_prompt = (
         "You are Bulls Eye's Risk Agent. Hunt business, competitive, financial, valuation, "
         "regulatory, legal, geopolitical, execution and technology risks. You MUST actively "
@@ -82,8 +78,7 @@ class RiskAgent(BaseSpecialistAgent):
 
 class WorkforceAgent(BaseSpecialistAgent):
     name = "workforce"
-    tools = [web_tools.fetch_page, web_tools.search_web,
-             jobs_tools.search_jobs, jobs_tools.fetch_job_detail]
+    tools = [web_tools.search_web, jobs_tools.search_jobs]
     system_prompt = (
         "You are Bulls Eye's Workforce Agent (optional). Use ONLY permitted sources: company "
         "career pages and public disclosures. LinkedIn scraping is banned. Note the source "
@@ -103,7 +98,7 @@ class SocialAgent(BaseSpecialistAgent):
 
 class DocumentAgent(BaseSpecialistAgent):
     name = "document"
-    tools = [document_tools.search_documents, document_tools.retrieve_evidence]
+    tools = [document_tools.search_documents]
     system_prompt = (
         "You are Bulls Eye's Document/RAG Agent. Answer ONLY from retrieved passages of "
         "annual reports, filings, transcripts, decks and uploaded PDFs. Cite page and "
@@ -111,9 +106,21 @@ class DocumentAgent(BaseSpecialistAgent):
     )
 
 
+class IndustryAgent(BaseSpecialistAgent):
+    name = "industry"
+    tools = [web_tools.search_web]
+    system_prompt = "Explain sector demand, competition and industry structure only from supplied evidence. Do not invent market sizes or peer benchmarks."
+
+
+class ManagementAgent(BaseSpecialistAgent):
+    name = "management"
+    tools = [web_tools.search_web]
+    system_prompt = "Explain management, governance, board changes and capital allocation only from supplied evidence. Distinguish allegations from established findings."
+
+
 AGENT_REGISTRY: dict[str, type[BaseSpecialistAgent]] = {
     a.name: a for a in [
         FinancialAgent, ValuationAgent, MarketAgent, NewsAgent, GrowthAgent,
-        RiskAgent, WorkforceAgent, SocialAgent, DocumentAgent,
+        RiskAgent, WorkforceAgent, SocialAgent, DocumentAgent, IndustryAgent, ManagementAgent,
     ]
 }

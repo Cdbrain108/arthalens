@@ -11,6 +11,8 @@ export default function TypingText({
   const [isTyping, setIsTyping] = useState(false)
   const indexRef = useRef(0)
   const timerRef = useRef(null)
+  const completeRef = useRef(onComplete)
+  useEffect(() => { completeRef.current = onComplete }, [onComplete])
 
   useEffect(() => {
     if (!text) {
@@ -19,6 +21,12 @@ export default function TypingText({
     }
 
     // Reset and start typing
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayedText(text)
+      setIsTyping(false)
+      completeRef.current?.()
+      return undefined
+    }
     setDisplayedText('')
     indexRef.current = 0
     setIsTyping(true)
@@ -33,7 +41,7 @@ export default function TypingText({
       if (indexRef.current >= text.length) {
         clearInterval(timerRef.current)
         setIsTyping(false)
-        if (onComplete) onComplete()
+        completeRef.current?.()
       }
     }, speed)
 

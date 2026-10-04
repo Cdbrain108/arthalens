@@ -13,7 +13,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from .base import NativeFunctionTool
 from .web_tools import _BLOCKED_SCRAPE_DOMAINS

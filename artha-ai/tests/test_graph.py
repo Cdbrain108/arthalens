@@ -24,8 +24,8 @@ def test_graph_compiles_cleanly():
 
 def test_agent_definitions_complete():
     """Verify all 9 agents are registered with complete metadata and tools."""
-    assert len(AGENT_DEFS) == 9
-    assert len(DEF_BY_NAME) == 9
+    assert len(AGENT_DEFS) == 11
+    assert len(DEF_BY_NAME) == 11
     for name in ALL_AGENTS:
         assert name in DEF_BY_NAME
         defn = DEF_BY_NAME[name]
@@ -63,7 +63,7 @@ def test_routing_policy_price_move():
     assert "valuation" not in selected
 
 
-def test_full_graph_execution_mock(monkeypatch, tmp_path):
+def test_full_graph_execution_mock(monkeypatch, tmp_path, offline_data_tools):
     """Test full LangGraph execution in deterministic mock mode."""
     from app.config import settings
     monkeypatch.setattr(settings, "model_provider", "mock")
@@ -83,7 +83,8 @@ def test_full_graph_execution_mock(monkeypatch, tmp_path):
     assert result["current_node"] == "generate_pdf"
     assert result["report"] is not None
     assert result["report"]["query"] == "Should I hold TCS for the next 5 years?"
-    assert len(result["completed_agents"]) > 0
+    assert result['agent_statuses']
+    assert all(status == 'unavailable' for status in result['agent_statuses'].values())
     assert result["pdf_path"] is not None
 
     # Check that lifecycle events fired

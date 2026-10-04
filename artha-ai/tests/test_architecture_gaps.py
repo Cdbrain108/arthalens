@@ -310,11 +310,12 @@ def test_historical_multiples_returns_points_or_gap(monkeypatch):
 
 
 def test_technicals_deterministic_math(monkeypatch):
+    from types import SimpleNamespace
     from app.tools import market_tools
     series = [{"date": f"2026-01-0{i}", "close": 100.0 + i, "volume": 10}
               for i in range(1, 6)]
-    monkeypatch.setattr(market_tools, "_get_price_history",
-                        lambda *a, **k: {"ok": True, "data": {"series": series}})
+    monkeypatch.setattr(market_tools, "get_price_history",
+                        SimpleNamespace(invoke=lambda *a, **k: {"ok": True, "data": {"series": series}}))
     out = market_tools._get_technicals("TCS", windows=[3])
     assert out["ok"] is True
     assert out["data"]["points"] == 5
@@ -344,17 +345,17 @@ def test_news_web_wiring_where_required():
     from app.agents.specialists import AGENT_REGISTRY
     from app.graph.definitions import DEF_BY_NAME
     market_tools = {tool.name for tool in AGENT_REGISTRY["market"].tools}
-    assert {"get_technicals", "search_news", "get_benchmark_history"} <= market_tools
+    assert {"get_technicals", "get_price_history", "get_benchmark_history"} <= market_tools
     valuation_tools = {tool.name for tool in AGENT_REGISTRY["valuation"].tools}
-    assert {"get_peer_multiples", "get_historical_multiples", "search_web"} <= valuation_tools
+    assert {"get_peer_multiples", "get_historical_multiples", "calculate_ratio"} <= valuation_tools
     growth_tools = {tool.name for tool in AGENT_REGISTRY["growth"].tools}
-    assert "search_news" in growth_tools
+    assert "search_web" in growth_tools
     risk_tools = {tool.name for tool in AGENT_REGISTRY["risk"].tools}
-    assert {"get_financials", "get_quote", "get_technicals"} <= risk_tools
+    assert "search_web" in risk_tools
     financial_tools = {tool.name for tool in AGENT_REGISTRY["financial"].tools}
-    assert "get_quarterly_results" in financial_tools
+    assert {"get_financials", "compute_growth"} <= financial_tools
     workforce_tools = {tool.name for tool in AGENT_REGISTRY["workforce"].tools}
-    assert {"search_jobs", "fetch_job_detail"} <= workforce_tools
+    assert {"search_jobs", "search_web"} <= workforce_tools
     for name in ("market", "valuation", "growth", "risk", "financial", "workforce"):
         canonical = {tool.name for tool in DEF_BY_NAME[name]["tools"]}
         mirrored = {tool.name for tool in AGENT_REGISTRY[name].tools}

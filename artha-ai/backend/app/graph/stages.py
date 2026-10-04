@@ -45,7 +45,11 @@ def analyze_query(state: dict) -> dict:
         time_horizon = a["time_horizon"]
         compare_mode = a["compare_mode"]
     else:
-        analysis: QueryAnalysis = meta.analyze(state["query"])
+        try:
+            analysis: QueryAnalysis = meta.analyze(state["query"])
+        except Exception:
+            from ..llm_mock import mock_analyze
+            analysis = QueryAnalysis.model_validate(mock_analyze(state['query']))
         entities = [e.model_dump() for e in analysis.entities]
         intent = analysis.intent
         time_horizon = analysis.time_horizon
@@ -63,7 +67,7 @@ def analyze_query(state: dict) -> dict:
     for ent in entities:
         ent_name = (ent.get("name") or "").lower()
         ent_ticker = (ent.get("ticker") or "").upper()
-        if (ent_name in INDIAN_NAMES or ent_ticker in INDIAN_TICKERS) and not is_explicit_us:
+        if (ent_name in INDIAN_NAMES or ent_ticker in INDIAN_TICKERS) and not is_explicit_us and ent.get('exchange') != 'BSE':
             ent["exchange"] = "NSE"
 
     return {**_stamp(state, "analyze_query"),
@@ -86,7 +90,11 @@ def create_plan(state: dict) -> dict:
     analysis = QueryAnalysis(
         entities=state["entities"], intent=state["intent"],
         time_horizon=state.get("time_horizon"), compare_mode=state["compare_mode"])
-    plan: ResearchPlan = meta.plan(state["query"], analysis)
+    try:
+        plan: ResearchPlan = meta.plan(state["query"], analysis)
+    except Exception:
+        from ..llm_mock import mock_plan
+        plan = ResearchPlan.model_validate(mock_plan(analysis.intent, analysis.compare_mode))
     selected = enforce_policy(analysis, plan)  # deterministic guardrail
     return {**_stamp(state, "create_plan"),
             "research_plan": {**plan.model_dump(), "selected_agents": selected},

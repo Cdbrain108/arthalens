@@ -79,7 +79,7 @@ def test_routing_cap_never_drops_required_agents(intent, compare_mode):
     selected = set(enforce_policy(analysis, plan))
     assert ROUTING_TABLE[intent]["min"] <= selected
     assert not (ROUTING_TABLE[intent]["never"] & selected)
-    assert len(selected) <= (8 if compare_mode else 6)
+    assert selected <= set(ALL_AGENTS)  # concurrency must never truncate scope
 
 
 def test_document_agent_unroutable_for_price_move_unless_uploaded_or_filing_intent():

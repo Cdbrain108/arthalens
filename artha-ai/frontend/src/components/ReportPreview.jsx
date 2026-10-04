@@ -292,9 +292,7 @@ export default function ReportPreview({
   const [showPdfViewer, setShowPdfViewer] = useState(false)
 
   useEffect(() => {
-    if (initialMode && initialMode !== mode) {
-      setMode(initialMode)
-    }
+    if (initialMode) setMode(initialMode)
   }, [initialMode])
 
   const handleModeToggle = (newMode) => {
@@ -311,7 +309,7 @@ export default function ReportPreview({
       'good morning', 'good evening'].includes(qLower)
 
   useEffect(() => {
-    if (!jobId || isConversational || (job && job.status !== 'succeeded')) {
+    if (!jobId || isConversational || (job?.status && job.status !== 'succeeded')) {
       setLoading(false)
       return
     }
@@ -340,7 +338,7 @@ export default function ReportPreview({
       <div className="mt-4 w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#181a1f] text-[#f1f3f4] shadow-2xl animate-fade-up">
         <div className="border-b border-white/10 bg-[#1e2026] px-6 py-5 text-left">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-sans text-[16px] font-bold tracking-tight text-white">ArthaAI</span>
+            <span className="font-sans text-[16px] font-bold tracking-tight text-white">Bullseye</span>
             <span className="font-mono text-[12px] text-[#9aa0a6]">·</span>
             <span className="text-[12px] font-medium text-[#bdc1c6]">Research Beyond the Noise</span>
             <span className="ml-2 rounded-full bg-[#4285f4]/15 px-2.5 py-0.5 font-mono text-[11px] font-medium text-[#8ab4f8]">
@@ -351,7 +349,7 @@ export default function ReportPreview({
             Institutional Multi-Agent Equity Research Workspace
           </h2>
           <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-[#bdc1c6] sm:text-[13.5px]">
-            Hello. ArthaAI dispatches{' '}
+            Hello. Bullseye dispatches{' '}
             <span className="font-medium text-[#8ab4f8]">only the minimal required specialist agents in parallel</span>,
             validates every claim against its source, and reports what it could not establish instead of filling
             the gap.
@@ -577,7 +575,11 @@ export default function ReportPreview({
     { key: 'growth', name: 'Strategic Growth & Expansion', color: 'text-purple-400', border: 'border-purple-500/20' },
     { key: 'news', name: 'Corporate News & Disclosures', color: 'text-rose-400', border: 'border-rose-500/20' },
     { key: 'workforce', name: 'Workforce & Operational Posture', color: 'text-cyan-400', border: 'border-cyan-500/20' },
-    { key: 'risk', name: 'Risk & Downside Assessment', color: 'text-orange-400', border: 'border-orange-500/20' }
+    { key: 'risk', name: 'Risk & Downside Assessment', color: 'text-orange-400', border: 'border-orange-500/20' },
+    { key: 'industry', name: 'Industry & Sector', color: 'text-green-300', border: 'border-green-500/20' },
+    { key: 'management', name: 'Management & Governance', color: 'text-green-300', border: 'border-green-500/20' },
+    { key: 'social', name: 'Public Discussion', color: 'text-green-300', border: 'border-green-500/20' },
+    { key: 'document', name: 'Uploaded Documents', color: 'text-green-300', border: 'border-green-500/20' }
   ]
 
   /** Comparison rows: a delta is computed only when both sides are numeric. */
@@ -619,7 +621,7 @@ export default function ReportPreview({
       <div>
         <div className="flex items-center gap-2">
           <Logo size={28} />
-          <span className="font-sans text-[16px] font-bold tracking-tight text-white">ArthaAI</span>
+          <span className="font-sans text-[16px] font-bold tracking-tight text-white">Bullseye</span>
           <span className="font-mono text-[12px] text-[#9aa0a6]">·</span>
           <span className="text-[12px] font-medium text-[#bdc1c6]">Research Beyond the Noise</span>
         </div>

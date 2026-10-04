@@ -12,3 +12,12 @@ def no_paid_providers(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "model_provider", "mock")
     monkeypatch.setattr(settings, "tavily_api_key", None)
+
+
+@pytest.fixture
+def offline_data_tools(monkeypatch):
+    """Explicit all-provider outage fixture for real graph/HTTP lifecycle tests."""
+    from app.tools.base import NativeFunctionTool
+    def unavailable(self, args):
+        return {'ok': False, 'data': None, 'error': 'test provider unavailable', 'source': {'title': self.name}}
+    monkeypatch.setattr(NativeFunctionTool, 'invoke', unavailable)

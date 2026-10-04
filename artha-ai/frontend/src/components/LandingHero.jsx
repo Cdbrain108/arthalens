@@ -41,7 +41,7 @@ export default function LandingHero({ onRun, running, submitting, initialQuery =
 
       {/* Main Headline — Google AI Studio Clean Typography */}
       <h1 className="max-w-3xl text-3xl font-normal tracking-tight text-white sm:text-5xl md:text-6xl font-sans">
-        Build your conviction with <span className="font-serif italic text-[#8ab4f8]">ArthaAI</span>
+        Explore the evidence with <span className="font-serif italic text-[#a5d99d]">Bullseye</span>
       </h1>
       <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-muted sm:text-[16px]">
         Autonomous institutional research. Ask any company question and a roster of 9 specialist AI agents is routed to the ones it needs — to challenge, verify, and synthesize evidence.
@@ -65,7 +65,7 @@ export default function LandingHero({ onRun, running, submitting, initialQuery =
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) submit(e)
               }}
-              placeholder="Describe a company or investment question, and let ArthaAI do the rest... e.g. What about Infosys's current situation?"
+              placeholder="Ask Bullseye about a company, ticker or investment question…"
               disabled={running}
               className="w-full resize-none bg-transparent px-2 text-[14px] sm:text-[15px] text-white placeholder-slate-500 focus:outline-none scroll-slim"
             />

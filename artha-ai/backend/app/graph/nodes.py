@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..schemas.models import QueryAnalysis, ResearchPlan
-from . import meta, stages
+from . import stages
 from .routing import enforce_policy
 from .specialists import run_all_specialists
 from .state import ResearchState
@@ -51,6 +51,10 @@ async def node_apply_routing_policy(state: ResearchState) -> dict[str, Any]:
     plan = ResearchPlan.model_validate(plan_dict)
 
     selected = enforce_policy(analysis, plan, document_ids=state.get("document_ids"))
+    import re
+    if analysis.intent not in ('conversational', 'news', 'price_move') and re.search(r'\b(sentiment|social|reddit|investor discussion)\b', state.get('query', ''), re.I):
+        if 'social' not in selected:
+            selected.append('social')
 
     updated_plan = dict(plan_dict)
     updated_plan["selected_agents"] = list(selected)

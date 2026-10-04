@@ -36,7 +36,7 @@ def jobs(tmp_path, monkeypatch):
     return manager
 
 
-def test_full_research_lifecycle_over_http(jobs):
+def test_full_research_lifecycle_over_http(jobs, offline_data_tools):
     from app.main import app
     with TestClient(app) as client:
         reply = client.post(
@@ -67,7 +67,7 @@ def test_full_research_lifecycle_over_http(jobs):
         assert any(s["node"] == "analyze_query" and s["state"] == "done"
                    for s in job["steps"])
         assert any(s["node"].endswith("_agent") for s in job["steps"])
-        assert all(s["state"] in ("done", "failed") for s in job["steps"])
+        assert all(s["state"] in ("done", "failed", "partial", "unavailable") for s in job["steps"])
 
         report = client.get(f"/api/research/{job_id}/report").json()
         assert report["query"] == "Should I hold TCS for the next five years?"
@@ -180,8 +180,10 @@ def test_report_context_persistence_and_offline_question_answer(jobs):
 def test_route_contracts(jobs):
     from app.main import app
     with TestClient(app) as client:
-        assert client.get("/api/health").json() == \
-            {"status": "ok", "service": "bullseye"}
+        health = client.get("/api/health").json()
+        assert health['status'] == 'ok' and health['service'] == 'bullseye'
+        assert len(health['agents']) == 11
+        assert health['provider_connectivity'] == 'not checked'
         assert client.post("/api/research", json={"query": "   "}).status_code == 400
         # Missing body field: FastAPI's standard 422 (client.js parses its detail list).
         assert client.post("/api/research", json={}).status_code == 422

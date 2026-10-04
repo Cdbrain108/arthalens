@@ -25,8 +25,8 @@ const PIPELINE_STAGES = [
   { id: 'create_plan', label: 'Plan research', detail: 'Choose the required specialists', icon: ListChecks },
   { id: 'collect_results', label: 'Collect specialist results', detail: 'Wait for all dispatched tracks', icon: Layers },
   { id: 'validate_evidence', label: 'Validate evidence', detail: 'Check sources, dates and claims', icon: ShieldCheck },
-  { id: 'bull_bear_risk', label: 'Challenge the thesis', detail: 'Stress-test upside and downside', icon: Swords },
-  { id: 'synthesize', label: 'Synthesize findings', detail: 'Combine validated evidence', icon: Sparkles },
+  { id: 'challenge_thesis', label: 'Challenge the thesis', detail: 'Stress-test upside and downside', icon: Swords },
+  { id: 'synthesize_report', label: 'Synthesize findings', detail: 'Combine validated evidence', icon: Sparkles },
   { id: 'build_report', label: 'Assemble report', detail: 'Format the research brief', icon: FileText },
   { id: 'generate_pdf', label: 'Generate PDF', detail: 'Prepare the downloadable report', icon: Download },
 ]
@@ -41,6 +41,8 @@ const AGENT_META = {
   workforce: { label: 'Workforce', icon: Users, tone: 'cyan' },
   social: { label: 'Public sentiment', icon: Globe, tone: 'sky' },
   document: { label: 'Uploaded document', icon: FileSearch, tone: 'indigo' },
+  industry: { label: 'Industry & sector', icon: Globe, tone: 'green' },
+  management: { label: 'Management & governance', icon: Users, tone: 'green' },
 }
 
 const ORDER = [
@@ -49,8 +51,8 @@ const ORDER = [
   'apply_routing_policy',
   'collect_results',
   'validate_evidence',
-  'bull_bear_risk',
-  'synthesize',
+  'challenge_thesis',
+  'synthesize_report',
   'build_report',
   'generate_pdf',
 ]
@@ -58,7 +60,7 @@ const ORDER = [
 function stateIcon(state) {
   if (state === 'done') return <CheckCircle2 size={14} />
   if (state === 'running') return <Loader2 size={14} className="animate-spin" />
-  if (state === 'failed') return <AlertTriangle size={14} />
+  if (['failed', 'partial', 'unavailable', 'timed_out'].includes(state)) return <AlertTriangle size={14} />
   return <Circle size={10} />
 }
 
@@ -66,6 +68,9 @@ function stateLabel(state) {
   if (state === 'done') return 'Complete'
   if (state === 'running') return 'Working'
   if (state === 'failed') return 'Failed'
+  if (state === 'partial') return 'Partial evidence'
+  if (state === 'unavailable') return 'Unavailable'
+  if (state === 'timed_out') return 'Timed out'
   return 'Queued'
 }
 
@@ -91,6 +96,8 @@ export default function ResearchProcessGraph({ job, running = false, isDone = fa
   }
 
   const agentState = (agent) => {
+    const actual = job?.agent_statuses?.[agent]
+    if (actual) return actual === 'completed' ? 'done' : actual
     const id = `${agent}_agent`
     const recorded = steps.find((step) => step.node === id)
     if (recorded?.state === 'failed' || failedAgents.includes(agent)) return 'failed'
@@ -101,7 +108,7 @@ export default function ResearchProcessGraph({ job, running = false, isDone = fa
 
   const allAgentStates = selectedAgents.map(agentState)
   const completedStageCount = PIPELINE_STAGES.filter((stage) => stepState(stage.id) === 'done').length
-  const completedAgentCount = allAgentStates.filter((state) => state === 'done').length
+  const completedAgentCount = allAgentStates.filter((state) => ['done', 'partial', 'unavailable', 'failed', 'timed_out'].includes(state)).length
   const totalUnits = PIPELINE_STAGES.length + selectedAgents.length
   const completedUnits = completedStageCount + completedAgentCount
   const progress = totalUnits ? Math.min(100, Math.round((completedUnits / totalUnits) * 100)) : 0
@@ -148,7 +155,7 @@ export default function ResearchProcessGraph({ job, running = false, isDone = fa
         </div>
       </div>
 
-      <div className="research-process-progress" role="progressbar" aria-valuenow={isDone ? 100 : progress} aria-valuemin="0" aria-valuemax="100">
+      <div className="research-process-progress" role="progressbar" aria-label="Research steps settled" aria-valuenow={isDone ? 100 : progress} aria-valuemin="0" aria-valuemax="100">
         <span style={{ width: `${isDone ? 100 : progress}%` }} />
       </div>
 
@@ -159,7 +166,7 @@ export default function ResearchProcessGraph({ job, running = false, isDone = fa
 
         <div className="process-branch-label">
           <span>Parallel specialist review</span>
-          <span>{selectedAgents.length ? `${completedAgentCount}/${selectedAgents.length} complete` : 'Waiting for routing'}</span>
+          <span>{selectedAgents.length ? `${completedAgentCount}/${selectedAgents.length} settled` : 'Waiting for routing'}</span>
         </div>
         <div className="process-branch">
           <div className="process-branch-rail" aria-hidden="true" />

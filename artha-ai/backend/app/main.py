@@ -17,12 +17,15 @@ async def lifespan(app: FastAPI):
     from .api.research_routes import jobs
 
     provider = settings.effective_provider
+    from .graph.definitions import registry_health
+    from .graph.workflow import get_graph
+    app.state.agent_health = registry_health()
+    get_graph()
     logger.info("Model provider in effect: %s", provider)
     if provider == "mock":
         logger.warning(
-            "No usable provider key for '%s' — running in deterministic mock "
-            "mode (₹0). Set GEMINI_API_KEY or OPENROUTER_API_KEY in "
-            "artha-ai/.env for live research.", settings.model_provider)
+            "LLM-free research selected for '%s'. Data tools still query real providers; "
+            "language-model explanation is disabled.", settings.model_provider)
 
     # Jobs left non-terminal by a previous run (crash, --reload restart) must
     # never stay "running" forever — fail them so the UI can recover.
@@ -30,7 +33,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Bulls Eye", version="1.0.0", lifespan=lifespan,
+app = FastAPI(title="Bullseye", version="1.0.0", lifespan=lifespan,
               description="Multi-agent company research — one question, "
                           "specialist agents, evidence, synthesis, PDF.")
 
@@ -50,4 +53,9 @@ app.include_router(agent_routes.router, prefix="/api")
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "bullseye"}
+    from .config import settings
+    from .graph.definitions import registry_health
+    agents = registry_health()
+    return {"status": "ok" if all(a['status'] == 'configured' for a in agents) else "degraded",
+            "service": "bullseye", "agents": agents, "provider": settings.effective_provider,
+            "provider_connectivity": "not checked", "agent_concurrency": settings.agent_concurrency}
