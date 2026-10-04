@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>News Brief</title>
+<style>
+  @page { size: A4; margin: 2.2cm; @bottom-center {
+    content: "Artha AI — News Brief · page " counter(page);
+    font-size: 8pt; color: #888; } }
+  body { font-family: 'DejaVu Sans', sans-serif; color: #1a1a1a; font-size: 10pt; }
+  h1 { font-size: 20pt; margin-bottom: 2pt; }
+  h2 { font-size: 13pt; border-bottom: 2px solid #5b5bd6; padding-bottom: 3pt;
+       margin-top: 22pt; color: #2b2b8f; }
+  .cover { border-left: 5px solid #5b5bd6; padding-left: 16pt; margin: 30pt 0; }
+  .query { font-style: italic; color: #444; }
+  .badge { display: inline-block; padding: 2pt 10pt; border-radius: 10pt;
+           background: #eef; color: #2b2b8f; font-weight: bold; }
+  .summary { background: #f2f2fa; border: 1px solid #ccc; padding: 9pt; }
+  .item { border: 1px solid #ddd; border-left: 4px solid #5b5bd6;
+          padding: 8pt 10pt; margin: 9pt 0; page-break-inside: avoid; }
+  .date { color: #2b2b8f; font-weight: bold; }
+  .source { font-size: 8.5pt; color: #555; overflow-wrap: anywhere; }
+  .source a { color: #2b2b8f; }
+  .cite { color: #5b5bd6; font-weight: bold; }
+  .gap { background: #fff7ed; border: 1px solid #fdba74; padding: 7pt; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="badge">Validated News Brief</div>
+  <h1>{{ report.company.get('name', 'News Brief') }}</h1>
+  <p class="query">“{{ report.query }}”</p>
+  <p class="source">News-only scope · no financial quality score or investment verdict</p>
+</div>
+
+<h2>Neutral News Summary</h2>
+<div class="summary">{{ report.news.get('summary', 'No validated news evidence was retrieved for this query.') }}</div>
+
+<h2>Dated Headlines and Claims</h2>
+{% if report.news.get('findings') %}
+  {% for item in report.news.get('findings') %}
+  <div class="item">
+    <div><span class="date">{{ item.get('publication_date') or 'Date unavailable' }}</span>
+      — {{ item.get('claim') }}
+      {% for citation in item.get('citations', []) %}<span class="cite">[{{ citation }}]</span>{% endfor %}
+    </div>
+    <div class="source">Source: {{ item.get('source_title') or 'Source not named' }}{% if item.get('source_url') %}
+      · <a href="{{ item.get('source_url') }}">{{ item.get('source_url') }}</a>{% endif %}</div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="gap">No validated news evidence was retrieved. Retrieval or coverage is unavailable for this query.</div>
+{% endif %}
+
+<h2>Sources and Citations</h2>
+{% if report.sources %}
+  {% for source in report.sources %}
+  <div class="source">[{{ source.get('n') }}] {{ source.get('title') or 'Source' }}{% if source.get('publication_date') %} ({{ source.get('publication_date') }}){% endif %}{% if source.get('url') %} · <a href="{{ source.get('url') }}">{{ source.get('url') }}</a>{% endif %}</div>
+  {% endfor %}
+{% else %}
+  <div class="gap">No source citations are available because no validated news evidence was retrieved.</div>
+{% endif %}
+
+<h2>Coverage and Limitations</h2>
+{% if report.evidence_gaps %}
+  <div class="gap">{% for gap in report.evidence_gaps %}<div>{{ gap }}</div>{% endfor %}</div>
+{% else %}
+  <div class="gap">This brief is limited to the validated news evidence listed above; absence of an item is not evidence that no event occurred.</div>
+{% endif %}
+</body>
+</html>

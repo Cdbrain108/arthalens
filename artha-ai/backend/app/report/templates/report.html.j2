@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ArthaAI Research Brief</title>
+<style>
+  @page {
+    size: A4;
+    margin: 14mm 15mm 16mm;
+    @bottom-left { content: "ARTHAAI  /  EVIDENCE-FIRST RESEARCH"; font-size: 7pt; color: #64748b; }
+    @bottom-right { content: "Page " counter(page); font-size: 7pt; color: #64748b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "DejaVu Sans", Arial, sans-serif; color: #172033; font-size: 9.2pt; line-height: 1.48; }
+  h1, h2, h3, p { margin-top: 0; }
+  h1 { font-size: 27pt; line-height: 1.1; letter-spacing: -.7pt; margin-bottom: 7pt; color: #0f172a; }
+  h2 { font-size: 14pt; line-height: 1.2; letter-spacing: -.15pt; color: #0f172a; margin: 18pt 0 8pt; padding-bottom: 5pt; border-bottom: 1.5pt solid #dbe4f0; }
+  h3 { font-size: 10pt; color: #26354d; margin: 0 0 4pt; }
+  p { margin-bottom: 7pt; }
+  .muted { color: #64748b; }
+  .tiny { font-size: 7.4pt; color: #64748b; }
+  .brand { color: #2563eb; font-weight: 800; letter-spacing: .8pt; font-size: 8pt; }
+  .cover { min-height: 238mm; padding: 15mm 6mm 8mm; position: relative; page-break-after: always; }
+  .cover::before { content: ""; position: absolute; z-index: -1; top: -14mm; left: -15mm; right: -15mm; height: 118mm; background: linear-gradient(135deg, #0f172a 0%, #182c55 65%, #1d4ed8 100%); }
+  .cover .brand { color: #93c5fd; }
+  .cover h1 { color: #fff; font-size: 30pt; max-width: 150mm; margin-top: 46mm; }
+  .cover .company { color: #bfdbfe; font-size: 13pt; font-weight: 700; margin-bottom: 20pt; }
+  .cover .query { max-width: 145mm; color: #e2e8f0; font-size: 12pt; line-height: 1.55; padding-left: 10pt; border-left: 3pt solid #60a5fa; }
+  .cover-meta { margin-top: 55mm; padding-top: 12pt; border-top: 1pt solid #cbd5e1; width: 100%; }
+  .cover-meta td { padding: 3pt 18pt 3pt 0; vertical-align: top; }
+  .cover-meta .label { font-size: 7pt; color: #64748b; text-transform: uppercase; letter-spacing: .65pt; font-weight: 700; }
+  .cover-meta .value { font-size: 9pt; color: #172033; font-weight: 600; }
+  .pill { display: inline-block; padding: 3pt 8pt; border-radius: 20pt; background: #dbeafe; color: #1d4ed8; font-size: 7.5pt; font-weight: 700; }
+  .decision { border-radius: 8pt; padding: 11pt 13pt; margin: 8pt 0 11pt; background: #eff6ff; border: 1pt solid #bfdbfe; border-left: 4pt solid #2563eb; }
+  .decision.positive { background: #f0fdf4; border-color: #bbf7d0; border-left-color: #16a34a; }
+  .decision.negative { background: #fff1f2; border-color: #fecdd3; border-left-color: #e11d48; }
+  .decision.neutral, .decision.gap { background: #fffbeb; border-color: #fde68a; border-left-color: #d97706; }
+  .decision-label { color: #475569; font-size: 7.3pt; font-weight: 800; text-transform: uppercase; letter-spacing: .8pt; }
+  .decision-value { font-size: 16pt; font-weight: 800; color: #0f172a; margin: 2pt 0 4pt; }
+  .decision p { margin: 0; color: #334155; }
+  .kpis { width: 100%; border-collapse: separate; border-spacing: 5pt 0; margin: 8pt -5pt 12pt; }
+  .kpis td { width: 25%; padding: 9pt 8pt; background: #f8fafc; border: 1pt solid #e2e8f0; border-radius: 6pt; vertical-align: top; }
+  .kpi-label { color: #64748b; font-size: 7pt; text-transform: uppercase; letter-spacing: .45pt; font-weight: 700; }
+  .kpi-value { color: #172033; font-size: 13pt; font-weight: 800; margin-top: 3pt; }
+  .kpi-note { color: #64748b; font-size: 7pt; margin-top: 2pt; }
+  .two-col { width: 100%; border-collapse: separate; border-spacing: 6pt 0; margin: 0 -6pt 10pt; }
+  .two-col > tbody > tr > td { width: 50%; vertical-align: top; padding: 10pt; border-radius: 7pt; }
+  .support { background: #f0fdf4; border: 1pt solid #bbf7d0; }
+  .watch { background: #fff7ed; border: 1pt solid #fed7aa; }
+  .change { background: #eff6ff; border: 1pt solid #bfdbfe; }
+  .simple-title { font-size: 8pt; text-transform: uppercase; letter-spacing: .6pt; font-weight: 800; margin-bottom: 5pt; }
+  .support .simple-title { color: #15803d; }
+  .watch .simple-title { color: #c2410c; }
+  .change .simple-title { color: #1d4ed8; }
+  ul { margin: 4pt 0 7pt 14pt; padding: 0; }
+  li { margin: 0 0 4pt; }
+  .plain-list li { font-size: 8.7pt; }
+  .section-card { border: 1pt solid #e2e8f0; border-radius: 7pt; padding: 10pt 11pt; margin: 8pt 0; page-break-inside: avoid; }
+  .section-card h3 { color: #1d4ed8; }
+  .section-card .summary { color: #334155; margin-bottom: 5pt; }
+  .section-card ul { margin-bottom: 0; }
+  .section-card li { font-size: 8.6pt; }
+  .gap { background: #fffbeb; border: 1pt solid #fde68a; border-left: 3pt solid #f59e0b; border-radius: 5pt; padding: 7pt 9pt; margin: 5pt 0; color: #78350f; page-break-inside: avoid; }
+  table.data { width: 100%; border-collapse: collapse; margin: 7pt 0 10pt; }
+  table.data th, table.data td { border-bottom: 1pt solid #e2e8f0; padding: 6pt 7pt; text-align: left; font-size: 8pt; vertical-align: top; }
+  table.data th { background: #f1f5f9; color: #475569; font-size: 7pt; text-transform: uppercase; letter-spacing: .3pt; }
+  table.data tr:nth-child(even) td { background: #fafcff; }
+  .chart { display: block; width: 100%; max-height: 65mm; object-fit: contain; margin: 9pt 0 12pt; }
+  .source-list { margin: 0; padding: 0; list-style: none; }
+  .source-list li { padding: 5pt 0; border-bottom: 1pt solid #e2e8f0; font-size: 8pt; }
+  .source-number { display: inline-block; min-width: 17pt; color: #2563eb; font-weight: 800; }
+  .source-url { color: #2563eb; overflow-wrap: anywhere; }
+  .agent-note { border-left: 3pt solid #93c5fd; padding: 5pt 8pt; margin: 6pt 0; page-break-inside: avoid; }
+  .agent-note.failed { border-left-color: #fb7185; background: #fff1f2; }
+  .agent-note h3 { margin-bottom: 1pt; }
+  .agent-note p { font-size: 7.8pt; margin-bottom: 3pt; }
+  .footer-note { margin-top: 17pt; padding: 9pt 11pt; background: #f8fafc; border: 1pt solid #e2e8f0; border-radius: 6pt; color: #475569; font-size: 7.8pt; }
+  .avoid-break { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+{% set company = report.company or {} %}
+{% set oa = report.overall_assessment or {} %}
+{% set financial = report.financial or {} %}
+{% set market = report.market or {} %}
+{% set ratios = financial.get('ratios_table') or [] %}
+{% set metrics = financial.get('metrics') or {} %}
+{% set classification = oa.get('classification', 'NOT ASSESSED') %}
+{% set classification_upper = classification|string|upper %}
+{% set tone = 'positive' if ('POSITIVE' in classification_upper or 'BUY' in classification_upper or 'ACCUMULATE' in classification_upper) else ('negative' if ('NEGATIVE' in classification_upper or 'SELL' in classification_upper or 'REDUCE' in classification_upper) else ('gap' if ('INSUFFICIENT' in classification_upper or 'GAP' in classification_upper) else 'neutral')) %}
+{% set price = market.get('price') or (market.get('quote') or {}).get('price') %}
+{% set currency = market.get('currency') or (market.get('quote') or {}).get('currency') or '—' %}
+
+<section class="cover">
+  <div class="brand">ARTHAAI  /  EVIDENCE-FIRST EQUITY RESEARCH</div>
+  <div class="pill" style="margin-top: 13pt;">RESEARCH BRIEF</div>
+  <h1>{{ company.get('name', 'Company Research') }}</h1>
+  <div class="company">{% if company.get('ticker') %}{{ company.get('ticker') }}{% if company.get('exchange') %} · {{ company.get('exchange') }}{% endif %}{% else %}Research scope{% endif %}</div>
+  <p class="query">“{{ report.query }}”</p>
+  <table class="cover-meta">
+    <tr><td><div class="label">Prepared</div><div class="value">{{ report.timestamps.get('generate_pdf', '—') }}</div></td><td><div class="label">Verified sources</div><div class="value">{{ oa.get('verified_sources_count', report.sources|length) }}</div></td><td><div class="label">Evidence grounding</div><div class="value">{% if oa.get('evidence_grounding_pct') is not none %}{{ oa.get('evidence_grounding_pct') }}%{% else %}Not measured{% endif %}</div></td></tr>
+    <tr><td><div class="label">Report type</div><div class="value">Decision-support research</div></td><td><div class="label">Quality</div><div class="value">{% if oa.get('quality_score') is not none %}{{ oa.get('quality_score') }} / {{ oa.get('max_quality_score', '—') }}{% else %}Not scored{% endif %}</div></td><td><div class="label">Reading time</div><div class="value">A concise evidence brief</div></td></tr>
+  </table>
+</section>
+
+<h2>1. The short answer</h2>
+<div class="decision {{ tone }}">
+  <div class="decision-label">Evidence direction</div>
+  <div class="decision-value">{{ classification }}</div>
+  <p>{{ oa.get('rationale') or report.executive_summary or 'The run did not produce a supported assessment.' }}</p>
+</div>
+
+<h2>2. At a glance</h2>
+<table class="kpis">
+  <tr>
+    <td><div class="kpi-label">Market price</div><div class="kpi-value">{% if price is not none %}{{ currency }} {{ price }}{% else %}Not measured{% endif %}</div><div class="kpi-note">Only shown when established by the run</div></td>
+    <td><div class="kpi-label">Return on equity</div><div class="kpi-value">{{ metrics.get('roe_pct') or 'Not measured' }}</div><div class="kpi-note">Profit earned on shareholder capital</div></td>
+    <td><div class="kpi-label">Operating margin</div><div class="kpi-value">{{ metrics.get('opm_pct') or 'Not measured' }}</div><div class="kpi-note">Operating profit as a share of revenue</div></td>
+    <td><div class="kpi-label">Evidence gaps</div><div class="kpi-value">{{ report.evidence_gaps|length }}</div><div class="kpi-note">Open questions disclosed below</div></td>
+  </tr>
+</table>
+
+<div class="avoid-break">
+  <h2>3. What matters most</h2>
+  <table class="two-col">
+    <tr>
+      <td class="support"><div class="simple-title">What supports the view</div><ul class="plain-list">{% for item in report.bull_case[:4] %}<li>{{ item.claim if item is mapping else item }}</li>{% else %}<li>No positive driver was established by validated evidence.</li>{% endfor %}</ul></td>
+      <td class="watch"><div class="simple-title">What could go wrong</div><ul class="plain-list">{% for item in report.bear_case[:4] %}<li>{{ item.claim if item is mapping else item }}</li>{% else %}<li>No bear factor was established by validated evidence.</li>{% endfor %}</ul></td>
+    </tr>
+    <tr>
+      <td colspan="2" class="change"><div class="simple-title">What would change the view</div><ul class="plain-list">{% for item in report.what_could_change_view[:5] %}<li>{{ item.claim if item is mapping else item }}</li>{% else %}<li>Obtain new, verifiable evidence before changing the view.</li>{% endfor %}</ul></td>
+    </tr>
+  </table>
+</div>
+
+{% if report.executive_summary %}<div class="section-card"><h3>Plain-English explanation</h3><p class="summary">{{ report.executive_summary }}</p></div>{% endif %}
+
+{% if ratios %}
+<h2>4. Measured numbers</h2>
+<p class="muted">These are the values established by this run. “Not measured” is left blank rather than estimated.</p>
+<table class="data"><tr><th>What it measures</th><th>Reported value</th><th>Sector reference</th><th>What it suggests</th></tr>{% for row in ratios %}<tr><td>{{ row.metric }}</td><td><strong>{{ row.reported or row.value }}</strong></td><td>{{ row.sector or '—' }}</td><td>{{ row.assessment or 'Measured' }}</td></tr>{% endfor %}</table>
+{% endif %}
+
+{% if charts.get('financial_metrics') %}<img class="chart" src="{{ charts.get('financial_metrics') }}" alt="Measured financial metrics compared with sector references">{% endif %}
+
+<h2>5. What the specialists found</h2>
+{% for title, sec in [('Financial health', report.financial), ('Valuation', report.valuation), ('Market activity', report.market), ('Growth and projects', report.growth), ('Recent news', report.news), ('Workforce', report.workforce), ('Risks', report.risk)] %}
+  {% set sec = sec or {} %}
+  {% set findings = sec.get('findings') or [] %}
+  {% set summary = sec.get('summary') or '' %}
+  {% if summary or findings %}<div class="section-card"><h3>{{ title }}</h3>{% if summary and not summary.startswith('Unavailable') %}<p class="summary">{{ summary }}</p>{% endif %}{% if findings %}<ul>{% for item in findings[:7] %}<li>{{ item.claim if item is mapping else item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Unavailable — evidence gap.</p>{% endif %}</div>{% endif %}
+{% endfor %}
+
+{% if charts.get('scorecard') %}<h2>Evidence balance</h2><img class="chart" src="{{ charts.get('scorecard') }}" alt="Balance of positive and downside evidence">{% endif %}
+
+{% if report.evidence_gaps %}<h2>6. What was not established</h2>{% for gap in report.evidence_gaps %}<div class="gap">{{ gap }}</div>{% endfor %}{% endif %}
+
+{% if report.agent_notes %}
+<h2>7. How the work was done</h2>
+<p class="muted">The notes below describe the actual routed work and its evidence contribution. They are not hidden reasoning.</p>
+{% for note in report.agent_notes %}<div class="agent-note{% if note.status != 'completed' %} failed{% endif %}"><h3>{{ note.label or note.agent }} · {{ note.status|title }}</h3><p class="tiny">{{ note.mandate }}{% if note.evidence_count is defined %} · {{ note.evidence_count }} validated evidence item(s){% endif %}</p>{% if note.thought %}<p>{{ note.thought }}</p>{% endif %}{% if note.data_gaps %}<p class="tiny">Open: {{ note.data_gaps[:3]|join('; ') }}</p>{% endif %}</div>{% endfor %}
+{% endif %}
+
+<h2>Sources</h2>
+{% if report.sources %}<ul class="source-list">{% for source in report.sources %}<li><span class="source-number">[{{ source.n }}]</span><strong>{{ source.title or 'Source' }}</strong>{% if source.publication_date %} · {{ source.publication_date }}{% endif %}{% if source.page %} · p. {{ source.page }}{% endif %}{% if source.url %}<br><span class="source-url">{{ source.url }}</span>{% endif %}</li>{% endfor %}</ul>{% else %}<div class="gap">No validated sources were available for this run.</div>{% endif %}
+
+<div class="footer-note"><strong>How to use this brief:</strong> Start with the short answer, then check the supporting evidence and the open gaps. This is decision-support research, not personalized financial advice. New prices, news, and filings require a fresh run.</div>
+</body>
+</html>
