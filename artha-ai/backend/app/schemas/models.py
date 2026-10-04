@@ -135,6 +135,13 @@ class EvidenceItem(BaseModel):
     ] = "provider"
     relevance: float | None = None
     calc_inputs: dict = Field(default_factory=dict)
+    metric: str | None = None
+    entity: str | None = None
+    period: str | None = None
+    basis: str | None = None
+    formula: str | None = None
+    coverage: str | None = None
+    sentiment: Literal["positive", "negative", "neutral"] = "neutral"
 
 
 class AgentResult(BaseModel):
@@ -210,6 +217,7 @@ class Conflict(BaseModel):
     source_a: str
     source_b: str
     resolution: str | None = None  # None => disclosed, not resolved
+    evidence_ids: list[str] = Field(default_factory=list)
 
 
 class ChallengeOutput(BaseModel):
@@ -263,6 +271,12 @@ class ReportJSON(BaseModel):
     news: dict = Field(default_factory=dict)
     workforce: dict = Field(default_factory=dict)
     risk: dict = Field(default_factory=dict)
+    industry: dict = Field(default_factory=dict)
+    management: dict = Field(default_factory=dict)
+    social: dict = Field(default_factory=dict)
+    document: dict = Field(default_factory=dict)
+    evidence: list[dict] = Field(default_factory=list)
+    conflicts: list[dict] = Field(default_factory=list)
     bull_case: list[str] = Field(default_factory=list)
     bear_case: list[str] = Field(default_factory=list)
     evidence_gaps: list[str] = Field(default_factory=list)

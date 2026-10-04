@@ -375,27 +375,11 @@ def _search_news(query: str, since: str | None = None, deep: bool = False,
     topped_up = False
     tavily_answer: str | None = None
 
-    if not is_test_env and settings.tavily_enabled:
-        if deep or keywords:
-            tavily_items, tavily_answer = _tavily_news(
-                query, since=since, limit=12 if deep else 8, include_answer=True,
-            )
-            if keywords:
-                for kw in keywords[:2]:
-                    if not kw or not str(kw).strip():
-                        continue
-                    extra_items, _ = _tavily_news(f"{query} {kw}".strip(), since=since, limit=6, include_answer=False)
-                    if extra_items:
-                        tavily_items = _merge(tavily_items, extra_items)
-            if tavily_items:
-                items = _merge(items, tavily_items)
-                topped_up = True
-        elif _should_top_up(items):
-            extra, answer = _tavily_news(query, since=since, limit=8, include_answer=True)
-            if extra:
-                items = _merge(items, extra)
-                topped_up = True
-                tavily_answer = answer
+    if _should_top_up(items):
+        extra, _ = _tavily_news(query, since=since, limit=8, include_answer=False)
+        if extra:
+            items = _merge(items, extra)
+            topped_up = True
 
     if not items:
         return {
@@ -439,7 +423,7 @@ def _fetch_news(url: str) -> dict:
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return {"ok": True, "data": {"url": url, "title": title, "text": text[:20000],
-            "publication_date": publication_date or _parse_date(resp.headers.get("date"))},
+            "publication_date": publication_date},
             "source": _source(url, url=url, provider="httpx"), "error": None}
 
 

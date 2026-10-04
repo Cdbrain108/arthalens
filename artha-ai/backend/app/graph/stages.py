@@ -113,14 +113,16 @@ def validate_evidence(state: dict) -> dict:
     results, conflicts, validation_gaps = run_validation(evidence)
     gaps.extend(validation_gaps)
     disputed = {c.claim.lower().strip() for c in conflicts if c.resolution is None}
+    disputed_ids = {i for c in conflicts for i in c.evidence_ids}
     accepted = []
     for item, result in zip(evidence, results):
-        if result.passed and item["claim"].lower().strip() not in disputed:
+        if result.passed and item["claim"].lower().strip() not in disputed and item["evidence_id"] not in disputed_ids:
             accepted.append(item)
         else:
             rejected.append(item)
 
     grounded = {}
+    total_claims = accepted_claims = 0
     for name, result in state.get("agent_results", {}).items():
         items = [item for item in accepted if item["agent"] == name]
         claims = {item["claim"] for item in items}
@@ -131,21 +133,16 @@ def validate_evidence(state: dict) -> dict:
             grounded_findings = []
             had_structured = False
             for raw in result.get(field, []) or []:
+                total_claims += 1
                 claim, linked_ids, structured = _finding_parts(raw)
                 had_structured = had_structured or structured
                 valid_ids = [evidence_id for evidence_id in linked_ids if evidence_id in ids]
                 if not valid_ids and claim in claims:
                     valid_ids = [item["evidence_id"] for item in items if item["claim"] == claim]
                 if not valid_ids:
-                    for it in items:
-                        it_c = it["claim"].lower()
-                        c_low = claim.lower()
-                        if it_c in c_low or c_low in it_c or (it.get("value") is not None and str(it["value"]) in claim):
-                            valid_ids.append(it["evidence_id"])
-                            break
-                if not valid_ids:
                     gaps.append(f"{name}: unlinked {field[:-1] if field.endswith('s') else field} excluded from synthesis")
                     continue
+                accepted_claims += 1
                 grounded_findings.append(
                     {"claim": claim, "evidence_ids": valid_ids}
                     if structured or linked_ids else claim
@@ -175,7 +172,8 @@ def validate_evidence(state: dict) -> dict:
     return {**_stamp(state, "validate_evidence"),
             "validation_results": [r.model_dump() for r in results + malformed],
             "conflicts": [c.model_dump() for c in conflicts],
-            "evidence": accepted, "rejected_evidence": rejected,
+             "evidence": accepted, "rejected_evidence": rejected,
+            "claim_coverage": {"total": total_claims, "accepted": accepted_claims},
             "agent_results": grounded, "evidence_gaps": sorted(set(gaps))}
 
 

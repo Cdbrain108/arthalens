@@ -20,7 +20,7 @@ from ..tools import news_tools
 
 
 _DEFAULT_WINDOW_DAYS = 30
-_MAX_RESULTS = 24
+_MAX_RESULTS = 8
 _DATE_RE = re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b")
 _DMY_RE = re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b")
 _RELATIVE_RE = re.compile(
@@ -199,8 +199,8 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
     query = _scoped_query(state)
     base_reasoning = (
         f"Deterministic news search for '{query}' since {since_text}; retained dated "
-        "publisher headlines/snippets only. Headlines are publisher reports, not "
-        "article-verified facts; article bodies were not fetched."
+        "publisher reports. Article excerpts are fetched where accessible; neither "
+        "headlines nor article text are independently verified facts."
     )
 
     keywords = _derived_keywords(state)
@@ -225,9 +225,6 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
             base_reasoning,
         )
     data = envelope.get("data") or {}
-    tavily_answer = data.get("answer") if isinstance(data, dict) else None
-    if tavily_answer:
-        base_reasoning += f"\n\nSynthesized Intelligence: {tavily_answer}"
     raw_items = data.get("items") if isinstance(data, dict) else []
     if not isinstance(raw_items, list):
         raw_items = []
@@ -236,6 +233,8 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
     findings: list[dict[str, Any]] = []
     seen: set[str] = set()
     excluded_undated = excluded_future = excluded_old = excluded_invalid = 0
+    aliases = [str(e.get(k) or "").casefold() for e in state.get("entities", [])
+               if isinstance(e, dict) for k in ("name", "ticker") if e.get(k)]
     for raw in raw_items:
         if not isinstance(raw, dict):
             excluded_invalid += 1
@@ -256,6 +255,11 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
             continue
         if publication < since:
             excluded_old += 1
+            continue
+        searchable = (title + " " + str(raw.get("snippet") or raw.get("description") or "")).casefold()
+        if aliases and not any(re.search(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", searchable)
+                               for alias in aliases):
+            excluded_invalid += 1
             continue
         dedupe_key = url.casefold()
         if dedupe_key in seen:
@@ -283,11 +287,29 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
             "claim_type": "fact",
             "confidence": "medium",
             "source_type": "news_article",
+            "coverage": "headline",
+            "sentiment": "neutral",
         })
         findings.append({"claim": claim, "evidence_ids": [evidence_id]})
 
     evidence.sort(key=lambda item: item["publication_date"], reverse=True)
     evidence = evidence[:_MAX_RESULTS]
+    # Fetch a bounded set in parallel. A blocked publisher remains headline-only.
+    from concurrent.futures import ThreadPoolExecutor
+    def fetch_article(item):
+        out = news_tools.fetch_news.invoke({"url": item["source_url"]})
+        body = ((out or {}).get("data") or {}).get("text") or ""
+        if out.get("ok") and len(body) >= 200 and "news.google.com" not in item["source_url"]:
+            item["excerpt"] += "\nArticle excerpt: " + body[:2400]
+            item["coverage"] = "article excerpt"
+        # Transparent headline tone only; this is not an investment signal.
+        text = item["claim"].casefold()
+        positive = bool(re.search(r"\b(raises|beats|wins|expands|growth)\b", text))
+        negative = bool(re.search(r"\b(layoffs|cuts|misses|lawsuit|falls|probe)\b", text))
+        item["sentiment"] = "positive" if positive and not negative else "negative" if negative and not positive else "neutral"
+    if evidence:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            list(pool.map(fetch_article, evidence[:3]))
     allowed_ids = {item["evidence_id"] for item in evidence}
     findings = [item for item in findings if item["evidence_ids"][0] in allowed_ids]
     sources = list(dict.fromkeys(item["source_title"] for item in evidence))
@@ -298,10 +320,9 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
             f"window (undated={excluded_undated}, future={excluded_future}, "
             f"older={excluded_old}, invalid={excluded_invalid})."
         )
-    gaps.append(
-        "Headlines/snippets are publisher reports; article bodies were not fetched, "
-        "so article-level verification is unavailable."
-    )
+    headline_count = sum(e.get("coverage") == "headline" for e in evidence)
+    if headline_count:
+        gaps.append(f"{headline_count} news items are headline/snippet-only; full article evidence unavailable. Headline tone uses disclosed keyword rules, not a sentiment score.")
     if not evidence:
         error = envelope.get("error")
         if error:

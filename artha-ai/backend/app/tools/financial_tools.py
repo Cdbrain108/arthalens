@@ -37,6 +37,28 @@ class CalculateRatioArgs(BaseModel):
     inputs: dict[str, float]
 
 
+class GrowthArgs(BaseModel):
+    current: float
+    previous: float
+    current_period: str
+    previous_period: str
+    basis: str = "reported currency"
+
+
+def _compute_growth(current: float, previous: float, current_period: str,
+                    previous_period: str, basis: str = "reported currency") -> dict:
+    """A positive, finite base is required for a meaningful percentage change."""
+    source = _source("Bullseye growth calculation", "deterministic_calculation")
+    if not all(math.isfinite(v) for v in (current, previous)) or previous <= 0:
+        return {"ok": False, "data": None, "source": source,
+                "error": "Growth requires finite values and a positive comparison base."}
+    return {"ok": True, "error": None, "source": source, "data": {
+        "value": (current / previous - 1) * 100, "unit": "%",
+        "formula": "(current / previous - 1) × 100", "basis": basis,
+        "inputs": {"current": current, "previous": previous},
+        "current_period": current_period, "previous_period": previous_period}}
+
+
 class FinancialsArgs(BaseModel):
     ticker: str
     statement: str = "income"
@@ -354,6 +376,11 @@ calculate_ratio = NativeFunctionTool(
                  "Use this tool for all arithmetic and retain the inputs."),
     args_schema=CalculateRatioArgs,
     function=_calculate_ratio,
+)
+
+compute_growth = NativeFunctionTool(
+    name="compute_growth", description="Compute growth with explicit periods and retained inputs.",
+    args_schema=GrowthArgs, function=_compute_growth,
 )
 
 get_financials = NativeFunctionTool(

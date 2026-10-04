@@ -36,8 +36,10 @@ def run_validation(evidence: list[dict]) -> tuple[list[ValidationResult],
             "calc_inputs_retained": item.source_type != "deterministic_calculation"
             or bool(item.calc_inputs),
         }
+        checks["numeric_finite"] = not isinstance(item.value, (int, float)) or __import__("math").isfinite(item.value)
         passed = (checks["source_exists"] and checks["excerpt_present"]
-                  and checks["relevance_known"] and checks["calc_inputs_retained"])
+                  and checks["relevance_known"] and checks["calc_inputs_retained"]
+                  and checks["numeric_typed"] and checks["numeric_finite"])
         results.append(ValidationResult(
             evidence_claim=item.claim, passed=passed, checks=checks,
             note="" if passed else "insufficient provenance"))
@@ -73,8 +75,10 @@ def _detect_conflicts(items: list[EvidenceItem]) -> list[Conflict]:
     for item in items:
         if item.value is None or item.claim_type != "fact":
             continue
-        by_key.setdefault((item.claim.lower().strip(), item.unit), []).append(item)
-    for (claim, _unit), group in by_key.items():
+        key = (item.metric or item.claim.lower().strip(), item.unit,
+               item.entity, item.period, item.basis)
+        by_key.setdefault(key, []).append(item)
+    for (claim, _unit, _entity, _period, _basis), group in by_key.items():
         numeric = [g for g in group if isinstance(g.value, (int, float))]
         # Every pair, not just adjacent ones: a disagreement between two sources
         # was previously missed whenever the pair sitting between them happened
@@ -93,5 +97,5 @@ def _detect_conflicts(items: list[EvidenceItem]) -> list[Conflict]:
             conflicts.append(Conflict(
                 claim=claim, value_a=str(a.value), value_b=str(b.value),
                 source_a=a.source_title, source_b=b.source_title,
-                resolution=None))  # resolver checks period/basis; else disclose
+                resolution=None, evidence_ids=[i.evidence_id for i in group if i.evidence_id]))
     return conflicts

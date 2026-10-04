@@ -98,7 +98,7 @@
   <div class="company">{% if company.get('ticker') %}{{ company.get('ticker') }}{% if company.get('exchange') %} · {{ company.get('exchange') }}{% endif %}{% else %}Research scope{% endif %}</div>
   <p class="query">“{{ report.query }}”</p>
   <table class="cover-meta">
-    <tr><td><div class="label">Prepared</div><div class="value">{{ report.timestamps.get('generate_pdf', '—') }}</div></td><td><div class="label">Verified sources</div><div class="value">{{ oa.get('verified_sources_count', report.sources|length) }}</div></td><td><div class="label">Evidence grounding</div><div class="value">{% if oa.get('evidence_grounding_pct') is not none %}{{ oa.get('evidence_grounding_pct') }}%{% else %}Not measured{% endif %}</div></td></tr>
+    <tr><td><div class="label">Prepared</div><div class="value">{{ report.timestamps.get('assembled_at', '—') }}</div></td><td><div class="label">Cited sources</div><div class="value">{{ report.sources|length }}</div></td><td><div class="label">Claim-link coverage</div><div class="value">{{ oa.get('evidence_grounding_pct', 0) }}%</div></td></tr>
     <tr><td><div class="label">Report type</div><div class="value">Decision-support research</div></td><td><div class="label">Quality</div><div class="value">{% if oa.get('quality_score') is not none %}{{ oa.get('quality_score') }} / {{ oa.get('max_quality_score', '—') }}{% else %}Not scored{% endif %}</div></td><td><div class="label">Reading time</div><div class="value">A concise evidence brief</div></td></tr>
   </table>
 </section>
@@ -148,7 +148,7 @@
   {% set sec = sec or {} %}
   {% set findings = sec.get('findings') or [] %}
   {% set summary = sec.get('summary') or '' %}
-  {% if summary or findings %}<div class="section-card"><h3>{{ title }}</h3>{% if summary and not summary.startswith('Unavailable') %}<p class="summary">{{ summary }}</p>{% endif %}{% if findings %}<ul>{% for item in findings[:7] %}<li>{{ item.claim if item is mapping else item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Unavailable — evidence gap.</p>{% endif %}</div>{% endif %}
+  {% if summary or findings %}<div class="section-card"><h3>{{ title }}</h3>{% if findings %}<ul>{% for item in sec.get('cited_findings', findings) %}<li>{{ item.claim if item is mapping else item }}{% if item is mapping %}{% for n in item.get('citations', []) %} [{{ n }}]{% endfor %}{% endif %}</li>{% endfor %}</ul>{% else %}<p class="muted">Unavailable — evidence gap.</p>{% endif %}</div>{% endif %}
 {% endfor %}
 
 {% if charts.get('scorecard') %}<h2>Evidence balance</h2><img class="chart" src="{{ charts.get('scorecard') }}" alt="Balance of positive and downside evidence">{% endif %}
@@ -162,6 +162,7 @@
 {% endif %}
 
 <h2>Sources</h2>
+{% if report.conflicts %}<h3>Data conflicts — unresolved</h3>{% for c in report.conflicts %}<div class="gap">{{ c.claim }}: {{ c.value_a }} ({{ c.source_a }}) versus {{ c.value_b }} ({{ c.source_b }}).</div>{% endfor %}{% endif %}
 {% if report.sources %}<ul class="source-list">{% for source in report.sources %}<li><span class="source-number">[{{ source.n }}]</span><strong>{{ source.title or 'Source' }}</strong>{% if source.publication_date %} · {{ source.publication_date }}{% endif %}{% if source.page %} · p. {{ source.page }}{% endif %}{% if source.url %}<br><span class="source-url">{{ source.url }}</span>{% endif %}</li>{% endfor %}</ul>{% else %}<div class="gap">No validated sources were available for this run.</div>{% endif %}
 
 <div class="footer-note"><strong>How to use this brief:</strong> Start with the short answer, then check the supporting evidence and the open gaps. This is decision-support research, not personalized financial advice. New prices, news, and filings require a fresh run.</div>

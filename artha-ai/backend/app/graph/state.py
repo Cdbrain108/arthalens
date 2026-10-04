@@ -9,6 +9,7 @@ from typing import Any, Optional, TypedDict
 
 
 class ResearchState(TypedDict, total=False):
+    claim_coverage: dict
     # Initial query and session identifiers
     query: str
     job_id: str

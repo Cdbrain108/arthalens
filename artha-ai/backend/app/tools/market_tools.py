@@ -93,16 +93,41 @@ def _get_quote(ticker: str, exchange: str = "NSE") -> dict:
             except Exception:
                 pass
         if price is None:
-            return _envelope({"ticker": ticker}, source_title=f"yfinance quote {ticker}",
-                             ok=False, error="quote unavailable (provider empty/blocked)")
+            return _stooq_quote(ticker, exchange)
         return _envelope({
             "ticker": ticker, "price": float(price),
             "change_pct": float(chg) if chg is not None else None,
             "currency": curr or "INR", "as_of": datetime.now(timezone.utc).isoformat(),
         }, source_title=f"yfinance quote {ticker}")
     except Exception as exc:
-        return _envelope({"ticker": ticker}, source_title=f"yfinance quote {ticker}",
-                         ok=False, error=str(exc))
+        return _stooq_quote(ticker, exchange, reason=str(exc))
+
+
+def _stooq_quote(ticker: str, exchange: str, reason: str = "Yahoo quote unavailable") -> dict:
+    """US end-of-day fallback. Never substitute a different country's listing."""
+    if exchange.upper() not in {"NASDAQ", "NYSE", "US"} or not ticker.isalpha():
+        return _envelope({"ticker": ticker}, f"quote {ticker}", ok=False,
+                         error=f"{reason}; Stooq fallback does not cover this listing")
+    import csv
+    import io
+    import httpx
+    url = f"https://stooq.com/q/l/?s={ticker.lower()}.us&f=sd2t2ohlcv&h&e=csv"
+    try:
+        response = httpx.get(url, timeout=8)
+        response.raise_for_status()
+        row = next(csv.DictReader(io.StringIO(response.text)))
+        price = float(row["Close"])
+        if not math.isfinite(price) or price <= 0:
+            raise ValueError("invalid close")
+        result = _envelope({"ticker": ticker, "price": price, "currency": "USD",
+                            "change_pct": None, "as_of": row["Date"],
+                            "quote_type": "end-of-day", "fallback_reason": reason},
+                           f"Stooq daily close {ticker}", url)
+        result["source"]["provider"] = "stooq"
+        return result
+    except Exception as exc:
+        return _envelope({"ticker": ticker}, f"Stooq {ticker}", ok=False,
+                         error=f"{reason}; fallback unavailable: {type(exc).__name__}")
 
 
 _PERIOD_ALIASES = {"1m": "1mo", "3m": "3mo", "6m": "6mo", "12m": "1y",
