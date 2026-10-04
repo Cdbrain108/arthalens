@@ -1,598 +1,109 @@
-import { useState } from 'react'
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BarChart3,
-  BookOpen,
-  CheckCircle2,
-  ChevronRight,
-  Database,
-  Eye,
-  FileCheck,
-  FileSearch,
-  FileText,
-  Globe,
-  Layers,
-  ListChecks,
-  Lock,
-  MinusCircle,
-  Network,
-  Newspaper,
-  PieChart,
-  Scale,
-  Search,
-  ShieldAlert,
-  ShieldCheck,
-  Sparkles,
-  Swords,
-  Target,
-  TrendingUp,
-  Users,
-  Zap
-} from 'lucide-react'
-import ResearchPrompt from './ResearchPrompt'
+import { useEffect, useState } from 'react'
+import { ArrowUpRight, ArrowRight, Search, Sun, Moon, ShieldCheck, Layers3, FileText, Activity, Scale, ChevronDown } from 'lucide-react'
+import { api } from '../api/client'
 import Logo from './Logo'
+import MarketAnimal from './MarketAnimal'
 
-const WORKFLOW_STEPS = [
-  {
-    step: '01',
-    badge: 'STAGE 1 · SCOPE',
-    title: 'Query Deconstruction & Scope',
-    short: 'Intent & Entity Resolution',
-    description: 'Deconstructs the question into investment intent (valuation, long-term thesis, peer comparison, price catalyst, or document query). Resolves NSE/BSE tickers and defines evidence bounds.',
-    output: 'Deterministic research scope & security identifiers',
-    icon: Search,
-    color: '#4285f4',
-    bg: 'rgba(66, 133, 244, 0.1)',
-    border: 'rgba(66, 133, 244, 0.25)'
-  },
-  {
-    step: '02',
-    badge: 'STAGE 2 · DISPATCH',
-    title: 'Dynamic Multi-Agent Dispatch',
-    short: 'Parallel Isolated Specialists',
-    description: 'Instead of running a slow, generic swarm, Bulls Eye dynamically activates only the required specialists from our 9-agent roster. Each specialist runs in an isolated sandbox with dedicated toolkits.',
-    output: 'Concurrent tool execution & raw evidence extraction',
-    icon: Network,
-    color: '#34a853',
-    bg: 'rgba(52, 168, 83, 0.1)',
-    border: 'rgba(52, 168, 83, 0.25)'
-  },
-  {
-    step: '03',
-    badge: 'STAGE 3 · AUDIT',
-    title: 'Deterministic Evidence Auditor',
-    short: '9-Point Verification & Stress Test',
-    description: 'Every statement is scored against a strict 9-point grounding checklist. Financial arithmetic is computed in Python, unverified claims are purged, and the thesis undergoes an adversarial Bull vs Bear challenge.',
-    output: 'Audited evidence packet & explicit gap disclosures',
-    icon: ShieldCheck,
-    color: '#fbbc04',
-    bg: 'rgba(251, 188, 4, 0.1)',
-    border: 'rgba(251, 188, 4, 0.25)'
-  },
-  {
-    step: '04',
-    badge: 'STAGE 4 · SYNTHESIS',
-    title: 'Institutional Brief & In-App PDF',
-    short: 'Cited Executive Delivery',
-    description: 'The finalized findings are organized into an executive narrative with supporting metrics tables, risk vectors, what could change the view, and clickable citation footnotes. Available in-app and as a vector PDF.',
-    output: 'Institutional report with in-app reader & download',
-    icon: FileText,
-    color: '#9b72cb',
-    bg: 'rgba(155, 114, 203, 0.1)',
-    border: 'rgba(155, 114, 203, 0.25)'
-  }
+const STEPS = [
+  ['Ask a better question', 'Start with a company, ticker, comparison or uploaded filing. The planner identifies the scope and the evidence needed.', '01 / SCOPE'],
+  ['Follow the investigation', 'Relevant specialists collect financial, market and qualitative evidence in parallel. You can see their progress and gaps.', '02 / RESEARCH'],
+  ['Hear both sides', 'Evidence is checked for conflicting values and missing sources. Bull and bear perspectives make the trade-offs visible.', '03 / CHALLENGE'],
+  ['Keep the reasoning', 'Explore the report, inspect source links, ask follow-up questions and export the research as a PDF.', '04 / UNDERSTAND'],
 ]
-
-const SPECIALIST_ROSTER = [
-  {
-    id: 'financial',
-    name: 'Financial Health',
-    role: 'Balance Sheet & Cash Flows',
-    desc: 'Audits multi-year revenue growth, operating profit margins, debt-to-equity leverage, and return on equity (ROE) from verified financial filings.',
-    icon: BarChart3,
-    color: '#4285f4',
-    tools: ['get_financials', 'get_quarterly_results', 'calculate_ratio']
-  },
-  {
-    id: 'valuation',
-    name: 'Valuation & Multiples',
-    role: 'Historical & Peer Multiples',
-    desc: 'Extracts real-time trading quotes, trailing P/E, EV/EBITDA, price-to-book ratios, and compares against sector benchmarks without fabricating inputs.',
-    icon: PieChart,
-    color: '#fbbc04',
-    tools: ['get_quote', 'get_company_metrics', 'get_peer_multiples']
-  },
-  {
-    id: 'market',
-    name: 'Market Momentum',
-    role: 'Technicals & Volume Channels',
-    desc: 'Tracks price history, trading volume distribution, 52-week channels, moving average crossovers, and computed technical indicators for timing signals.',
-    icon: TrendingUp,
-    color: '#34a853',
-    tools: ['get_price_history', 'get_volume', 'get_technicals']
-  },
-  {
-    id: 'growth',
-    name: 'Growth & Expansion',
-    role: 'CapEx & Addressable TAM',
-    desc: 'Analyzes corporate capital expenditure pipelines, manufacturing capacity additions, new product rollouts, and multi-year industry tailwinds.',
-    icon: Layers,
-    color: '#a78bfa',
-    tools: ['search_web', 'fetch_page', 'search_documents']
-  },
-  {
-    id: 'news',
-    name: 'News & Disclosures',
-    role: 'Regulatory Filings & BSE/NSE',
-    desc: 'Monitors real-time exchange announcements, quarterly earning calls, board changes, dividend declarations, and material regulatory filings.',
-    icon: Newspaper,
-    color: '#f87171',
-    tools: ['search_news', 'fetch_news', 'fetch_page']
-  },
-  {
-    id: 'risk',
-    name: 'Risk & Downside',
-    role: 'Covenants & Concentration',
-    desc: 'Stress-tests debt maturity cliffs, client concentration risks, foreign exchange exposure, input inflation vulnerability, and governance red flags.',
-    icon: ShieldAlert,
-    color: '#fb923c',
-    tools: ['search_web', 'get_financials', 'search_news']
-  },
-  {
-    id: 'workforce',
-    name: 'Workforce & Operations',
-    role: 'Hiring Velocity & Attrition',
-    desc: 'Gauges headcount trajectory, key managerial personnel departures, talent retention health, and Glassdoor operational sentiment.',
-    icon: Users,
-    color: '#22d3ee',
-    tools: ['search_jobs', 'fetch_job_detail', 'search_web']
-  },
-  {
-    id: 'social',
-    name: 'Public Sentiment',
-    role: 'Chatter vs Corporate Reality',
-    desc: 'Dissects retail forum sentiment, investor conference takeaways, and public sentiment to separate genuine catalysts from short-term noise.',
-    icon: Globe,
-    color: '#38bdf8',
-    tools: ['search_web', 'fetch_page']
-  },
-  {
-    id: 'document',
-    name: 'Document Intelligence',
-    role: 'RAG & Regulatory PDF Audit',
-    desc: 'Extracts ground-truth data from uploaded annual reports, investor presentations, and broker notes with semantic vector search.',
-    icon: FileSearch,
-    color: '#818cf8',
-    tools: ['search_documents', 'retrieve_evidence']
-  }
+const QUESTIONS = [
+  ['Is this financial advice?', 'No. Bullseye is a research aid, not an investment adviser. Its findings can be incomplete or wrong. Verify important information against original filings and consider your own circumstances before making decisions.'],
+  ['Where does the evidence come from?', 'Depending on the question: market-data providers, company filings, published news, official hiring boards and documents you upload. Each run lists the sources it actually used, retrieval times and any missing coverage.'],
+  ['Does every specialist run for every question?', 'The planner selects relevant specialists. Broad company research needs a broad investigation; a focused news question should stay focused. Selected agents, failures and missing evidence are visible in the research workspace.'],
+  ['What happens when data is missing?', 'Missing inputs stay unavailable. Python computes financial ratios only from supplied inputs; language models explain the evidence. Missing or conflicting evidence can prevent a recommendation.'],
+  ['Can I compare companies and keep my research?', 'Yes. Ask a comparison question, reopen previous research from this browser’s history, or view and download a completed report as a PDF. Market coverage depends on the configured providers.'],
 ]
+const SUGGESTIONS = ['TCS.NS', 'INFY.NS', 'RELIANCE.NS', 'AAPL', 'MSFT', 'NVDA']
 
-const GUARANTEES = [
-  {
-    icon: Scale,
-    title: 'Zero Plausible Hallucinations',
-    desc: 'If a ratio or metric cannot be established from filed statements or quotes, it is surfaced as an explicit "Not measured" gap, never filled with model guesswork.'
-  },
-  {
-    icon: Lock,
-    title: 'Deterministic Python Arithmetic',
-    desc: 'All financial calculations (ROE, ROCE, debt-to-equity, profit margins) are computed by deterministic Python code with audited inputs, not improvised by LLMs.'
-  },
-  {
-    icon: FileCheck,
-    title: 'Audited Source Provenance',
-    desc: 'Every key claim in the synthesized report includes a superscript footnote pointing to its exact filing, disclosure, or source document.'
-  },
-  {
-    icon: Swords,
-    title: 'Adversarial Bull vs Bear Challenge',
-    desc: 'The pipeline does not produce one-sided cheerleading. Every positive thesis is challenged by dedicated risk auditors before final sign-off.'
-  }
-]
-
-export default function LandingExperience({ onRun, running, submitting, query, onQueryChange }) {
-  const [activeWorkflow, setActiveWorkflow] = useState(0)
-  const currentStep = WORKFLOW_STEPS[activeWorkflow]
-  const CurrentIcon = currentStep.icon
-
-  return (
-    <div className="mx-auto w-full max-w-[1280px] px-4 pb-20 sm:px-6 lg:px-10 font-sans">
-      
-      {/* ═══ 1. COMMAND DECK HERO ═══ */}
-      <section className="relative overflow-hidden pt-8 pb-12 sm:pt-14 sm:pb-16 text-center">
-        {/* Ambient lighting glows */}
-        <div className="pointer-events-none absolute left-1/2 -top-24 h-96 w-96 -translate-x-1/2 rounded-full bg-gradient-to-tr from-[#4285f4]/15 via-[#9b72cb]/10 to-emerald-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute right-10 top-1/3 h-64 w-64 rounded-full bg-[#4285f4]/8 blur-3xl" />
-        <div className="pointer-events-none absolute left-10 bottom-0 h-64 w-64 rounded-full bg-emerald-500/8 blur-3xl" />
-
-        {/* Top Intelligence Pill */}
-        <div className="relative inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-1.5 backdrop-blur-md mb-6 shadow-sm">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-mono text-[10.5px] font-semibold tracking-wider text-[#8ab4f8] uppercase">
-            ARTHAAI · BULLS EYE
-          </span>
-          <span className="text-white/20">|</span>
-          <span className="font-mono text-[10px] text-[#9aa0a6] uppercase tracking-wide">
-            9 Autonomous Specialists · NSE/BSE Live
-          </span>
-        </div>
-
-        {/* Main Headline */}
-        <h1 className="mx-auto max-w-4xl text-[clamp(2.4rem,5.5vw,4.5rem)] font-medium leading-[1.05] tracking-tight text-[#f1f3f4]">
-          Less noise. More conviction.<br />
-          <span className="bg-gradient-to-r from-[#8ab4f8] via-[#c4b5fd] to-[#6ee7b7] bg-clip-text text-transparent font-semibold">
-            Evidence-Driven Equity Research.
-          </span>
-        </h1>
-
-        {/* Subhead */}
-        <p className="mx-auto mt-5 max-w-2xl text-[14.5px] leading-relaxed text-[#9aa0a6] sm:text-[16px]">
-          Ask any question on Indian equities. Bulls Eye routes isolated specialists, audits filed balance sheets, stress-tests Bull vs Bear cases, and generates cited executive briefs with in-app PDF export.
-        </p>
-
-        {/* Central Spotlight Search Terminal */}
-        <div className="relative mx-auto mt-9 w-full max-w-3xl">
-          <div className="relative rounded-[22px] border border-white/12 bg-[#171a21]/90 p-3 shadow-2xl backdrop-blur-xl sm:p-4">
-            <div className="mb-2.5 flex items-center justify-between px-1 text-[11px] font-mono text-[#9aa0a6]">
-              <div className="flex items-center gap-2 font-semibold text-[#8ab4f8]">
-                <Sparkles size={14} className="text-[#8ab4f8]" />
-                <span>AUTONOMOUS RESEARCH PROMPT</span>
-              </div>
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Evidence before opinion
-              </span>
-            </div>
-
-            <ResearchPrompt
-              onRun={onRun}
-              running={running}
-              submitting={submitting}
-              query={query}
-              onQueryChange={onQueryChange}
-            />
-          </div>
-        </div>
-
-        {/* Market Quick Metrics Banner */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[11px] font-mono text-[#9aa0a6]">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.025] px-3.5 py-1.5">
-            <span className="font-semibold text-white">NIFTY 50</span>
-            <span className="text-emerald-400 font-bold">25,250.10</span>
-            <span className="text-[10px] text-emerald-400/80">(+0.42%)</span>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.025] px-3.5 py-1.5">
-            <span className="font-semibold text-white">SENSEX</span>
-            <span className="text-emerald-400 font-bold">82,490.85</span>
-            <span className="text-[10px] text-emerald-400/80">(+0.38%)</span>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.025] px-3.5 py-1.5">
-            <span className="font-semibold text-white">NIFTY IT</span>
-            <span className="text-amber-400 font-bold">42,120.45</span>
-            <span className="text-[10px] text-amber-400/80">(-0.15%)</span>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.025] px-3.5 py-1.5">
-            <ShieldCheck size={13} className="text-[#8ab4f8]" />
-            <span className="text-[#8ab4f8] font-medium">100% CITED FACTS ONLY</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ 2. FOUR-STAGE AUTONOMOUS PIPELINE ARCHITECTURE ═══ */}
-      <section className="mt-14 scroll-mt-12 rounded-3xl border border-white/10 bg-[#15181f]/80 p-6 sm:p-9 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 rounded-md bg-[#4285f4]/15 px-2.5 py-1 font-mono text-[10.5px] font-semibold text-[#8ab4f8]">
-              <Target size={13} />
-              <span>HOW BULLS EYE WORKS</span>
-            </div>
-            <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              From Plain Question to Cited Institutional Brief
-            </h2>
-          </div>
-          <p className="max-w-md text-[13px] leading-relaxed text-[#9aa0a6]">
-            Every query passes through an autonomous 4-stage pipeline that eliminates hallucinations and guarantees full provenance.
-          </p>
-        </div>
-
-        {/* 4 Interactive Stage Tabs */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {WORKFLOW_STEPS.map((s, index) => {
-            const Icon = s.icon
-            const isSelected = activeWorkflow === index
-            return (
-              <button
-                key={s.step}
-                type="button"
-                onClick={() => setActiveWorkflow(index)}
-                className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all duration-200 ${
-                  isSelected
-                    ? 'border-[#4285f4] bg-[#4285f4]/10 shadow-[0_8px_30px_-10px_rgba(66,133,244,0.4)]'
-                    : 'border-white/8 bg-[#1a1e27]/60 hover:border-white/20 hover:bg-[#1a1e27]'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full mb-3">
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-xl shadow"
-                    style={{ background: s.bg, color: s.color }}
-                  >
-                    <Icon size={18} />
-                  </span>
-                  <span className="font-mono text-[12px] font-bold text-[#5f6368]">
-                    {s.step}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-mono font-semibold tracking-wider text-[#8ab4f8] uppercase">
-                    {s.badge}
-                  </span>
-                  <h3 className="mt-1 text-[14px] font-bold text-white">
-                    {s.title}
-                  </h3>
-                  <p className="mt-1 text-[11.5px] text-[#9aa0a6] line-clamp-2">
-                    {s.short}
-                  </p>
-                </div>
-                <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
-                  <span className="text-[11px] font-medium text-[#bdc1c6]">
-                    {isSelected ? 'Viewing details' : 'Click to inspect'}
-                  </span>
-                  <ChevronRight
-                    size={14}
-                    className={`transition-transform ${isSelected ? 'translate-x-1 text-[#8ab4f8]' : 'text-[#5f6368]'}`}
-                  />
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Active Stage Detailed Breakdown Panel */}
-        <div className="mt-6 rounded-2xl border border-white/10 bg-[#12141a] p-6 sm:p-7">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 items-center">
-            <div>
-              <div className="flex items-center gap-2.5 font-mono text-[11px] font-semibold text-[#8ab4f8]">
-                <CurrentIcon size={16} />
-                <span>STAGE {currentStep.step} DEEP DIVE · {currentStep.badge}</span>
-              </div>
-              <h3 className="mt-2 text-xl font-bold text-white sm:text-2xl">
-                {currentStep.title}
-              </h3>
-              <p className="mt-3 text-[13.5px] leading-relaxed text-[#bdc1c6]">
-                {currentStep.description}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-[#181c24] p-5">
-              <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#9aa0a6] block mb-2">
-                Stage Deliverable & Artifact:
-              </span>
-              <div className="flex items-start gap-2.5 text-[13px] font-semibold text-emerald-300 leading-snug">
-                <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-                <span>{currentStep.output}</span>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2 text-[10.5px] font-mono text-[#8ab4f8]">
-                <span className="rounded-md border border-[#4285f4]/20 bg-[#4285f4]/10 px-2 py-0.5">Automated</span>
-                <span className="rounded-md border border-[#4285f4]/20 bg-[#4285f4]/10 px-2 py-0.5">Deterministic</span>
-                <span className="rounded-md border border-[#4285f4]/20 bg-[#4285f4]/10 px-2 py-0.5">Source-Checked</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ 3. THE 9 SPECIALIST AGENTS ROSTER ═══ */}
-      <section className="mt-16">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
-          <div>
-            <div className="inline-flex items-center gap-1.5 rounded-md bg-[#34a853]/15 px-2.5 py-1 font-mono text-[10.5px] font-semibold text-emerald-400">
-              <Layers size={13} />
-              <span>THE SPECIALIST ENGINE ROOM · WHAT WE HAVE BUILT</span>
-            </div>
-            <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              What we have built: Nine Focused Specialists. Zero Generic Agents.
-            </h2>
-          </div>
-          <p className="max-w-md text-[13px] leading-relaxed text-[#9aa0a6]">
-            Every company is investigated across separate specialized dimensions with dedicated provider tools and strict rate-limiting.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {SPECIALIST_ROSTER.map((agent) => {
-            const Icon = agent.icon
-            return (
-              <div
-                key={agent.id}
-                className="group relative rounded-2xl border border-white/8 bg-[#181c24] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-white/20 hover:bg-[#1c212c] hover:shadow-xl"
-              >
-                <div className="flex items-center justify-between mb-3.5">
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-                    style={{ background: `${agent.color}15`, color: agent.color }}
-                  >
-                    <Icon size={19} />
-                  </span>
-                  <span className="font-mono text-[10px] text-[#5f6368] uppercase tracking-wider">
-                    Specialist #{SPECIALIST_ROSTER.indexOf(agent) + 1}
-                  </span>
-                </div>
-                <h3 className="text-[15px] font-bold text-white group-hover:text-[#8ab4f8] transition-colors">
-                  {agent.name}
-                </h3>
-                <span className="block text-[11px] font-mono text-[#8ab4f8] mt-0.5">
-                  {agent.role}
-                </span>
-                <p className="mt-2.5 text-[12px] leading-relaxed text-[#9aa0a6]">
-                  {agent.desc}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-1.5 border-t border-white/5 pt-3">
-                  {agent.tools.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded bg-white/[0.04] px-1.5 py-0.5 font-mono text-[9.5px] text-[#bdc1c6]"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ═══ 4. DUAL READING MODES SHOWCASE ═══ */}
-      <section className="mt-16 rounded-3xl border border-white/10 bg-gradient-to-br from-[#181d26] via-[#141720] to-[#12141a] p-6 sm:p-9 shadow-2xl">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-          <div>
-            <div className="inline-flex items-center gap-1.5 rounded-md bg-[#fbbc04]/15 px-2.5 py-1 font-mono text-[10.5px] font-semibold text-[#fbbc04]">
-              <Eye size={13} />
-              <span>DUAL READING MODES</span>
-            </div>
-            <h2 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              One Research Engine. Two Views for Different Audiences.
-            </h2>
-            <p className="mt-3 text-[13.5px] leading-relaxed text-[#bdc1c6]">
-              Whether you are an active investor wanting institutional clarity in 60 seconds, or an equity analyst verifying audited balance-sheet multiples, Bulls Eye switches seamlessly between two purpose-built perspectives.
-            </p>
-
-            <div className="mt-6 space-y-3">
-              <div className="flex items-start gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#4285f4]/15 text-[#8ab4f8] mt-0.5 font-bold text-[12px]">
-                  B
-                </span>
-                <div>
-                  <h4 className="text-[13px] font-semibold text-white">Beginner Mode · Plain English Verdict</h4>
-                  <p className="text-[11.5px] text-[#9aa0a6] mt-0.5">
-                    Directional evidence summary, high-impact cards, plain-language risk factors, and clear takeaways.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#fbbc04]/15 text-[#fbbc04] mt-0.5 font-bold text-[12px]">
-                  E
-                </span>
-                <div>
-                  <h4 className="text-[13px] font-semibold text-white">Expert Mode · Deep Analytical Rigor</h4>
-                  <p className="text-[11.5px] text-[#9aa0a6] mt-0.5">
-                    Python-computed ratios table, quarterly trend audits, peer spread calculations, and source links.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Mode Preview Card */}
-          <div className="rounded-2xl border border-white/12 bg-[#1b202a] p-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <span className="font-mono text-[11px] font-semibold text-[#8ab4f8] flex items-center gap-1.5">
-                <Sparkles size={13} /> SAMPLE VERDICT: RELIANCE INDUSTRIES
-              </span>
-              <span className="rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 font-mono text-[10px] font-bold">
-                EVIDENCE: ACCUMULATE
-              </span>
-            </div>
-            <div className="mt-4 space-y-3 text-left">
-              <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3.5">
-                <span className="text-[11px] font-mono text-[#9aa0a6] uppercase tracking-wider block">Short Answer</span>
-                <p className="mt-1 text-[13px] font-medium text-white leading-relaxed">
-                  Five-year fundamentals lean constructive: Retail and Jio digital cash flows support ongoing green energy CapEx, with net debt comfortably covered by EBITDA.
-                </p>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-center font-mono">
-                <div className="rounded-lg bg-black/30 p-2 border border-white/5">
-                  <span className="block text-[10px] text-[#9aa0a6]">P/E (TTM)</span>
-                  <strong className="text-[13px] text-white">24.2x</strong>
-                </div>
-                <div className="rounded-lg bg-black/30 p-2 border border-white/5">
-                  <span className="block text-[10px] text-[#9aa0a6]">ROE</span>
-                  <strong className="text-[13px] text-emerald-400">11.4%</strong>
-                </div>
-                <div className="rounded-lg bg-black/30 p-2 border border-white/5">
-                  <span className="block text-[10px] text-[#9aa0a6]">Grounding</span>
-                  <strong className="text-[13px] text-[#8ab4f8]">94.2%</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ 5. CORE METHODOLOGY & GUARANTEES ═══ */}
-      <section className="mt-16">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-1.5 rounded-md bg-[#9b72cb]/15 px-2.5 py-1 font-mono text-[10.5px] font-semibold text-[#c4b5fd]">
-            <ShieldCheck size={13} />
-            <span>INSTITUTIONAL INTEGRITY</span>
-          </div>
-          <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            Built on Facts. Verified by Code.
-          </h2>
-          <p className="mt-2 text-[13px] text-[#9aa0a6]">
-            Every architectural decision is optimized to eliminate false confidence and deliver actionable research.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {GUARANTEES.map((g, idx) => {
-            const Icon = g.icon
-            return (
-              <div key={idx} className="rounded-2xl border border-white/8 bg-[#181c24] p-5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4285f4]/15 text-[#8ab4f8] mb-4">
-                  <Icon size={18} />
-                </span>
-                <h3 className="text-[14px] font-bold text-white mb-2">
-                  {g.title}
-                </h3>
-                <p className="text-[12px] leading-relaxed text-[#9aa0a6]">
-                  {g.desc}
-                </p>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ═══ 6. IN-APP PDF VIEWER BANNER ═══ */}
-      <section className="mt-16 overflow-hidden rounded-3xl border border-[#4285f4]/25 bg-gradient-to-r from-[#172545] via-[#151d30] to-[#121622] p-7 sm:p-9 shadow-2xl">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="max-w-2xl text-left">
-            <span className="font-mono text-[10.5px] font-bold uppercase tracking-wider text-[#93c5fd]">
-              Executive PDF Publishing
-            </span>
-            <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
-              Inspect Onscreen or Export a C-Suite Ready PDF Brief
-            </h2>
-            <p className="mt-2.5 text-[13.5px] leading-relaxed text-[#bdc1c6]">
-              Every completed research job renders an embedded in-app PDF preview with download and external window support, complete with cover page, metrics cards, Bull/Bear thesis, and audited footnotes.
-            </p>
-          </div>
-          <div className="shrink-0 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                onQueryChange('Analyze TCS fundamentals')
-                onRun('Analyze TCS fundamentals')
-              }}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#4285f4] to-[#1a73e8] px-5 py-3 text-[13px] font-semibold text-white shadow-lg hover:brightness-110 transition"
-            >
-              <span>Launch Research Demo</span>
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ FOOTER ═══ */}
-      <footer className="mt-16 flex flex-col sm:flex-row items-center justify-between border-t border-white/8 pt-8 text-[11px] font-mono text-[#6f7a8c] gap-3">
-        <div className="flex items-center gap-2">
-          <Logo size={20} />
-          <span>ArthaAI · Bulls Eye Institutional Equity Intelligence</span>
-        </div>
-        <span>Built for Indian Markets (NSE / BSE) · 100% Audited Evidence</span>
-      </footer>
-
-    </div>
-  )
+function Registry() {
+  const [agents, setAgents] = useState(null)
+  const [error, setError] = useState(false)
+  const [attempt, retry] = useState(0)
+  useEffect(() => {
+    let active = true
+    setError(false)
+    api.getAgents().then(data => {
+      if (!Array.isArray(data) || !data.length) throw new Error('Registry unavailable')
+      if (active) setAgents(data)
+    }).catch(() => { if (active) setError(true) })
+    return () => { active = false }
+  }, [attempt])
+  return <section className="be-section" id="agents" aria-labelledby="agents-heading">
+    <div className="be-section-heading"><div><p className="be-kicker">SPECIALISTS, WITH A PURPOSE</p><h2 id="agents-heading">Many lenses.<br />A fuller picture.</h2></div><p>A shared evidence trail, with a different question for every specialist. This list comes directly from the backend registry.</p></div>
+    {error ? <div className="be-empty" role="status"><p>The agent registry is currently unavailable. Start the backend to see configured capabilities.</p><button className="be-text-button" onClick={() => retry(attempt + 1)}>Retry registry <ArrowRight size={16} /></button></div>
+      : !agents ? <p className="be-empty" role="status">Loading the specialist registry…</p>
+        : <div className="be-agent-grid">{agents.map((agent, index) => <article className="be-agent-card" key={agent.name}>
+          <div className="be-card-top"><span className="be-number">{String(index + 1).padStart(2, '0')}</span><span className="be-tag">{agent.status || 'configured'}</span></div>
+          <h3>{agent.label || agent.name.replaceAll('_', ' ')}</h3><p>{agent.description}</p>
+          <details><summary>Explore capabilities <ChevronDown size={14} /></summary><p>{agent.tools?.join(' · ') || 'Capabilities unavailable'}</p>{agent.limitations && <p>{agent.limitations}</p>}</details>
+        </article>)}</div>}
+  </section>
 }
+
+export default function LandingExperience({ onRun, running = false, submitting = false, query = '', onQueryChange, sessions = [], onSelectSession, onDeleteSession, onResume }) {
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('bullseye:theme') || 'dark' } catch { return 'dark' }
+  })
+  const [step, setStep] = useState(0)
+  const [perspective, setPerspective] = useState('bull')
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem('bullseye:theme', theme) } catch { /* storage unavailable */ }
+  }, [theme])
+  const focusSearch = () => document.getElementById('research-query')?.focus()
+  const busy = running || submitting
+  const submit = event => { event.preventDefault(); if (!busy && query.trim()) onRun?.(query) }
+  return <div className="be-landing" data-theme={theme}>
+    <a className="be-skip" href="#research-query">Skip to research</a>
+    <header className="be-nav"><a className="be-brand" href="#home" aria-label="Bullseye home"><Logo size={35} /><span>Bullseye<span className="be-brand-dot">.</span></span></a>
+      <nav aria-label="Main navigation"><a href="#methodology">The process</a><a href="#agents">The specialists</a><a href="#transparency">Our principles</a></nav>
+      <div className="be-nav-actions"><button className="be-icon-button" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}</button><a className="be-button be-button-small" href="#research">Start research <ArrowUpRight size={16} /></a></div>
+    </header>
+    <main id="home">
+      <section className="be-hero be-container" aria-labelledby="hero-heading">
+        <div className="be-hero-copy"><p className="be-kicker"><span className="be-status-dot" /> EQUITY RESEARCH. WITH PERSPECTIVE.</p>
+          <h1 id="hero-heading">See the upside.<br />Understand<br /><span>the other side.</span></h1>
+          <p className="be-hero-description">Behind every stock, there’s more than one story. Explore the bull case, challenge it with the bear case, and follow the evidence.</p>
+          <a className="be-text-link" href="#methodology">A clearer way to do your homework <ArrowDownIcon /></a>
+        </div>
+        <div className="be-hero-art" aria-hidden="true"><div className="be-art-grid" /><div className="be-orbit be-orbit-one" /><div className="be-orbit be-orbit-two" />
+          <svg className="be-art-chart" viewBox="0 0 520 440" fill="none"><path d="M0 340L60 280L125 300L195 204L260 234L350 115L420 148L510 44" /><path d="M10 80L80 150L145 124L220 200L285 178L370 300L430 272L520 357" /></svg>
+          <span className="be-art-label be-art-label-up">THE POSSIBILITY ↗</span><div className="be-hero-bull"><MarketAnimal side="bull" lazy={false} /></div><div className="be-hero-bear"><MarketAnimal side="bear" lazy={false} /></div><span className="be-art-label be-art-label-down">↘ THE COUNTERPOINT</span>
+          <div className="be-art-center"><Logo size={38} /></div><span className="be-art-caption">TWO PERSPECTIVES. ONE CLEARER PICTURE.</span>
+        </div>
+      </section>
+      <section id="research" className="be-search-section be-container" aria-label="Start stock research">
+        <form className="be-search" onSubmit={submit}><label htmlFor="research-query">YOUR NEXT QUESTION STARTS HERE</label><div className="be-search-row"><Search aria-hidden="true" size={22} /><input id="research-query" name="query" list="stock-suggestions" value={query} onChange={e => onQueryChange?.(e.target.value)} placeholder="A company, a ticker, a question…" required maxLength={2000} autoComplete="off" disabled={busy} /><button className="be-button" type="submit" disabled={busy || !query.trim()}>{submitting ? 'Starting…' : 'Research'}<ArrowUpRight size={20} /></button></div>
+          <datalist id="stock-suggestions">{SUGGESTIONS.map(ticker => <option key={ticker} value={ticker} />)}</datalist>
+        </form>
+        <div className="be-suggestions"><span>Try asking</span>{['Research TCS', 'Compare TCS and Infosys', 'Latest news on Apple'].map(text => <button key={text} disabled={busy} onClick={() => { onQueryChange?.(text); focusSearch() }}>{text}<ArrowUpRight size={13} /></button>)}</div>
+        {running && <button className="be-text-button" onClick={onResume}>Return to your active research <ArrowRight size={16} /></button>}
+        <p className="be-search-note"><ShieldCheck size={14} /> Research aid. Not financial advice. Provider coverage and freshness vary.</p>
+        {sessions.length > 0 && <details className="be-history"><summary>Your previous research ({sessions.length})</summary><ul>{sessions.slice(0, 10).map(session => <li key={session.job_id}><button disabled={busy} onClick={() => onSelectSession?.(session)}>{session.query || session.job_id}<ArrowUpRight size={16} /></button><button disabled={busy} aria-label={`Remove ${session.query || session.job_id} from local history`} onClick={() => onDeleteSession?.(session.job_id)}>Remove</button></li>)}</ul></details>}
+      </section>
+      <div className="be-ticker" aria-label="Illustrative ticker strip, no live prices"><div className="be-container"><span className="be-tag">DEMO · NOT LIVE QUOTES</span>{['NIFTY 50', 'SENSEX', 'S&P 500', 'NASDAQ'].map((name, i) => <span className="be-ticker-item" key={name}>{name}<svg viewBox="0 0 70 24" aria-hidden="true"><path d={i % 2 ? 'M0 5L12 11L25 8L37 17L49 13L70 23' : 'M0 22L12 14L25 17L37 8L49 11L70 1'} className={i % 2 ? 'be-down' : 'be-up'} /></svg><span>—</span></span>)}</div></div>
+      <div className="be-container">
+        <section className="be-section" id="methodology" aria-labelledby="process-heading"><div className="be-section-heading"><div><p className="be-kicker">LESS NOISE. MORE UNDERSTANDING.</p><h2 id="process-heading">From a question<br />to a point of view.</h2></div><p>No black box to take on faith. A visible research process, from the first source to the final summary.</p></div>
+          <div className="be-process"><div className="be-process-tabs">{STEPS.map(([title, , number], i) => <button key={number} aria-pressed={step === i} onClick={() => setStep(i)} aria-controls="process-detail"><span>{number}</span><strong>{title}</strong><ArrowUpRight size={20} /></button>)}</div><div className="be-process-detail" id="process-detail"><Layers3 size={40} strokeWidth={1} /><span className="be-kicker">{STEPS[step][2]}</span><h3>{STEPS[step][0]}</h3><p>{STEPS[step][1]}</p><div className="be-process-trail"><span>Question</span><ArrowRight size={14} /><span>Evidence</span><ArrowRight size={14} /><span>Perspective</span></div></div></div>
+        </section>
+        <Registry />
+        <section className="be-section" id="perspectives" aria-labelledby="perspective-heading"><div className="be-section-heading"><div><p className="be-kicker">CONVICTION NEEDS A COUNTERPOINT</p><h2 id="perspective-heading">Meet the bull.<br />Make room for the bear.</h2></div><div><p>Better questions emerge when you consider both sides.</p><span className="be-tag">INTERACTIVE DEMO · HYPOTHETICAL</span></div></div>
+          <div className="be-perspectives"><div className={`be-animal-stage case-panel ${perspective}`}><MarketAnimal side={perspective} /><span>{perspective === 'bull' ? 'Look for the opportunity.' : 'Ask what could go wrong.'}</span></div><div className="be-perspective-copy"><div className="be-toggle" aria-label="Demo perspective"><button aria-pressed={perspective === 'bull'} onClick={() => setPerspective('bull')}>↗ Bull case</button><button aria-pressed={perspective === 'bear'} onClick={() => setPerspective('bear')}>↘ Bear case</button></div><h3>{perspective === 'bull' ? 'What could go right?' : 'What could break the thesis?'}</h3><p>{perspective === 'bull' ? 'If a company reports sustained revenue growth and improving cash conversion, the bull asks whether that momentum can last.' : 'If the same company depends on a few customers or takes on more debt, the bear asks how resilient that growth really is.'}</p><ul>{(perspective === 'bull' ? ['Is growth backed by reported results?', 'Are margins and cash flows improving?', 'Is the opportunity already priced in?'] : ['How concentrated are the revenue streams?', 'Can cash flow support debt obligations?', 'Which evidence would change the thesis?']).map(item => <li key={item}><Scale size={16} />{item}</li>)}</ul><p className="be-fine-print">Illustrative questions, not findings about any company. Actual cases depend on the evidence collected in your run.</p></div></div>
+        </section>
+        <section className="be-section be-report-section" id="report" aria-labelledby="report-heading"><div><p className="be-kicker">A REPORT YOU CAN QUESTION</p><h2 id="report-heading">The reasoning.<br />Not just the rating.</h2><p className="be-body-copy">Start with the plain-English view. Dig into calculations and sources. Keep the full picture with an exportable research report.</p><ul className="be-feature-list"><li><FileText size={18} />Beginner & expert reading modes</li><li><Activity size={18} />Source-linked findings & explicit gaps</li><li><ArrowUpRight size={18} />Follow-up questions & PDF export</li></ul><a className="be-text-link" href="#research">Build your first report <ArrowRight size={17} /></a></div>
+          <div className="be-report-preview"><div className="be-card-top"><Logo size={30} /><span className="be-tag">LAYOUT PREVIEW</span></div><div className="be-preview-title"><span>COMPANY RESEARCH</span><h3>Your company. In context.</h3><p>Evidence before opinion.</p></div><div className="be-preview-metrics">{['Revenue growth', 'P/E ratio', 'Debt / equity'].map(label => <div key={label}><span>{label}</span><strong>—</strong><small>Awaiting evidence</small></div>)}</div><div className="be-preview-cases"><div><span>↗ THE BULL CASE</span><p>Source-linked opportunities</p></div><div><span>↘ THE BEAR CASE</span><p>Risks and counter-evidence</p></div></div><div className="be-preview-footer"><ShieldCheck size={15} /><span>Sources · Timestamps · Calculation inputs</span></div><p className="be-fine-print">Preview only. No investment verdict or company data is shown.</p></div>
+        </section>
+        <section className="be-section" id="transparency" aria-labelledby="principles-heading"><div className="be-section-heading"><div><p className="be-kicker">BUILT FOR HEALTHY SKEPTICISM</p><h2 id="principles-heading">Trust the trail.<br />Check the conclusion.</h2></div><p>Useful research shows its workings and tells you where the evidence ends.</p></div><div className="be-principles">{[[ShieldCheck, 'Sources you can inspect', 'Open the source, check its date, and decide how much weight it deserves. A citation is a starting point for verification.'], [Activity, 'Math with a paper trail', 'Python computes ratios from explicit inputs. Missing inputs stay missing; conflicting values are surfaced.'], [Scale, 'Uncertainty stays visible', 'An incomplete investigation is shown as incomplete. Evidence may be too weak for any recommendation.']].map(([Icon, title, text]) => <article key={title}><Icon size={28} strokeWidth={1.4} /><h3>{title}</h3><p>{text}</p></article>)}</div><p className="be-disclaimer"><strong>Research aid, not financial advice.</strong> Markets involve risk, including loss of capital. Verify original sources and use your own judgment. AI-generated explanations can be wrong.</p></section>
+        <section className="be-section be-faq" aria-labelledby="faq-heading"><div><p className="be-kicker">GOOD QUESTIONS</p><h2 id="faq-heading">A little more<br />perspective.</h2></div><div>{QUESTIONS.map(([question, answer]) => <details key={question}><summary>{question}<ChevronDown size={18} /></summary><p>{answer}</p></details>)}</div></section>
+        <section className="be-final-cta"><Logo size={48} /><p className="be-kicker">CURIOSITY IS A GOOD STARTING POINT.</p><h2>What’s your next<br /><span>investment question?</span></h2><a href="#research" className="be-button" onClick={focusSearch}>Follow the evidence <ArrowUpRight size={19} /></a></section>
+      </div>
+    </main>
+    <footer className="be-footer be-container"><a className="be-brand" href="#home"><Logo size={30} /><span>Bullseye.</span></a><p>Two perspectives. One clearer picture.</p><a href="#transparency">Research, responsibly <ArrowUpRight size={14} /></a><span>© {new Date().getFullYear()} Bullseye</span></footer>
+  </div>
+}
+
+function ArrowDownIcon() { return <ArrowRight size={16} style={{ transform: 'rotate(45deg)' }} aria-hidden="true" /> }

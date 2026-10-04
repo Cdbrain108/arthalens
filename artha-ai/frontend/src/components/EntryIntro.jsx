@@ -19,7 +19,7 @@ export default function EntryIntro() {
   useEffect(() => {
     if (!visible) return undefined
     const node = dialog.current
-    focusBefore.current = document.activeElement
+    if (!node?.contains(document.activeElement)) focusBefore.current = document.activeElement
     node?.showModal()
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const timer = setTimeout(finish, media.matches ? 220 : 3200)
@@ -37,13 +37,21 @@ export default function EntryIntro() {
     const timer = setTimeout(() => {
       dialog.current?.close()
       setVisible(false)
-      const target = focusBefore.current?.isConnected && focusBefore.current !== document.body
-        ? focusBefore.current : document.getElementById('research-query')
-      // Avoid scrolling the landing page when focus is restored.
-      target?.focus({ preventScroll: true })
     }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 400)
     return () => clearTimeout(timer)
   }, [exiting])
+
+  useEffect(() => {
+    if (visible || !exiting) return undefined
+    // Native dialog focus restoration finishes after close; restore app focus
+    // after React removes the modal, including under StrictMode.
+    const frame = requestAnimationFrame(() => {
+      const target = focusBefore.current?.isConnected && focusBefore.current.matches('button, a[href], input, textarea, select, [tabindex="0"]')
+        ? focusBefore.current : document.getElementById('research-query')
+      target?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [visible, exiting])
 
   if (!visible) return null
   return <dialog ref={dialog} className={`entry-intro ${exiting ? 'intro-exiting' : ''}`}

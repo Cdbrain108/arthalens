@@ -125,8 +125,8 @@ test('landing experience and in-app PDF viewer render their core actions', () =>
   const landing = renderToStaticMarkup(React.createElement(LandingExperience, {
     onRun: () => {}, running: false, submitting: false, query: '', onQueryChange: () => {}
   }))
-  assert.ok(landing.includes('Less noise'))
-  assert.ok(landing.includes('What we have built'))
+  assert.ok(landing.includes('See the upside.'))
+  assert.ok(landing.includes('Loading the specialist registry'))
   assert.ok(landing.includes('Evidence before opinion'))
 
   const viewer = renderToStaticMarkup(React.createElement(PdfViewerModal, {

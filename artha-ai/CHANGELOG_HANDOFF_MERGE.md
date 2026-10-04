@@ -82,3 +82,17 @@ chart strokes and a logo resolve over 3.6 seconds. Skip/Escape, sessionStorage,
 reduced-motion 400ms logo fade and focus restoration. App mounts alongside the
 intro, so history/registry/data loading is independent. Shared artwork also appears
 in both result panels with restrained hover motion.
+
+## Phase 4B — research-first landing
+
+Replaced the gated sidebar overview with a public, responsive landing: original
+bull/bear hero, stock suggestions, real research submission, persistent dark/light
+themes, interactive workflow and hypothetical perspectives, backend-registry
+specialists, coded report preview, transparent limitations, FAQ and local history.
+Removed fabricated ticker prices, sample recommendation and absolute verification
+claims. Research studio is lazy-loaded; fonts are served locally with swap.
+Standardized Vite defaults to 5173 and backend proxy to 8000.
+
+Browser coverage includes both themes at 360/390/768/1024/1280/1440/1920px and
+844px landscape, WCAG AA axe checks, intro/session/focus and real submission
+contract (stubbed providers). Full live-provider verification is a later phase.

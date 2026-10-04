@@ -1,170 +1,62 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Menu, Sparkles } from 'lucide-react'
-import Sidebar from './components/Sidebar'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import LandingExperience from './components/LandingExperience'
-import StudioPage from './components/StudioPage'
-import Login from './components/Login'
 import { useResearchJob } from './hooks/useResearchJob'
 import { isTerminalJob } from './hooks/researchJob'
 import { useAuth } from './hooks/useAuth'
 import { api } from './api/client'
-import {
-  loadSessions,
-  saveSession,
-  saveChatQuery,
-  mergeSessions,
-  deleteSession
-} from './storage/chatSessions'
+import { loadSessions, saveSession, mergeSessions, deleteSession } from './storage/chatSessions'
+
+const StudioPage = lazy(() => import('./components/StudioPage'))
 
 export default function App() {
-  const { user, login, logout } = useAuth()
+  const { user } = useAuth()
   const { job, submitting, start, reset, restore } = useResearchJob()
-  const [navOpen, setNavOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState(() => {
-    if (typeof window !== 'undefined' && window.location.hash === '#chat') return 'chat'
-    return 'landing'
-  })
+  const [currentPage, setCurrentPage] = useState(() => window.location.hash === '#chat' ? 'chat' : 'landing')
   const [query, setQuery] = useState('')
   const [sessions, setSessions] = useState(() => loadSessions())
   const savedJobRef = useRef(null)
+  const running = submitting || Boolean(job && !isTerminalJob(job))
+  const navigate = useCallback(page => { setCurrentPage(page); window.location.hash = page === 'chat' ? 'chat' : 'home'; window.scrollTo(0, 0) }, [])
 
   useEffect(() => {
+    const changed = () => setCurrentPage(window.location.hash === '#chat' ? 'chat' : 'landing')
+    window.addEventListener('hashchange', changed)
+    return () => window.removeEventListener('hashchange', changed)
+  }, [])
+  useEffect(() => {
     let cancelled = false
-    api.getHistory()
-      .then((remote) => {
-        if (!cancelled && Array.isArray(remote) && remote.length) {
-          setSessions((previous) => mergeSessions(previous, remote))
-        }
-      })
-      .catch(() => {})
+    api.getHistory().then(remote => {
+      if (!cancelled && Array.isArray(remote) && remote.length) setSessions(previous => mergeSessions(previous, remote))
+    }).catch(() => {})
     return () => { cancelled = true }
   }, [])
-
   useEffect(() => {
     if (!job || !isTerminalJob(job)) return
     const key = `${job.job_id}:${job.status}`
-    if (savedJobRef.current !== key) {
-      savedJobRef.current = key
-      setSessions(saveSession(job))
-    }
+    if (savedJobRef.current !== key) { savedJobRef.current = key; setSessions(saveSession(job)) }
   }, [job])
 
-  const running = submitting || Boolean(job && !isTerminalJob(job))
-
-  const handleStartResearch = useCallback((value) => {
+  const handleStartResearch = useCallback(value => {
     const trimmed = (value || '').trim()
-    if (!trimmed) return
-    setQuery(trimmed)
-    setCurrentPage('chat')
-    if (typeof window !== 'undefined') window.location.hash = '#chat'
-    start(trimmed)
-  }, [start])
-
-  const handleSelectSession = useCallback((session) => {
+    if (!trimmed || running) return
+    setQuery(trimmed); navigate('chat'); start(trimmed)
+  }, [start, navigate, running])
+  const handleSelectSession = useCallback(session => {
     if (!session || running) return
-    if (typeof session === 'string') {
-      handleStartResearch(session)
-      return
-    }
-    const selectedQuery = session.query || ''
-    setQuery(selectedQuery)
-    setCurrentPage('chat')
-    if (typeof window !== 'undefined') window.location.hash = '#chat'
-    if (session.status === 'chat' || !session.job_id || session.job_id.startsWith('chat_')) {
-      reset()
-      return
-    }
-    const snapshot = session.snapshot || session
-    api.getStatus(session.job_id)
-      .then((fresh) => restore(fresh))
-      .catch(() => restore(snapshot))
-  }, [handleStartResearch, reset, restore, running])
-
+    setQuery(session.query || ''); navigate('chat')
+    if (session.status === 'chat' || !session.job_id || session.job_id.startsWith('chat_')) { reset(); return }
+    api.getStatus(session.job_id).then(restore).catch(() => restore(session.snapshot || session))
+  }, [navigate, reset, restore, running])
   const handleNewResearch = useCallback(() => {
     if (running) return
-    reset()
-    setQuery('')
-    setCurrentPage('landing')
-    if (typeof window !== 'undefined') window.location.hash = '#landing'
-  }, [reset, running])
+    reset(); setQuery(''); navigate('landing')
+  }, [reset, running, navigate])
 
-  const handleNavSelect = useCallback((section) => {
-    if (section === 'chat' || section === 'research') {
-      setCurrentPage('chat')
-      if (typeof window !== 'undefined') window.location.hash = '#chat'
-      return
-    }
-    if (section === 'landing' || section === 'explore' || section === 'methodology') {
-      setCurrentPage('landing')
-      if (typeof window !== 'undefined') window.location.hash = '#landing'
-      if (section !== 'landing') {
-        setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' }), 50)
-      }
-    }
-  }, [])
-
-  if (!user) return <Login onLogin={login} />
-
-  if (currentPage === 'chat') {
-    return (
-      <StudioPage
-        job={job}
-        query={query}
-        running={running}
-        submitting={submitting}
-        onStartResearch={handleStartResearch}
-        onAskReport={(jobId, question) => api.askReport(jobId, question)}
-        onNewResearch={handleNewResearch}
-        onBackToStart={() => handleNavSelect('landing')}
-        user={user}
-      />
-    )
-  }
-
-  return (
-    <div className="app-shell">
-      <a className="skip-link" href="#research-query">Skip to research</a>
-      {navOpen && <button aria-label="Close navigation" onClick={() => setNavOpen(false)} className="drawer-overlay" />}
-
-      <Sidebar
-        open={navOpen}
-        onClose={() => setNavOpen(false)}
-        user={user}
-        onLogout={() => { reset(); setQuery(''); logout() }}
-        onNew={handleNewResearch}
-        running={running}
-        onNavSelect={handleNavSelect}
-        history={sessions}
-        onSelectHistory={handleSelectSession}
-        onDeleteHistory={(jobId) => setSessions(deleteSession(jobId))}
-        currentPage={currentPage}
-      />
-
-      <main className="workspace-main" {...(navOpen ? { inert: '' } : {})}>
-        <header className="workspace-header">
-          <button aria-label="Open navigation" aria-expanded={navOpen} aria-controls="workspace-navigation" onClick={() => setNavOpen(true)} className="mobile-menu">
-            <Menu size={20} />
-          </button>
-          <div className="breadcrumb"><span>Workspace</span><span>/</span><strong>Research overview</strong></div>
-          <div className="header-right">
-            <button onClick={() => handleNavSelect('chat')} className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-[11.5px] font-mono text-[#bdc1c6] transition hover:bg-white/10 hover:text-white">
-              <Sparkles size={13} className="text-[#4285f4]" />
-              <span>Open research chat</span>
-            </button>
-            <span className="demo-badge hidden sm:inline">EVIDENCE-FIRST PIPELINE</span>
-            <span className="header-avatar" title={user.name}>{(user.name || 'R').trim().charAt(0).toUpperCase()}</span>
-          </div>
-        </header>
-        <div className="workspace-scroll scroll-slim">
-          <LandingExperience
-            onRun={handleStartResearch}
-            running={running}
-            submitting={submitting}
-            query={query}
-            onQueryChange={setQuery}
-          />
-        </div>
-      </main>
-    </div>
-  )
+  if (currentPage === 'chat') return <Suspense fallback={<div className="be-loading" role="status">Opening your research workspace…</div>}><StudioPage
+    job={job} query={query} running={running} submitting={submitting}
+    onStartResearch={handleStartResearch} onAskReport={(jobId, question) => api.askReport(jobId, question)}
+    onNewResearch={handleNewResearch} onBackToStart={() => navigate('landing')} user={user || { name: 'Researcher', guest: true }}
+  /></Suspense>
+  return <LandingExperience onRun={handleStartResearch} running={running} submitting={submitting} query={query} onQueryChange={setQuery}
+    sessions={sessions} onSelectSession={handleSelectSession} onDeleteSession={id => setSessions(deleteSession(id))} onResume={() => navigate('chat')} />
 }
