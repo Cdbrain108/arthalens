@@ -6,6 +6,9 @@
 *.zip
 *.tar.gz
 backend_deploy*
+DEPLOYMENT_GUIDE.md
+*DEPLOYMENT*
+*deployment*
 unified_llm_client.py
 artha-ai/backend/test_*.py
 artha-ai/backend/scratch_*.py
