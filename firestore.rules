@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================================================
+    // SAMVAAD AI (Preserved - Do Not Modify)
+    // ========================================================================
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ========================================================================
+    // STOCK RESEARCH - User Isolation and Private Research Data
+    // ========================================================================
+    match /stockResearchUsers/{userId} {
+      // User can read and manage their own profile node
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // User's Persistent Stock Research Conversations and Queries
+      // Schema: stockResearchUsers/{userId}/conversations/{conversationId}
+      match /conversations/{conversationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // User's Saved PDF Reports and Dossier Metadata
+      // Schema: stockResearchUsers/{userId}/reports/{reportId}
+      match /reports/{reportId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Default deny all other paths for tight security
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

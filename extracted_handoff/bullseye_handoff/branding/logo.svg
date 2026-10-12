@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Bulls Eye logo">
+  <title>Bulls Eye</title>
+  <rect width="240" height="240" rx="48" fill="#0B1020"/>
+  <!-- bull head: face, horns, ears -->
+  <g fill="none" stroke="#6C7CFF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M82 72 L158 72 C168 102 166 134 154 160 C148 178 132 190 120 190 C108 190 92 178 86 160 C74 134 72 102 82 72 Z"/>
+    <path d="M82 76 C58 80 36 68 28 40 C46 58 64 58 80 60"/>
+    <path d="M158 76 C182 80 204 68 212 40 C194 58 176 58 160 60"/>
+    <path d="M82 90 C66 90 54 98 50 108 C66 108 76 104 83 98"/>
+    <path d="M158 90 C174 90 186 98 190 108 C174 108 164 104 157 98"/>
+  </g>
+  <!-- nostrils -->
+  <circle cx="108" cy="166" r="4" fill="#6C7CFF"/>
+  <circle cx="132" cy="166" r="4" fill="#6C7CFF"/>
+  <!-- chart line: down, up, rising to bullseye -->
+  <polyline points="28,196 60,176 82,190 112,150 134,162 170,112 196,86"
+            fill="none" stroke="#22C55E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- bullseye target -->
+  <circle cx="206" cy="78" r="17" fill="#0B1020" stroke="#22C55E" stroke-width="5"/>
+  <circle cx="206" cy="78" r="8" fill="none" stroke="#22C55E" stroke-width="4"/>
+  <circle cx="206" cy="78" r="3" fill="#22C55E"/>
+</svg>

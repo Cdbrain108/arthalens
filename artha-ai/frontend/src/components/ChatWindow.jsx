@@ -150,7 +150,7 @@ export default function ChatWindow({
                       </a>
                       <a
                         href={pdfUrl}
-                        download={`bullseye_${job.job_id}.pdf`}
+                        download={`stock_research_${job.job_id}.pdf`}
                         className="cta-gradient flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[11.5px] font-semibold text-white shadow-md"
                       >
                         <Download size={13} /> Download PDF

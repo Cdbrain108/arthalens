@@ -44,9 +44,17 @@ test('demo controls, theme persistence, and research submission work', async ({ 
   await page.addInitScript(() => sessionStorage.setItem('bullseye:intro:v1', 'seen'))
   await page.goto('/')
   await page.getByRole('button', { name: 'Research TCS', exact: true }).click()
-  await expect(page.locator('#research-query')).toHaveValue('Research TCS')
+  // Example chips launch a run directly (workspace opens immediately) …
+  await expect(page).toHaveURL(/#chat$/)
+  await expect(page.locator('.studio-root')).toBeVisible()
+  // … and the demo controls below operate on the landing page.
+  await page.goBack()
+  await expect(page.locator('#research-query')).toBeVisible()
   await page.getByRole('button', { name: '↘ Bear case', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'What could break the thesis?' })).toBeVisible()
+  // Scrolling down auto-hides the taskbar by design; a real user moves the
+  // pointer to the top screen edge to reveal it before reaching the theme switch.
+  await page.mouse.move(400, 20)
   await page.getByRole('button', { name: 'Switch to light theme' }).click()
   await page.reload()
   await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible()

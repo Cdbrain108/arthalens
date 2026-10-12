@@ -1,108 +1,439 @@
 import { useState } from 'react'
-import { ArrowRight, ArrowUpRight, Check, CheckCircle2, Fingerprint, Layers3, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Fingerprint,
+  Layers3,
+  Loader2,
+  Lock,
+  Mail,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  User as UserIcon,
+  X,
+} from 'lucide-react'
 import Logo from './Logo'
 import MarketVisual from './MarketVisual'
+import { useAuth } from '../hooks/useAuth'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onCancel }) {
+  const { login, signup, loginWithGoogle, sendPasswordReset, loginAsGuest, isFirebaseConfigured } = useAuth()
+
+  // Modes: 'signin' | 'signup' | 'forgot'
+  const [mode, setMode] = useState('signin')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+
+  const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [err, setErr] = useState(null)
-  const [errorField, setErrorField] = useState(null)
+  const [successMsg, setSuccessMsg] = useState(null)
   const [activeField, setActiveField] = useState(null)
-  const [submitted, setSubmitted] = useState(false)
-  const [status, setStatus] = useState('')
-  const [guestFocused, setGuestFocused] = useState(false)
 
   const clearFeedback = () => {
-    if (err) {
-      setErr(null)
-      setErrorField(null)
-    }
-    if (status) setStatus('')
+    if (err) setErr(null)
+    if (successMsg) setSuccessMsg(null)
   }
 
-  const submit = (event) => {
-    event.preventDefault()
-    setSubmitted(true)
-    if (name.trim().length < 2) {
-      setErrorField('name')
-      setActiveField('name')
-      return setErr('Please enter a name with at least 2 characters.')
+  const switchMode = (newMode) => {
+    setMode(newMode)
+    setErr(null)
+    setSuccessMsg(null)
+  }
+
+  // Handle Form Submit
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    clearFeedback()
+
+    if (mode === 'forgot') {
+      if (!EMAIL_RE.test(email.trim())) {
+        return setErr('Please enter a valid email address.')
+      }
+      setLoading(true)
+      const res = await sendPasswordReset(email.trim())
+      setLoading(false)
+      if (res.success) {
+        setSuccessMsg('Password reset instructions have been sent to your email.')
+      } else {
+        setErr(res.error || 'Failed to send password reset email.')
+      }
+      return
     }
+
+    if (mode === 'signup' && name.trim().length < 2) {
+      return setErr('Please enter your full name (at least 2 characters).')
+    }
+
     if (!EMAIL_RE.test(email.trim())) {
-      setErrorField('email')
-      setActiveField('email')
       return setErr('Please enter a valid email address.')
     }
-    setErr(null)
-    setErrorField(null)
-    setStatus('Opening your workspace…')
-    onLogin({ name, email })
+
+    if (password.length < 6) {
+      return setErr('Password must be at least 6 characters.')
+    }
+
+    setLoading(true)
+
+    if (mode === 'signup') {
+      const { user, error } = await signup(name.trim(), email.trim(), password)
+      setLoading(false)
+      if (error) {
+        setErr(error)
+      } else if (user) {
+        setSuccessMsg('Account created successfully!')
+        onLogin?.(user)
+      }
+    } else {
+      // signin
+      const { user, error } = await login(email.trim(), password)
+      setLoading(false)
+      if (error) {
+        setErr(error)
+      } else if (user) {
+        setSuccessMsg('Welcome back!')
+        onLogin?.(user)
+      }
+    }
   }
 
-  const enterAsGuest = () => {
-    setStatus('Opening the guest workspace…')
-    onLogin({ name: 'Guest Researcher', email: 'guest@local', guest: true })
+  // Handle Google Sign-In
+  const handleGoogleSignIn = async () => {
+    clearFeedback()
+    setGoogleLoading(true)
+    const { user, error } = await loginWithGoogle()
+    setGoogleLoading(false)
+    if (error) {
+      setErr(error)
+    } else if (user) {
+      onLogin?.(user)
+    }
+  }
+
+  // Handle Guest Enter
+  const handleGuestEnter = () => {
+    const guestUser = loginAsGuest('Guest Researcher', 'guest@local')
+    onLogin?.(guestUser)
   }
 
   const fieldClass = (field) => [
     'field w-full rounded-xl border bg-white/[0.045] px-4 py-3 text-sm text-white placeholder:text-[#7d8590] transition duration-200',
-    'focus:border-[#9cee69] focus:bg-white/[0.07] focus:outline-none focus:ring-4 focus:ring-[#9cee69]/10',
-    activeField === field && !err ? 'border-[#9cee69]/70 bg-white/[0.07]' : 'border-white/10',
-    errorField === field ? 'border-[#ff8c8c] ring-4 ring-[#ff8c8c]/10' : '',
-  ].filter(Boolean).join(' ')
+    'focus:border-[#22c55e] focus:bg-white/[0.07] focus:outline-none focus:ring-4 focus:ring-[#22c55e]/10',
+    activeField === field && !err ? 'border-[#22c55e]/70 bg-white/[0.07]' : 'border-white/10',
+  ].join(' ')
 
-  return <div className="welcome-page relative min-h-screen overflow-hidden bg-[#0d1014] text-[#f1f3f4]">
-    <a className="skip-link sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[#9cee69] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#15251a]" href="#login-name">Skip to sign in</a>
-    <div className="welcome-aurora pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      <span className="absolute -left-24 -top-40 h-96 w-96 rounded-full bg-[#9cee69]/10 blur-3xl" />
-      <span className="absolute right-[-12rem] top-1/3 h-[34rem] w-[34rem] rounded-full bg-[#4285f4]/10 blur-3xl" />
+  return (
+    <div className="welcome-page relative min-h-screen overflow-hidden bg-[#0d1014] text-[#f1f3f4]">
+      {/* Background Aurora Lighting */}
+      <div className="welcome-aurora pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <span className="absolute -left-24 -top-40 h-96 w-96 rounded-full bg-[#22c55e]/10 blur-3xl" />
+        <span className="absolute right-[-12rem] top-1/3 h-[34rem] w-[34rem] rounded-full bg-[#4285f4]/10 blur-3xl" />
+      </div>
+
+      {/* Header */}
+      <header className="welcome-header relative z-10 flex items-center justify-between border-b border-white/[0.08] px-6 py-4 lg:px-12">
+        <a className="welcome-logo flex items-center gap-3 text-lg font-semibold tracking-[-0.03em] text-white" href="#home" aria-label="Stock Research Home">
+          <Logo size={36} />
+          <span className="flex items-center gap-1.5 font-bold tracking-tight">
+            Stock Research
+            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+          </span>
+          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-mono font-semibold tracking-widest text-emerald-400">
+            PRO PLATFORM
+          </span>
+        </a>
+
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+          >
+            <X size={15} /> Close
+          </button>
+        )}
+      </header>
+
+      {/* Main Container */}
+      <main className="welcome-main relative z-10 mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(380px,460px)] lg:gap-16 lg:px-12 lg:pt-12">
+        {/* Left Column: Visual Story */}
+        <section className="welcome-story animate-fade-up">
+          <div className="welcome-eyebrow flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-[#22c55e]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_rgba(34,197,94,0.9)]" />
+            EVIDENCE-FIRST FINANCIAL INTELLIGENCE
+          </div>
+          <h1 className="mt-5 max-w-2xl text-4xl font-normal leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+            See the upside.<br />
+            <span className="text-[#22c55e]">Audit the downside.</span>
+          </h1>
+          <p className="welcome-description mt-5 max-w-xl text-sm leading-relaxed text-[#a8afb8] sm:text-base">
+            Autonomous multi-agent stock research that cross-examines financial filings, earnings calls, news, and valuation with verified provenance.
+          </p>
+
+          <div className="welcome-tags mt-6 flex flex-wrap gap-2.5 text-xs text-[#c8ced5]">
+            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
+              <Check size={14} className="text-[#22c55e]" /> Deterministic Math
+            </span>
+            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
+              <Check size={14} className="text-[#22c55e]" /> Primary Filings & Sources
+            </span>
+            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
+              <Check size={14} className="text-[#22c55e]" /> Institutional PDF Dossiers
+            </span>
+          </div>
+
+          <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-2xl sm:p-5">
+            <MarketVisual />
+          </div>
+        </section>
+
+        {/* Right Column: Authentication Card */}
+        <section className="welcome-access animate-fade-up">
+          <div className="rounded-3xl border border-white/10 bg-[#161a20]/95 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
+            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <Logo size={28} />
+                <span className="text-sm font-semibold text-white">
+                  {mode === 'signin' && 'Sign in to Stock Research'}
+                  {mode === 'signup' && 'Create your Research Account'}
+                  {mode === 'forgot' && 'Reset your Password'}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400">
+                {isFirebaseConfigured ? 'FIREBASE CLOUD' : 'LOCAL MODE'}
+              </span>
+            </div>
+
+            {/* Google One-Click Button */}
+            {mode !== 'forgot' && isFirebaseConfigured && (
+              <div className="mb-5">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={googleLoading || loading}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-3 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.09] disabled:opacity-50"
+                >
+                  {googleLoading ? (
+                    <Loader2 size={17} className="animate-spin text-white" />
+                  ) : (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                  )}
+                  <span>Continue with Google</span>
+                </button>
+
+                <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-wider text-[#666e78]">
+                  <span className="h-px flex-1 bg-white/10" />
+                  <span>or email credentials</span>
+                  <span className="h-px flex-1 bg-white/10" />
+                </div>
+              </div>
+            )}
+
+            {/* Email Form */}
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              {mode === 'signup' && (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-[#c8ced5]">Full Name</label>
+                  <div className="relative">
+                    <UserIcon size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => { setName(e.target.value); clearFeedback() }}
+                      onFocus={() => setActiveField('name')}
+                      onBlur={() => setActiveField(null)}
+                      placeholder="Anuj Kesharwani"
+                      required
+                      className={`${fieldClass('name')} pl-10`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#c8ced5]">Email Address</label>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); clearFeedback() }}
+                    onFocus={() => setActiveField('email')}
+                    onBlur={() => setActiveField(null)}
+                    placeholder="researcher@firm.com"
+                    required
+                    className={`${fieldClass('email')} pl-10`}
+                  />
+                </div>
+              </div>
+
+              {mode !== 'forgot' && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium text-[#c8ced5]">Password</label>
+                    {mode === 'signin' && (
+                      <button
+                        type="button"
+                        onClick={() => switchMode('forgot')}
+                        className="text-[11px] text-[#22c55e] hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); clearFeedback() }}
+                      onFocus={() => setActiveField('password')}
+                      onBlur={() => setActiveField(null)}
+                      placeholder="••••••••"
+                      required
+                      className={`${fieldClass('password')} pl-10 pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Feedback messages */}
+              {err && (
+                <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                  {err}
+                </div>
+              )}
+
+              {successMsg && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                  {successMsg}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading || googleLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#22c55e] px-4 py-3.5 text-sm font-semibold text-[#091a0f] shadow-lg shadow-emerald-500/20 transition hover:bg-[#4ade80] hover:shadow-emerald-500/30 disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 size={18} className="animate-spin text-black" />
+                ) : mode === 'signin' ? (
+                  <>
+                    <span>Enter Research Workspace</span>
+                    <ArrowRight size={17} />
+                  </>
+                ) : mode === 'signup' ? (
+                  <>
+                    <span>Create Research Account</span>
+                    <ArrowRight size={17} />
+                  </>
+                ) : (
+                  <>
+                    <span>Send Reset Link</span>
+                    <RotateCcw size={16} />
+                  </>
+                )}
+              </button>
+
+              {/* Mode switch links */}
+              <div className="pt-2 text-center text-xs text-slate-400">
+                {mode === 'signin' && (
+                  <p>
+                    Don’t have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => switchMode('signup')}
+                      className="font-medium text-[#22c55e] hover:underline"
+                    >
+                      Create one here
+                    </button>
+                  </p>
+                )}
+
+                {mode === 'signup' && (
+                  <p>
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => switchMode('signin')}
+                      className="font-medium text-[#22c55e] hover:underline"
+                    >
+                      Sign in instead
+                    </button>
+                  </p>
+                )}
+
+                {mode === 'forgot' && (
+                  <button
+                    type="button"
+                    onClick={() => switchMode('signin')}
+                    className="font-medium text-[#22c55e] hover:underline"
+                  >
+                    Back to Sign In
+                  </button>
+                )}
+              </div>
+
+              {/* Guest explorer button */}
+              <div className="border-t border-white/10 pt-4">
+                <button
+                  type="button"
+                  onClick={handleGuestEnter}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2.5 text-xs font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                >
+                  <span>Explore as Guest (No Login Required)</span>
+                  <ArrowUpRight size={14} />
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-5 flex items-center gap-2 text-[11px] text-slate-400">
+              <ShieldCheck size={14} className="shrink-0 text-[#22c55e]" />
+              <span>User sessions and private research dossiers are protected with Firebase Firestore and Storage rules.</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="welcome-footer relative z-10 flex flex-col gap-2 border-t border-white/[0.08] px-6 py-5 text-[10px] tracking-wider text-[#66707c] sm:flex-row sm:items-center sm:justify-between lg:px-12">
+        <span>STOCK RESEARCH · INDEPENDENT MINDS. INFORMED MOVES.</span>
+        <p className="tracking-normal">Evidence-based research platform. Not financial investment advice.</p>
+        <span>Stock Research © {new Date().getFullYear()}</span>
+      </footer>
     </div>
-    <header className="welcome-header relative z-10 flex items-center justify-between border-b border-white/[0.08] px-6 py-5 lg:px-12">
-      <a className="welcome-logo flex items-center gap-2.5 text-lg font-semibold tracking-[-0.03em] text-white" href="#welcome-title" aria-label="Bullseye home"><Logo size={34} /><span>Bullseye<span className="brand-dot text-[#9cee69]">.</span></span><span className="welcome-beta rounded-full border border-white/10 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] text-[#9aa0a6]">BETA</span></a>
-      <nav className="hidden items-center gap-6 text-xs text-[#9aa0a6] sm:flex" aria-label="Welcome navigation"><a className="transition-colors hover:text-white" href="#welcome-features">The advantage</a><a className="flex items-center gap-1 transition-colors hover:text-white" href="#welcome-access">Your workspace <ArrowUpRight size={14} /></a></nav>
-    </header>
-    <main className="welcome-main relative z-10 mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:gap-20 lg:px-12 lg:pt-16">
-      <section className="welcome-story animate-fade-up" aria-labelledby="welcome-title">
-        <div className="welcome-eyebrow flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-[#9cee69]"><span className="signal-dot h-1.5 w-1.5 rounded-full bg-[#9cee69] shadow-[0_0_14px_rgba(156,238,105,0.9)]" /> A NEW PERSPECTIVE ON INVESTING</div>
-        <h1 id="welcome-title" className="mt-6 max-w-2xl text-5xl font-normal leading-[1.05] tracking-[-0.055em] text-white sm:text-6xl lg:text-7xl">Find the signal.<br /><span className="text-[#9cee69]">Own your edge.</span></h1>
-        <p className="welcome-description mt-6 max-w-xl text-base leading-7 text-[#a8afb8]">Markets move fast. Think a step ahead. Turn your biggest investment questions into clear, evidence-backed research.</p>
-        <div className="welcome-tags mt-7 flex flex-wrap gap-2.5 text-xs text-[#c8ced5]"><span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-2"><Check size={14} className="text-[#9cee69]" /> In-depth analysis</span><span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-2"><Check size={14} className="text-[#9cee69]" /> Sources included</span><span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-2"><Check size={14} className="text-[#9cee69]" /> Your perspective</span></div>
-        <div className="mt-10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-2xl shadow-black/20 sm:p-5"><MarketVisual /></div>
-        <p className="visual-caption mt-4 flex items-center gap-2 text-xs text-[#7d8590]"><span className="h-1 w-1 rounded-full bg-[#9cee69]" /> A little clarity changes the whole picture.</p>
-      </section>
-      <section id="welcome-access" className="welcome-access animate-fade-up lg:pt-2" aria-labelledby="access-title">
-        <div className="access-topline mb-4 flex items-center justify-between text-[10px] font-semibold tracking-[0.2em] text-[#7d8590]"><span>YOUR NEXT CHAPTER</span><Fingerprint size={19} className="text-[#9cee69]" /></div>
-        <form onSubmit={submit} className="welcome-form rounded-3xl border border-white/10 bg-[#171b20]/90 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-8" noValidate>
-          <div className="access-icon mb-5 grid h-12 w-12 place-items-center rounded-2xl border border-[#9cee69]/20 bg-[#9cee69]/10 text-[#9cee69]"><Sparkles size={24} strokeWidth={1.5} /></div>
-          <h2 id="access-title" className="text-3xl font-normal leading-tight tracking-[-0.04em] text-white">Great research<br />starts with you.</h2>
-          <p className="mt-3 text-sm leading-6 text-[#9aa0a6]">A space for curious minds.<br />Make it yours and start exploring.</p>
-          <div className="mt-7 space-y-2">
-            <label htmlFor="login-name" className="block text-xs font-medium text-[#c8ced5]">What should we call you? <span aria-hidden="true" className="text-[#9cee69]">*</span></label>
-            <input id="login-name" value={name} onChange={event => { setName(event.target.value); clearFeedback() }} onFocus={() => setActiveField('name')} onBlur={() => setActiveField(null)} placeholder="Your name" autoComplete="name" required minLength={2} className={fieldClass('name')} aria-invalid={errorField === 'name'} aria-describedby={errorField === 'name' ? 'login-error' : undefined} />
-          </div>
-          <div className="mt-4 space-y-2">
-            <label htmlFor="login-email" className="block text-xs font-medium text-[#c8ced5]">Email address <span aria-hidden="true" className="text-[#9cee69]">*</span></label>
-            <input id="login-email" type="email" value={email} onChange={event => { setEmail(event.target.value); clearFeedback() }} onFocus={() => setActiveField('email')} onBlur={() => setActiveField(null)} placeholder="you@example.com" autoComplete="email" required className={fieldClass('email')} aria-invalid={errorField === 'email'} aria-describedby={errorField === 'email' ? 'login-error' : undefined} />
-          </div>
-          <div className="mt-3 min-h-5" aria-live="polite" aria-atomic="true">
-            {err && <p id="login-error" role="alert" className="access-error flex items-start gap-2 text-xs leading-5 text-[#ffaaaa]"><span aria-hidden="true" className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff8c8c]" />{err}</p>}
-            {!err && submitted && name.trim().length >= 2 && EMAIL_RE.test(email.trim()) && <p className="flex items-center gap-2 text-xs text-[#9cee69]"><CheckCircle2 size={14} /> Details look good.</p>}
-            {status && <p className="text-xs text-[#9aa0a6]">{status}</p>}
-          </div>
-          <button className="access-submit mt-3 flex w-full items-center justify-center gap-3 rounded-xl bg-[#9cee69] px-4 py-3.5 text-sm font-semibold text-[#15251a] shadow-lg shadow-[#9cee69]/10 transition duration-200 hover:-translate-y-0.5 hover:bg-[#b1f477] hover:shadow-[#9cee69]/20 active:translate-y-0" type="submit">Enter your workspace <ArrowRight size={18} /></button>
-          <div className="access-divider my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.16em] text-[#666e78]"><span className="h-px flex-1 bg-white/10" />or take a look around<span className="h-px flex-1 bg-white/10" /></div>
-          <button className={`access-guest flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition duration-200 ${guestFocused ? 'border-white/25 bg-white/[0.08] text-white' : 'border-white/10 bg-white/[0.025] text-[#c8ced5] hover:border-white/20 hover:bg-white/[0.06] hover:text-white'}`} type="button" onClick={enterAsGuest} onFocus={() => setGuestFocused(true)} onBlur={() => setGuestFocused(false)} onMouseEnter={() => setGuestFocused(true)} onMouseLeave={() => setGuestFocused(false)} aria-label="Explore the workspace as a guest">Explore as a guest <ArrowUpRight size={16} /></button>
-          <p className="access-privacy mt-5 flex items-start gap-2 text-[11px] leading-5 text-[#707984]"><ShieldCheck size={14} className="mt-0.5 shrink-0 text-[#9cee69]" /> Demo profile saved in this browser. Research questions are sent to the research service.</p>
-        </form>
-        <div className="access-bottom mt-5 flex items-center justify-center gap-2 text-xs text-[#7d8590]"><span className="signal-dot h-1.5 w-1.5 rounded-full bg-[#9cee69]" /> Curiosity looks good on you.<span className="text-[#9cee69]">↗</span></div>
-      </section>
-      <section id="welcome-features" className="welcome-features grid gap-4 border-t border-white/[0.08] pt-8 sm:grid-cols-3 lg:col-span-2" aria-label="The Bullseye advantage">
-        {[{ icon: Layers3, label: '01 / GO DEEPER', title: 'One question. Every angle.', text: 'Explore the fundamentals, valuation, growth drivers, and risks that matter.' }, { icon: ShieldCheck, label: '02 / STAY GROUNDED', title: 'Evidence over opinion.', text: 'Follow the sources. See what is known, and where the gaps remain.' }, { icon: ArrowUpRight, label: '03 / THINK CLEARER', title: 'Your thesis, sharpened.', text: 'Bring the research together in a cited report you can revisit and challenge.' }].map(({ icon: Icon, label, title, text }) => <article className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 transition-colors hover:border-white/20 hover:bg-white/[0.045]" key={label}><div className="flex items-center justify-between text-[10px] font-semibold tracking-[0.14em] text-[#7d8590]"><span>{label}</span><Icon size={19} className="text-[#9cee69]" /></div><h3 className="mt-5 text-base font-medium text-white">{title}</h3><p className="mt-2 text-xs leading-5 text-[#8f98a3]">{text}</p></article>)}
-      </section>
-    </main>
-    <footer className="welcome-footer relative z-10 flex flex-col gap-2 border-t border-white/[0.08] px-6 py-6 text-[10px] tracking-[0.14em] text-[#66707c] sm:flex-row sm:items-center sm:justify-between lg:px-12"><span>INDEPENDENT MINDS. INFORMED MOVES.</span><p className="tracking-normal">Built for research. Not investment advice.</p><span>Bullseye © {new Date().getFullYear()}</span></footer>
-  </div>
+  )
 }

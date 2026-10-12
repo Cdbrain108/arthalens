@@ -1,0 +1,129 @@
+BULLS EYE — COMPLETE PIPELINE, IN SIMPLE WORDS
+================================================
+One user question goes in. Nine specialist agents do only the work that is
+needed. Everything is checked, challenged, combined, rewritten, and saved as
+a cited PDF file. Nothing is ever invented: missing info becomes a visible gap.
+
+Q: WHY IS LANGGRAPH PERFECT FOR THIS TASK?
+------------------------------------------
+YES — this workflow is designed around explicit state transitions, conditional
+routing, and deterministic graph execution using LangGraph:
+
+  YOUR NEED                  LANGGRAPH ANSWER
+  Brain agent reads query    Query analysis & planning nodes with Chain-of-Thought
+  with CoT, then routes      Deterministic conditional routing policy
+  Only-needed agents run     Concurrent fan-out of routed specialist nodes in parallel
+  Wait for all, then join    Deterministic StateGraph synchronization
+  Validate & challenge       Adversarial truth audit, bull/bear cases & risk nodes
+  Combine + rewrite to file  Synthesis node with structured Pydantic contract,
+                             then compiled PDF rendering
+  Deterministic & typed      ResearchState typed dictionary throughout the graph
+  No key / ₹0 mode           Deterministic offline mock path; add Gemini/OpenRouter
+                             and live structured LLM takes over
+
+THE PIPELINE, STAGE BY STAGE
+----------------------------
+STAGE 0 — USER QUERY. Plain words. "Should I hold TCS for 5 years?"
+
+STAGE 1 — AGENT 0, THE QUERY UNDERSTANDING AGENT (the brain). It does NOT
+research. It thinks step-by-step (Chain-of-Thought):
+  1. READ the query. 2. THINK: which company/ticker? what is the intent
+  (price move? long-term? hiring? compare? document?). What time horizon?
+  3. PLAN the smallest agent set that can answer. 4. ROUTE: hand each chosen
+  agent a written brief (company, intent, plan slice) so nobody guesses.
+  Its tools: a structured LLM (or the deterministic mock) + the routing table.
+
+STAGE 2 — DYNAMIC ROUTER (policy guardrail, pure code, no LLM). The planner
+proposes; this table disposes: per-intent MINIMUM agents, NEVER-use lists,
+and a MAX-agent cap. A flaky model can therefore never under- or over-route.
+
+STAGE 3 — THE 9 SPECIALISTS (only the routed ones wake up, all in parallel).
+Each one: reads its brief -> calls its tools in a bounded loop -> returns a
+fixed-shape AgentResult (findings, good signals, bad signals, risks, evidence
+with source+excerpt each, confidence, gaps). One agent failing never kills the
+run; it becomes a gap note.
+
+  1. FINANCIAL — the accountant. Task: revenue, profit, margins, EPS, cash
+     flow, debt, ROE/ROCE + multi-year trends; state consolidated vs
+     standalone; min 4 evidence items. NEVER does math itself.
+     Tools now: get_financials, get_company_metrics, calculate_ratio (ours).
+     Best upgrades: Finnhub free (60 req/min), bfinance (10-yr Indian data).
+     Used for: long-term, compare, document questions.
+  2. VALUATION — the appraiser. Task: P/E, P/B, P/S, EV/EBITDA, PEG, dividend
+     + FCF yield VIA TOOLS ONLY, contextualised vs history/peers/sector;
+     min 5 evidence items.
+     Tools now: get_quote, get_company_metrics, calculate_ratio.
+     Best upgrades: Stooq CSV fallback (keyless), Twelve Data key.
+     Used for: long-term, compare. NEVER for pure price-move questions.
+  3. MARKET — the tape reader. Task: actual price/volume/history + sector
+     context, all dated. Technical claims only if a tool computed them.
+     Tools now: get_quote, get_price_history, get_volume.
+     Best upgrades: Stooq fallback, Finnhub for clean rate limits.
+     Used for: almost everything.
+  4. NEWS — the correspondent. Task: earnings, contracts, management,
+     regulation, launches, litigation, M&A as a DATED event list; min 3 items.
+     Tools now: Google News RSS. Best upgrades (all keyless): Yahoo
+     per-symbol RSS, Bing News RSS, GDELT API; keyed: Tavily topic=news.
+     Used for: price moves, long-term, hiring, general.
+  5. GROWTH — the scout. Task: capex, expansion, products, partnerships; tag
+     EVERY initiative announced/started/executing/completed.
+     Tools now: web search + page fetch + document search. Best upgrades:
+     Tavily keyless first, Jina Search, then Serper/Exa keys.
+     Used for: multi-year horizons, growth questions.
+  6. RISK — the thesis-breaker. Task: business/financial/regulatory/legal/
+     execution/tech risks; MUST pursue one thesis-breaking angle.
+     Tools: full web stack + news + documents (same best options as growth).
+     Used for: every decision-grade question (mandatory).
+  7. WORKFORCE (optional) — the hiring desk. Task: career pages + public
+     disclosures only; note source legality; LinkedIn scraping banned.
+     Tools: Jina Search + Jina Reader fetches. Used for: hiring questions only.
+  8. SOCIAL (optional) — the crowd listener. Task: qualitative discussion
+     themes + evidence strength; NEVER fake sentiment percentages.
+     Tools: Jina Search, DuckDuckGo. Used for: only when explicitly relevant.
+  9. DOCUMENT/RAG — the archivist. Task: answer ONLY from retrieved filing
+     passages with page + section cites.
+     Tools now: FAISS + local embeddings + PDF parser. Best upgrades:
+     trafilatura chunking, Firecrawl for hostile JS pages.
+     Used for: document questions, long-term research, whenever PDFs exist.
+
+STAGE 4 — EVIDENCE POOL. All agents drop findings + evidence here. Validator
+checks: does the source exist? is the date known? do units match? do two
+sources disagree on a number? (flag conflict). Optional upgrade: Jina
+Grounding spot-checks big claims against the live web.
+
+STAGE 5 — BULL/BEAR CHALLENGER. Deliberately attacks the thesis: min 2 bull
+points, 2 bear points, 1 view-changing trigger — each traced to evidence, zero
+new facts allowed.
+
+STAGE 6 — SYNTHESIZER. Combines + rewrites everything into one structured
+report: executive summary, per-section findings, bull/bear, risks,
+BUY/HOLD/SELL decision-support with rationale, evidence gaps, what-could-
+change-the-view, sources, timestamps. Separates FACT vs INTERPRETATION vs
+CONCLUSION.
+
+STAGE 7 — OUTPUT FILE. Report JSON -> Jinja2 template -> PDF (WeasyPrint,
+fpdf2 fallback). Deterministic: NO LLM touches rendering, so layout quality
+never depends on the model. Saved to reports/ and offered as download.
+
+HOW THEY CONNECT (the wiring in one paragraph)
+----------------------------------------------
+Query -> brain (CoT analysis + plan) -> router table (final agent list) ->
+FAN-OUT: chosen specialists run at the same time, each reading the shared
+brief and its own tools -> JOIN: collector waits for all, missing agents
+become gaps -> validator -> challenger -> synthesizer -> report JSON ->
+PDF file -> user. Progress events (node, agent_done) stream to the UI's
+WorkflowStatus; the API stores job, report and PDF for history.
+
+WORKED EXAMPLE
+--------------
+"Should I hold TCS for the next five years?"
+Brain: company=TCS, intent=long_term, horizon=5y. Router: financial,
+valuation, market, news, growth, risk (+document if PDFs uploaded).
+Six agents run parallel: market grabs the quote/history, financial pulls
+statements, valuation computes P/E deterministically, news builds the event
+list, growth tags projects, risk hunts the bear case. Validator flags one
+conflicting revenue figure (kept visible, not hidden). Challenger writes
+2 bull / 2 bear / triggers. Synthesizer merges all into HOLD-with-rationale
+plus gaps. PDF renders with cover, ratios, bull/bear, risks, sources.
+"Why did TCS move today?" takes the same pipe but routes ONLY market+news —
+fast and cheap. That selectiveness IS the product.

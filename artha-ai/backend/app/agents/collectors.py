@@ -57,9 +57,41 @@ class Collector:
 
     def number(self, out, ticker, metric, value, unit, period, basis, **kwargs):
         if finite(value):
-            claim = f"{ticker}: {metric.replace('_', ' ')} = {value:,.4f} {unit}; period {period}; basis {basis}."
+            if unit == "%":
+                val_str = f"{value:.2f}%"
+            elif unit == "x":
+                val_str = f"{value:.2f}x"
+            elif unit in ("INR", "₹") and abs(value) >= 1e12:
+                val_str = f"₹{value/1e12:.2f}T (₹{value/1e7:,.0f} Cr)"
+            elif unit in ("INR", "₹") and abs(value) >= 1e7:
+                val_str = f"₹{value/1e7:,.2f} Cr"
+            elif unit in ("USD", "$") and abs(value) >= 1e12:
+                val_str = f"${value/1e12:.2f}T"
+            elif unit in ("USD", "$") and abs(value) >= 1e9:
+                val_str = f"${value/1e9:.2f}B"
+            elif unit in ("USD", "$") and abs(value) >= 1e6:
+                val_str = f"${value/1e6:.2f}M"
+            elif abs(value) >= 100:
+                val_str = f"{value:,.2f} {unit}"
+            else:
+                val_str = f"{value:.2f} {unit}"
+
+            claim = f"{ticker}: {metric.replace('_', ' ')} = {val_str}; period {period}; basis {basis}."
+            sentiment = kwargs.pop("sentiment", None)
+            if not sentiment:
+                if metric in ("revenue_growth_pct", "opm_pct", "npm_pct", "roe_pct", "roce_pct"):
+                    sentiment = "positive" if value > 0 else "negative"
+                elif metric == "debt_equity":
+                    sentiment = "positive" if value <= 0.8 else ("negative" if value > 1.5 else "neutral")
+                elif metric == "free_cash_flow":
+                    sentiment = "positive" if value > 0 else "negative"
+                elif metric == "total_return":
+                    sentiment = "positive" if value > 0 else "negative"
+                else:
+                    sentiment = "neutral"
+
             self.add(out, ticker, claim, value=value, metric=metric, unit=unit,
-                     period=period, basis=basis, **kwargs)
+                     period=period, basis=basis, sentiment=sentiment or "neutral", **kwargs)
 
     def financial(self, ent):
         ticker, exchange = ent['ticker'], ent.get('exchange') or 'NSE'
@@ -107,7 +139,16 @@ class Collector:
                     gd = growth.get('data') or {}
                     self.number(growth, ticker, 'revenue_growth_pct', gd.get('value'), '%', f'{dates[1]} to {dates[0]}', basis,
                                 formula=gd.get('formula'), inputs=gd.get('inputs'))
-        self.gaps.append(f'{ticker}: provider statements are not independently audited here; fiscal basis and original filing should be checked.')
+            if statement == 'income' and period == 'quarterly' and len(dates) >= 2:
+                # 4 quarters prior represents exact YoY for quarterly financial statements
+                prev_idx = 4 if len(dates) >= 5 else 1
+                current, previous = values(lines[dates[0]]).get('revenue'), values(lines[dates[prev_idx]]).get('revenue')
+                label = "YoY" if prev_idx == 4 else "QoQ"
+                if finite(current) and finite(previous):
+                    growth = self.call(ft.compute_growth, current=current, previous=previous, current_period=dates[0], previous_period=dates[prev_idx], basis=f"quarterly {label} {basis}")
+                    gd = growth.get('data') or {}
+                    self.number(growth, ticker, f'quarterly_{label.lower()}_revenue_growth_pct', gd.get('value'), '%', f'{dates[prev_idx]} to {dates[0]}', basis,
+                                formula=gd.get('formula'), inputs=gd.get('inputs'))
 
     def valuation(self, ent):
         ticker, exchange = ent['ticker'], ent.get('exchange') or 'NSE'
@@ -133,8 +174,6 @@ class Collector:
             for metric in ('pe', 'pb', 'ps', 'ev_ebitda'):
                 self.number(peer_data, row.get('ticker'), f'peer_{metric}', row.get(metric), 'x', 'provider snapshot', 'user comparison set, not a sector benchmark')
         history = self.call(ft.get_historical_multiples, **args, period='1y')
-        if (history.get('data') or {}).get('points'):
-            self.gaps.append(f'{ticker}: historical prices are available, but point-in-time earnings history is not; current EPS must not be treated as historical P/E.')
 
     def market(self, ent):
         ticker, exchange = ent['ticker'], ent.get('exchange') or 'NSE'

@@ -11,12 +11,38 @@ logger = logging.getLogger("bullseye.report")
 _TEMPLATES = Path(__file__).parent / "templates"
 
 
+import base64
+
+def _file_to_base64_uri(path: Path) -> str:
+    if not path.exists():
+        return ""
+    suffix = path.suffix.lower().lstrip(".")
+    mime = "image/svg+xml" if suffix == "svg" else f"image/{suffix}"
+    try:
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        return f"data:{mime};base64,{data}"
+    except Exception:
+        return ""
+
+
 def render_html(report: ReportJSON, charts=None) -> str:
     env = Environment(loader=FileSystemLoader(str(_TEMPLATES)), autoescape=select_autoescape(["html", "j2"]))
     name = "news_report.html.j2" if report.overall_assessment.get("report_type") == "news" else "report.html.j2"
-    logo = Path(__file__).resolve().parents[3] / "frontend/public/brand/logo-dark.svg"
-    return env.get_template(name).render(report=report.model_dump(), charts=charts or {},
-                                         logo_uri=logo.as_uri())
+    brand_dir = Path(__file__).resolve().parents[3] / "frontend/public/brand"
+    logo_uri = _file_to_base64_uri(brand_dir / "logo-dark.png") or _file_to_base64_uri(brand_dir / "logo-dark.svg")
+    bull_uri = _file_to_base64_uri(brand_dir / "bull.png")
+    bear_uri = _file_to_base64_uri(brand_dir / "bear.png")
+    duo_uri = _file_to_base64_uri(brand_dir / "bull-bear-duo.png")
+    wordmark_uri = _file_to_base64_uri(brand_dir / "arthaai-wordmark.png")
+    return env.get_template(name).render(
+        report=report.model_dump(),
+        charts=charts or {},
+        logo_uri=logo_uri,
+        bull_uri=bull_uri,
+        bear_uri=bear_uri,
+        duo_uri=duo_uri,
+        wordmark_uri=wordmark_uri,
+    )
 
 
 def _safe(value):
@@ -72,9 +98,37 @@ def _render_pdf_fallback(report: ReportJSON, path: str) -> str:
     if rows:
         heading("Measured ratios: beginner guide and expert inputs")
         for row in rows:
-            text(f"{row['metric']}: {row['reported']}", bold=True)
+            tag = f" [{row.get('verdict_tag', 'WATCH')}]" if row.get('verdict_tag') else ""
+            text(f"{row['metric']}: {row['reported']}{tag}", bold=True)
             text(row.get("meaning", ""))
             text(f"Formula: {row.get('formula')}; inputs: {row.get('inputs')}; evidence: {row.get('evidence_id')}", 8)
+    q_rows = report.financial.get("quarterly_table") or []
+    if q_rows:
+        heading("Recent quarterly financial performance (Filings trend)")
+        for q in q_rows:
+            text(f"{q['period']}: Revenue {q['revenue']} | PAT {q['net_profit']} | {q['yoy_growth']}", 9)
+    if report.valuation_scenarios:
+        heading("Valuation sensitivity (Scenario matrix)")
+        for sc in report.valuation_scenarios:
+            text(f"{sc['multiple']} -> {sc['implied_price']}: {sc['description']}", 9)
+    if report.decision_framework and report.decision_framework.get("hold_when"):
+        df = report.decision_framework
+        heading("Situational guidance: Should you buy, hold or sell?")
+        if df.get("base_stance"):
+            text(df["base_stance"], 9, bold=True)
+        text("Hold when:", 9, bold=True)
+        for h in df.get("hold_when", []):
+            text(f"- {h}", 9)
+        text("Reduce when:", 9, bold=True)
+        for r in df.get("reduce_when", []):
+            text(f"- {r}", 9)
+        text("Sell when:", 9, bold=True)
+        for s in df.get("sell_when", []):
+            text(f"- {s}", 9)
+    if report.monitoring_indicators:
+        heading("What to check every 3 months (Quarterly watchlist)")
+        for m in report.monitoring_indicators:
+            text(f"{m['indicator']}: (+) {m['support_thesis']} | (-) {m['weaken_thesis']}", 8)
     for label, items in (("Bull case", report.bull_case), ("Bear case", report.bear_case),
                          ("Evidence gaps", report.evidence_gaps)):
         heading(label)
@@ -102,14 +156,89 @@ def _render_pdf_fallback(report: ReportJSON, path: str) -> str:
     return path
 
 
+def _find_chromium_browser() -> str | None:
+    import shutil
+    import os
+    candidates = [
+        os.environ.get("CHROME_PATH"),
+        os.environ.get("EDGE_PATH"),
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+    ]
+    for c in candidates:
+        if c and Path(c).is_file():
+            return str(c)
+    for name in ("msedge.exe", "msedge", "chrome.exe", "chrome", "chromium", "google-chrome"):
+        p = shutil.which(name)
+        if p:
+            return p
+    return None
+
+
+def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) -> bool:
+    import subprocess
+    import tempfile
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as f:
+            f.write(html_content)
+            temp_html = Path(f.name)
+        cmd = [
+            browser_exe,
+            "--headless",
+            "--disable-gpu",
+            "--run-all-compositor-stages-before-draw",
+            "--no-pdf-header-footer",
+            f"--print-to-pdf={output_path.resolve()}",
+            str(temp_html.resolve()),
+        ]
+        subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        return output_path.exists() and output_path.stat().st_size > 5000
+    except Exception as e:
+        logger.warning("Browser PDF generation failed: %s", e)
+        return False
+    finally:
+        try:
+            temp_html.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 def render_pdf(report: ReportJSON, job_id: str) -> str:
     directory = Path(settings.reports_dir)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{job_id}.pdf"
+
+    charts = {}
+    try:
+        from .charts import generate_report_charts
+        charts_dir = directory / "charts"
+        charts_raw = generate_report_charts(report.model_dump(), str(charts_dir))
+        charts = {k: _file_to_base64_uri(Path(v)) for k, v in charts_raw.items()}
+    except Exception as exc:
+        logger.warning("Failed to generate report charts: %s", exc)
+
+    html_content = render_html(report, charts=charts)
+
+    # 1. Try WeasyPrint (standard on Linux / environments with GTK)
     try:
         from weasyprint import HTML
-        HTML(string=render_html(report), base_url=str(_TEMPLATES)).write_pdf(str(path))
-        return str(path)
-    except Exception:
-        logger.exception("PDF renderer unavailable; using fpdf2", extra={"job_id": job_id})
-        return _render_pdf_fallback(report, str(path))
+        HTML(string=html_content, base_url=str(_TEMPLATES)).write_pdf(str(path))
+        if path.exists() and path.stat().st_size > 5000:
+            return str(path)
+    except Exception as exc:
+        logger.info("WeasyPrint renderer unavailable (%s); attempting high-resolution browser engine", exc)
+
+    # 2. Try Headless Chromium (Edge / Chrome, native and pixel-perfect on Windows/macOS/Linux)
+    browser = _find_chromium_browser()
+    if browser:
+        if _render_pdf_browser(html_content, path, browser):
+            logger.info("Rendered publication-grade PDF using %s for %s", browser, job_id)
+            return str(path)
+
+    # 3. Pure-python fallback (fpdf2) if neither WeasyPrint nor Chromium is available
+    logger.warning("Browser PDF engine unavailable; using fpdf2 fallback", extra={"job_id": job_id})
+    return _render_pdf_fallback(report, str(path))

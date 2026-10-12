@@ -1,0 +1,21 @@
+%% Bulls Eye working mechanism — editable source (paste at https://mermaid.live to re-render)
+flowchart TD
+    U["USER QUERY\nnatural language"] --> A["1 · QUERY ANALYZER\ncompany + ticker · intent · horizon · compare?"]
+    A --> P["2 · RESEARCH PLANNER\nminimal plan · propose only needed agents"]
+    P --> R{"3 · DYNAMIC ROUTER\npolicy: minimums + exclusions\n+ max-agent cap"}
+    R --> FIN["Financial"]
+    R --> VAL["Valuation"]
+    R --> MKT["Market"]
+    R --> NWS["News"]
+    R --> GRO["Growth"]
+    R --> RSK["Risk"]
+    R --> WF["Workforce*"]
+    R --> SOC["Social*"]
+    R --> DOC["Document / RAG"]
+    FIN & VAL & MKT & NWS & GRO & RSK & WF & SOC & DOC --> T["TOOLS + RAG + DATA\nyfinance · Google News RSS · DuckDuckGo\nFAISS docs · deterministic ratios"]
+    T --> V["5 · EVIDENCE VALIDATOR\nsource · date · units · conflicts"]
+    V --> C["6 · BULL / BEAR / RISK\nchallenge the thesis"]
+    C --> S["7 · SYNTHESIZER\nfact vs interpretation vs conclusion"]
+    S --> J["STRUCTURED REPORT JSON"]
+    J --> PDF["DETERMINISTIC PDF\nJinja2 → WeasyPrint / fpdf2"]
+    PDF --> D["USER DOWNLOADS PDF"]

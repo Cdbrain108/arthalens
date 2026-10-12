@@ -1,41 +1,200 @@
-// Demo auth — persisted to this browser only (localStorage).
-// Swap `login` for a real JWT call later; the App contract stays the same.
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  auth,
+  loginUser,
+  registerUser,
+  signInWithGoogle,
+  logoutUser,
+  onAuthStateChange,
+  resetPassword,
+  isFirebaseConfigured,
+} from '../services/firebase'
 
-const KEY = 'bullseye_user'
+const GUEST_KEY = 'stock_research_user_guest'
 
-const DEFAULT_USER = { name: 'Researcher', email: 'researcher@bullseye.ai', guest: true }
-
-function load() {
+function loadLocalGuest() {
   try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? JSON.parse(raw) : DEFAULT_USER
+    const raw = localStorage.getItem(GUEST_KEY)
+    return raw ? JSON.parse(raw) : null
   } catch {
-    return DEFAULT_USER
+    return null
   }
 }
 
 export function useAuth() {
-  const [user, setUser] = useState(load)
+  const [user, setUser] = useState(() => loadLocalGuest())
+  const [loading, setLoading] = useState(true)
 
-  const login = useCallback((u) => {
-    const v = { name: u.name.trim(), email: u.email.trim(), guest: !!u.guest, ts: Date.now() }
-    try {
-      localStorage.setItem(KEY, JSON.stringify(v))
-    } catch {
-      /* private mode — session-only */
+  // Listen to remote Firebase Auth state changes
+  useEffect(() => {
+    let active = true
+
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      if (!active) return
+
+      if (firebaseUser) {
+        const u = {
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Researcher'),
+          email: firebaseUser.email || '',
+          photoURL: firebaseUser.photoURL || null,
+          guest: false,
+          isFirebase: true,
+          ts: Date.now(),
+        }
+        setUser(u)
+        try {
+          localStorage.removeItem(GUEST_KEY)
+        } catch {}
+      } else {
+        // Fall back to local guest user if available
+        const local = loadLocalGuest()
+        setUser(local)
+      }
+      setLoading(false)
+    })
+
+    return () => {
+      active = false
+      unsubscribe?.()
     }
-    setUser(v)
   }, [])
 
-  const logout = useCallback(() => {
-    try {
-      localStorage.removeItem(KEY)
-    } catch {
-      /* noop */
+  // Email / Password Login
+  const login = useCallback(async (email, password) => {
+    if (!isFirebaseConfigured) {
+      const u = {
+        uid: `guest_${Date.now()}`,
+        name: email.split('@')[0],
+        email: email.trim(),
+        guest: false,
+        ts: Date.now(),
+      }
+      try {
+        localStorage.setItem(GUEST_KEY, JSON.stringify(u))
+      } catch {}
+      setUser(u)
+      return { user: u, error: null }
     }
+
+    const { user: firebaseUser, error } = await loginUser(email, password)
+    if (firebaseUser) {
+      const u = {
+        uid: firebaseUser.uid,
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Researcher',
+        email: firebaseUser.email || '',
+        photoURL: firebaseUser.photoURL || null,
+        guest: false,
+        isFirebase: true,
+        ts: Date.now(),
+      }
+      setUser(u)
+      try {
+        localStorage.removeItem(GUEST_KEY)
+      } catch {}
+      return { user: u, error: null }
+    }
+    return { user: null, error }
+  }, [])
+
+  // Email / Password / Name Registration
+  const signup = useCallback(async (name, email, password) => {
+    if (!isFirebaseConfigured) {
+      const u = {
+        uid: `guest_${Date.now()}`,
+        name: name.trim() || email.split('@')[0],
+        email: email.trim(),
+        guest: false,
+        ts: Date.now(),
+      }
+      try {
+        localStorage.setItem(GUEST_KEY, JSON.stringify(u))
+      } catch {}
+      setUser(u)
+      return { user: u, error: null }
+    }
+
+    const { user: firebaseUser, error } = await registerUser(name, email, password)
+    if (firebaseUser) {
+      const u = {
+        uid: firebaseUser.uid,
+        name: name.trim() || firebaseUser.email?.split('@')[0] || 'Researcher',
+        email: firebaseUser.email || '',
+        photoURL: firebaseUser.photoURL || null,
+        guest: false,
+        isFirebase: true,
+        ts: Date.now(),
+      }
+      setUser(u)
+      try {
+        localStorage.removeItem(GUEST_KEY)
+      } catch {}
+      return { user: u, error: null }
+    }
+    return { user: null, error }
+  }, [])
+
+  // Google Sign-In
+  const loginWithGoogle = useCallback(async () => {
+    const { user: firebaseUser, error } = await signInWithGoogle()
+    if (firebaseUser) {
+      const u = {
+        uid: firebaseUser.uid,
+        name: firebaseUser.displayName || 'Researcher',
+        email: firebaseUser.email || '',
+        photoURL: firebaseUser.photoURL || null,
+        guest: false,
+        isFirebase: true,
+        ts: Date.now(),
+      }
+      setUser(u)
+      try {
+        localStorage.removeItem(GUEST_KEY)
+      } catch {}
+      return { user: u, error: null }
+    }
+    return { user: null, error }
+  }, [])
+
+  // Password Recovery
+  const sendPasswordReset = useCallback(async (email) => {
+    return await resetPassword(email)
+  }, [])
+
+  // Guest exploration
+  const loginAsGuest = useCallback((name = 'Guest Researcher', email = 'guest@local') => {
+    const u = {
+      uid: `guest_${Date.now()}`,
+      name: name.trim(),
+      email: email.trim(),
+      guest: true,
+      ts: Date.now(),
+    }
+    try {
+      localStorage.setItem(GUEST_KEY, JSON.stringify(u))
+    } catch {}
+    setUser(u)
+    return u
+  }, [])
+
+  // Logout
+  const logout = useCallback(async () => {
+    try {
+      localStorage.removeItem(GUEST_KEY)
+      await logoutUser()
+    } catch {}
     setUser(null)
   }, [])
 
-  return { user, login, logout }
+  return {
+    user,
+    loading,
+    login,
+    signup,
+    loginWithGoogle,
+    sendPasswordReset,
+    loginAsGuest,
+    logout,
+    isFirebaseConfigured,
+  }
 }

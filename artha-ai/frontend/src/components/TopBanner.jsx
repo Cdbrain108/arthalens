@@ -22,7 +22,7 @@ export default function TopBanner() {
       }`}>
       <Info size={13} className="hidden shrink-0 text-accent sm:block" />
       <span className="truncate">
-        Bullseye is a research aid — not investment advice.
+        Stock Research is a research aid — not investment advice.
       </span>
       <button
         onClick={dismiss}

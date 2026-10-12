@@ -1,11 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
-  <title>Bullseye</title>
-  <path d="M17 101L43 84L61 94L96 49" stroke="#16a34a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M87 49L106 38L102 61Z" fill="#16a34a"/>
-  <path d="M100 23A42 42 0 1 0 109 80" stroke="#16a34a" stroke-width="4" stroke-linecap="round" opacity=".38"/>
-  <g fill="#16a34a">
-    <path d="M27 55C21 53 18 45 12 47C16 40 24 46 26 50L31 51ZM31 51C40 40 54 40 65 44C73 33 86 34 92 43L100 55L111 61L115 74L107 80L94 76L86 67C77 76 65 78 54 72L44 71L30 80L23 77L28 67C22 62 25 56 31 51Z"/>
-    <path d="M42 67L38 84L24 91H14L29 78L30 65ZM54 71L51 83L62 94H72L61 79L66 72ZM82 67L84 83L101 92H112L94 77L94 67Z"/>
-    <path d="M99 59C105 53 106 46 104 38C112 44 115 53 110 63ZM105 63C118 63 122 55 125 47C126 61 120 73 111 72Z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0c1220"/>
+      <stop offset="100%" stop-color="#07090e"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background rounded square -->
+  <rect width="64" height="64" rx="14" fill="url(#bg-grad)"/>
+  
+  <!-- Outer target ring - blue -->
+  <circle cx="32" cy="32" r="24" stroke="#4285F4" stroke-width="2.5" opacity="0.9"/>
+  <!-- Middle target ring - red -->
+  <circle cx="32" cy="32" r="16" stroke="#EA4335" stroke-width="2.5" opacity="0.9"/>
+  <!-- Inner target ring - yellow -->
+  <circle cx="32" cy="32" r="9" stroke="#FBBC05" stroke-width="2.5" opacity="0.9"/>
+  <!-- Center dot - green -->
+  <circle cx="32" cy="32" r="3.5" fill="#34A853"/>
+  
+  <!-- Crosshair lines (4 short segments) -->
+  <!-- Top -->
+  <line x1="32" y1="4" x2="32" y2="14" stroke="#4285F4" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <!-- Bottom -->
+  <line x1="32" y1="50" x2="32" y2="60" stroke="#4285F4" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <!-- Left -->
+  <line x1="4" y1="32" x2="14" y2="32" stroke="#4285F4" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <!-- Right -->
+  <line x1="50" y1="32" x2="60" y2="32" stroke="#4285F4" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  
+  <!-- Small tick marks between rings -->
+  <line x1="32" y1="19" x2="32" y2="22" stroke="#EA4335" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="32" y1="42" x2="32" y2="45" stroke="#EA4335" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="19" y1="32" x2="22" y2="32" stroke="#EA4335" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="42" y1="32" x2="45" y2="32" stroke="#EA4335" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
 </svg>

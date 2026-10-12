@@ -1,0 +1,313 @@
+BULLSEYE / STOCK RESEARCHER
+WORK COMPLETED SO FAR
+Updated: 04 October 2026
+======================================================================
+
+PROJECT LOCATION
+
+/mnt/d/DATA_SCIENCE2.0/Projects/Stock_Researcher/artha-ai
+
+The application directory remains named `artha-ai` for compatibility. The
+public product identity is now Bullseye. This document records the completed
+work and the latest verified state.
+
+
+1. AUDIT AND EVIDENCE-FIRST MERGE
+----------------------------------------------------------------------
+
+Completed a read-only audit of the handoff implementation, frontend, backend,
+tools, LangGraph workflow, storage, RAG, PDF generation and tests.
+
+Key findings recorded in:
+- artha-ai/docs/HANDOFF_AUDIT.md
+- artha-ai/CHANGELOG_HANDOFF_MERGE.md
+- artha-ai/docs/ARCHITECTURE_FRAMEWORK.md
+
+The application now follows these rules:
+- LLMs explain; Python computes.
+- Every numeric claim retains inputs, formula, period and basis where available.
+- Missing evidence remains unavailable instead of becoming a guess.
+- Conflicts are disclosed and cannot silently support an investment classification.
+- Sources retain publication dates separately from retrieval timestamps.
+- A successful job does not imply complete specialist coverage or independent
+  verification of every source.
+- The product is a research aid and not financial advice.
+
+Report assembly no longer creates fabricated HOLD/BUY/SELL defaults, invented
+benchmarks, canned company facts, unsupported quality scores or report-time
+provider calls. Older saved reports may contain historical content; new research
+must be run to generate reports under the current contracts.
+
+
+2. BULLSEYE BRAND IDENTITY
+----------------------------------------------------------------------
+
+Created and integrated original assets in:
+
+artha-ai/frontend/public/brand/
+
+Delivered:
+- Charging green bull with an upward chart/open target motif.
+- Red bear used for downside perspective.
+- Dark/light wordmarks and logo marks.
+- SVG favicon, PNG favicon sizes, ICO export, app icons and social card.
+- Shared accessible `Logo.jsx` component.
+- PDF cover/header and browser metadata updated to Bullseye.
+
+The asset export command is:
+
+python3 scripts/export_brand_assets.py
+
+Old ArthaAI/Bulls Eye references remain only in historical handoff/reference
+material that was intentionally not rewritten as application behavior.
+
+
+3. ENTRY INTRO AND SHARED MARKET ART
+----------------------------------------------------------------------
+
+Added:
+- `frontend/src/components/EntryIntro.jsx`
+- `frontend/src/components/MarketAnimal.jsx`
+- `frontend/src/styles/intro.css`
+
+Behavior:
+- Native modal entry sequence with charging bull, rearing bear, opposing chart
+  paths, target rings, dust motion and Bullseye logo resolution.
+- Approximately 3.6 seconds for normal motion.
+- Skip button, Escape handling and once-per-session storage.
+- Reduced-motion fade path.
+- Focus restoration after the modal closes.
+- Application loading continues while the intro is displayed.
+- Bull/Bear art is reused in the report's Bull Case and Bear Case panels.
+
+
+4. RESPONSIVE RESEARCH-FIRST LANDING PAGE
+----------------------------------------------------------------------
+
+Rebuilt `frontend/src/components/LandingExperience.jsx` and added:
+
+frontend/src/styles/landing.css
+
+The landing page now includes:
+- Public research-first hero and stock question input.
+- Stock/ticker suggestions and direct backend submission.
+- Dark/light theme switch with browser persistence.
+- Visible four-stage research workflow.
+- Backend-derived specialist registry and capability details.
+- Interactive hypothetical Bull/Bear perspective demo.
+- Evidence-oriented report layout preview without fabricated figures.
+- Transparency principles, limitations, disclaimer and FAQ.
+- Local research history access.
+- Lazy-loaded research studio.
+- Local Manrope variable font with swap behavior.
+- Sharing metadata, favicon metadata and manifest integration.
+
+The old fabricated market ticker values and sample Reliance verdict were removed.
+The ticker strip is clearly marked as a demonstration with unavailable values.
+
+Vite defaults are standardized to:
+- Frontend: http://localhost:5173
+- Backend proxy: http://localhost:8000
+
+
+5. CANONICAL AGENT REGISTRY AND LANGGRAPH EXECUTION
+----------------------------------------------------------------------
+
+The backend now uses one executable specialist registry with eleven entries:
+- financial
+- valuation
+- market
+- news
+- growth
+- risk
+- workforce
+- industry
+- management
+- social
+- document
+
+Broad company research selects the nine core research domains. Document and
+social coverage are added when relevant. Focused news questions route to news
+only. Concurrency limits execution slots but never remove required agents from
+the routed scope.
+
+The HTTP API now invokes the compiled LangGraph directly. The graph stages are:
+
+analyze_query → create_plan → apply_routing_policy → run_specialists →
+collect_results → validate_evidence → challenge_thesis → synthesize_report →
+build_report → generate_pdf
+
+Specialist execution now has:
+- Shared bounded collection concurrency.
+- Independent timeout and failure handling.
+- Partial, unavailable, failed and timed-out statuses.
+- Persisted per-agent status and evidence counts for UI polling.
+- Stable result ordering based on routed order.
+- Source-owned evidence that a model cannot replace.
+
+The new shared collectors replace canned deterministic findings. They invoke
+the configured tools for financial statements, quarters, cash flow, valuation,
+market history, technicals, volume, benchmark context, web evidence, official
+ATS listings and selected documents.
+
+Important safeguards:
+- Financial ratios and growth are computed by Python tools.
+- Calculation inputs and formulas are retained.
+- Zero values are valid values and are not treated as missing.
+- Workforce results do not invent hiring or attrition metrics.
+- LinkedIn and forbidden social scraping domains are rejected.
+- Selected document IDs are checked at retrieval and collection boundaries.
+- Failed Indian listings cannot silently fall back to a different exchange.
+- Point-in-time EPS is not presented as historical P/E evidence.
+
+Registry and health endpoints expose local configuration status. Provider
+connectivity is explicitly reported as not checked by the health endpoint.
+
+
+6. PDF, REPORT AND FOLLOW-UP EXPERIENCE
+----------------------------------------------------------------------
+
+Preserved and verified:
+- General HTML/WeasyPrint report generation.
+- fpdf2 fallback with citations, gaps, conflicts and methods.
+- In-app PDF viewer with retry/error behavior.
+- Browser download and external-window actions.
+- Grounded report follow-up questions.
+- SQLite job persistence and stale-job recovery.
+- Non-overlapping cancellable status polling.
+
+The report now shows explicit evidence gaps and uses `NOT ASSESSED` or
+`INSUFFICIENT EVIDENCE` when an investment classification is unsupported.
+News-only reports remain news briefs and do not create investment recommendations.
+
+
+7. TESTS AND VERIFICATION
+----------------------------------------------------------------------
+
+Backend:
+
+MODEL_PROVIDER=mock python3 -m pytest -q
+
+Result: 100 passed. The tests mock external data boundaries and isolate storage.
+
+Backend fatal lint checks:
+
+PYTHONPATH=/tmp/omnirush/bullseye-tools python3 -m ruff check backend/app --select F
+
+Result: passed.
+
+Frontend unit tests:
+
+cd frontend
+npm test
+
+Result: 35 passed.
+
+Frontend lint and build:
+
+npm run lint
+npm run build
+
+Result: both passed.
+
+Browser and accessibility checks:
+
+npm run test:e2e
+
+Result: 3 passed. The Playwright suite checks:
+- Intro animation, Skip/Escape, session replay and focus restoration.
+- Reduced motion.
+- Dark and light themes.
+- 360, 390, 768, 1024, 1280, 1440 and 1920 widths.
+- 844 x 390 landscape layout.
+- No horizontal overflow.
+- WCAG 2A/AA axe checks.
+- Theme persistence and research submission.
+
+Lighthouse scores against the production preview:
+- Performance: 93
+- Accessibility: 96
+- Best Practices: 100
+- SEO: 91
+
+Full verification details are in:
+
+artha-ai/docs/VERIFICATION.md
+
+
+8. LIVE TOOL SMOKE CHECKS
+----------------------------------------------------------------------
+
+The opt-in smoke command is:
+
+python3 scripts/live_smoke.py --query "Research AAPL"
+
+Observed provider snapshots on 04 October 2026:
+
+- Research AAPL:
+  succeeded, nine core specialists selected, 85 evidence items, 34 sources,
+  16 gaps, PDF generated, classification NOT ASSESSED.
+
+- Latest news on TCS:
+  succeeded, news specialist only, eight sourced reports, eight sources,
+  one gap, PDF generated, classification NEUTRAL for a news-only brief.
+
+- Compare TCS and Infosys:
+  succeeded, nine core specialists selected, 167 evidence items, 54 sources,
+  23 gaps, PDF generated, classification NOT ASSESSED.
+
+These are live provider snapshots, not fixed test fixtures. Availability,
+freshness and source coverage can change between runs.
+
+
+9. RUNNING THE CURRENT APPLICATION
+----------------------------------------------------------------------
+
+Backend:
+
+cd artha-ai/backend
+python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+Frontend in a second terminal:
+
+cd artha-ai/frontend
+npm install
+npm run dev
+
+Open:
+
+http://localhost:5173/
+
+Windows helper scripts are also available:
+- `artha-ai/run_backend.bat`
+- `artha-ai/run_frontend.bat`
+- `artha-ai/start_project.bat`
+
+LLM-free mode still uses real data tools. It disables language-model
+explanation; it is not a fake offline market-data simulator. External provider
+calls in automated tests are mocked.
+
+
+10. COMMITS CREATED
+----------------------------------------------------------------------
+
+e93eb39 chore: preserve audited application baseline
+dd3f61b fix: merge evidence-first handoff and remove fabricated report defaults
+2af2f80 feat: introduce original Bullseye bull and market identity
+ed005c7 feat: animate Bullseye entry with accessible session-aware motion
+91bb9a0 feat: rebuild responsive evidence-first Bullseye landing
+6fc22ed fix: execute complete research coverage through the canonical agent graph
+748761d docs: finalize Bullseye verification and run instructions
+
+
+11. REMAINING PRODUCTION WORK
+----------------------------------------------------------------------
+
+- Configure and test production CSP, HSTS, COOP/XFO and robots policy.
+- Register additional official ATS boards where workforce coverage is needed.
+- Expand exchange-filing adapters for deployments requiring broader coverage.
+- Review legacy studio-only contrast and CSS if that workspace is exposed as a
+  public route alongside the new landing page.
+
+
+END OF CURRENT WORK SUMMARY

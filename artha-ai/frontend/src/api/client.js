@@ -1,5 +1,6 @@
 // Bulls Eye API client.
-const BASE = '/api'
+const rawBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
+const BASE = rawBase ? `${rawBase}/api` : '/api'
 
 async function request(path, options = {}, responseType = 'json') {
   const headers = { ...(options.headers || {}) }

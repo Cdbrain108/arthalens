@@ -4,6 +4,15 @@
 *API_KEYS*
 *api_keys*
 *.zip
+*.tar.gz
+backend_deploy*
+unified_llm_client.py
+artha-ai/backend/test_*.py
+artha-ai/backend/scratch_*.py
+artha-ai/backend/quick_*.py
+backend/test_*.py
+backend/scratch_*.py
+backend/quick_*.py
 .opencode/
 __pycache__/
 *.py[cod]

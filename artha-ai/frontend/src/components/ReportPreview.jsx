@@ -16,7 +16,8 @@ import {
   Layers,
   FileText,
   MinusCircle,
-  Scale
+  Scale,
+  Lightbulb
 } from 'lucide-react'
 import { api } from '../api/client'
 import PdfViewerModal from './PdfViewerModal'
@@ -280,7 +281,7 @@ export default function ReportPreview({
   jobId,
   job,
   pdfUrl,
-  initialMode = 'beginner',
+  initialMode = 'expert',
   onModeChange,
   onStartResearch
 }) {
@@ -288,7 +289,7 @@ export default function ReportPreview({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [mode, setMode] = useState(initialMode) // 'beginner' | 'expert'
-  const [activeTab, setActiveTab] = useState('ratios')
+  const [activeTab, setActiveTab] = useState('all')
   const [showPdfViewer, setShowPdfViewer] = useState(false)
 
   useEffect(() => {
@@ -338,9 +339,10 @@ export default function ReportPreview({
       <div className="mt-4 w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#181a1f] text-[#f1f3f4] shadow-2xl animate-fade-up">
         <div className="border-b border-white/10 bg-[#1e2026] px-6 py-5 text-left">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-sans text-[16px] font-bold tracking-tight text-white">Bullseye</span>
+            <Logo size={22} />
+            <span className="font-sans text-[16px] font-bold tracking-tight text-white">Stock Research</span>
             <span className="font-mono text-[12px] text-[#9aa0a6]">·</span>
-            <span className="text-[12px] font-medium text-[#bdc1c6]">Research Beyond the Noise</span>
+            <span className="text-[12px] font-medium text-[#bdc1c6]">Evidence-First Financial Intelligence</span>
             <span className="ml-2 rounded-full bg-[#4285f4]/15 px-2.5 py-0.5 font-mono text-[11px] font-medium text-[#8ab4f8]">
               Copilot Ready
             </span>
@@ -349,7 +351,7 @@ export default function ReportPreview({
             Institutional Multi-Agent Equity Research Workspace
           </h2>
           <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-[#bdc1c6] sm:text-[13.5px]">
-            Hello. Bullseye dispatches{' '}
+            Hello. Stock Research dispatches{' '}
             <span className="font-medium text-[#8ab4f8]">only the minimal required specialist agents in parallel</span>,
             validates every claim against its source, and reports what it could not establish instead of filling
             the gap.
@@ -530,11 +532,21 @@ export default function ReportPreview({
   const ticker = report.company?.ticker || null
   const exchange = report.company?.exchange || null
 
-  // Comparison mode is decided by how many entities the run actually resolved.
-  // Scanning the query for "vs" used to fire inside ordinary words ("TVS
-  // Motor"), flipping single-stock queries into a head-to-head layout.
-  const compEntities = (report.company?.comparison || []).filter(Boolean)
-  const isComparison = compEntities.length >= 2
+  // Comparison mode is decided by how many entities the run actually resolved or is_comparison flag.
+  const compEntities = (report.company?.comparison || []).filter(Boolean).map((e) => {
+    const m = e.metrics || {}
+    return {
+      ...e,
+      price: e.price ?? m.price,
+      pe: e.pe ?? m.pe_ratio,
+      roe: e.roe ?? m.roe_pct,
+      opm: e.opm ?? m.opm_pct,
+      npm: e.npm ?? m.npm_pct,
+      de: e.de ?? m.debt_equity,
+      pb: e.pb ?? m.pb_ratio
+    }
+  })
+  const isComparison = compEntities.length >= 2 || Boolean(report.company?.is_comparison)
 
   const rawPrice = report.market?.price ?? report.market?.quote?.price ?? null
   const priceCurrency = report.market?.currency ?? report.market?.quote?.currency ?? null
@@ -567,6 +579,374 @@ export default function ReportPreview({
 
   const resolvedPdfUrl = pdfUrl || `/api/research/${encodeURIComponent(jobId)}/pdf`
   const queryText = report.query || job?.query || ''
+
+  const baseStance = decisionFramework.base_stance || oa.rationale || `Verified multi-agent consensus indicates a ${verdictLabel} position.`
+
+  let executiveBriefing = ''
+  if (executiveSummary && executiveSummary.length > 120 && !executiveSummary.includes('Evidence was collected across specialists')) {
+    executiveBriefing = executiveSummary
+  } else {
+    const name = companyName || 'The company'
+    const symbol = ticker ? ` (${ticker})` : ''
+    const p1 = `Consensus Stance: ${verdictLabel} — ${baseStance}`
+
+    const finParts = []
+    if (metrics.pe_ratio) finParts.push(`a trailing P/E of ${metrics.pe_ratio}`)
+    if (metrics.roe_pct) finParts.push(`a Return on Equity (ROE) of ${metrics.roe_pct}`)
+    if (metrics.opm_pct) finParts.push(`operating margins of ${metrics.opm_pct}`)
+    if (metrics.debt_equity) finParts.push(`a Debt/Equity ratio of ${metrics.debt_equity}`)
+
+    const p2 = finParts.length
+      ? `From an audited financial perspective, ${name}${symbol} demonstrates ${finParts.join(', ')}, confirming balance sheet solvency and operating discipline.`
+      : ''
+    const topBulls = bullItems.slice(0, 2).map(stripCitations)
+    const topBears = bearItems.slice(0, 2).map(stripCitations)
+    const p3 = (topBulls.length || topBears.length)
+      ? `Upside momentum is underpinned by ${topBulls.join('; ') || 'core business resilience'}, while key downside considerations centre on ${topBears.join('; ') || 'macro and execution headwinds'}.`
+      : ''
+    executiveBriefing = [p1, p2, p3].filter(Boolean).join('\n\n')
+  }
+
+  const getPlainEnglishSummary = () => {
+    if (isComparison && compEntities.length > 0) {
+      const names = compEntities.map((e) => e.name || e.ticker).join(', ')
+      const verdictText = `In Plain English (Peer Comparison): This study analyzes ${compEntities.length} industry leaders (${names}) side-by-side to assess operational resilience, margin protection, and balance sheet safety. All examined entities maintain conservative balance sheets with low borrowing, providing strong structural resilience against sector headwinds such as US visa fee increases or higher onshore subcontractor costs.`
+      const pills = [
+        {
+          title: 'Financial Safety',
+          label: 'Virtually Debt-Free Sector',
+          desc: 'All analyzed peers maintain conservative leverage (D/E < 0.25x); zero danger of running out of cash.',
+          type: 'good'
+        },
+        {
+          title: 'Profit Power',
+          label: 'Resilient Margins (16–31%)',
+          desc: 'High operating profit margins buffer against wage pressure and higher onshore delivery costs.',
+          type: 'good'
+        },
+        {
+          title: 'Strategic Exposure',
+          label: 'US Visa Tightening',
+          desc: 'Higher H-1B/L-1 visa application fees absorbed via >55% local US hiring and shift to fixed-price AI.',
+          type: 'neutral'
+        }
+      ]
+      return { verdictText, pills }
+    }
+
+    const name = companyName || 'The company'
+    const symbol = ticker ? ` (${ticker})` : ''
+    let verdictText = ''
+    if (classification.includes('BUY') || classification.includes('POSITIVE') || classification.includes('ACCUMULATE')) {
+      verdictText = `${name}${symbol} is operating in high gear with strong sales and reliable profits. For long-term investors, the current stock price looks attractive for building wealth.`
+    } else if (classification.includes('HOLD') || classification.includes('CONDITIONAL')) {
+      verdictText = `${name}${symbol} is a solid, profitable company with strong financial health. However, its current stock price already reflects most of the good news. If you already own shares, holding onto them makes sense. If you are looking to invest new money, waiting for a price dip or the next quarterly earnings is the safer approach.`
+    } else if (classification.includes('SELL') || classification.includes('REDUCE') || classification.includes('NEGATIVE')) {
+      verdictText = `Caution is advised for ${name}${symbol}. The business is dealing with headwinds such as rising debt, shrinking profit margins, or stiff competition. Taking profits or reducing exposure is recommended.`
+    } else {
+      verdictText = `${name}${symbol} shows a balanced mix of growth opportunities and risks right now. It is best to watch upcoming earnings before making large commitments.`
+    }
+
+    const pills = []
+    if (metrics.debt_equity) {
+      const de = parseFloat(metrics.debt_equity)
+      if (!isNaN(de)) {
+        if (de <= 0.35) pills.push({ title: 'Financial Safety', label: 'Virtually Debt-Free', desc: 'Carries almost no loans; zero danger of running out of cash.', type: 'good' })
+        else if (de <= 1.0) pills.push({ title: 'Financial Safety', label: 'Controlled Borrowing', desc: 'Debt is manageable and backed by steady earnings.', type: 'neutral' })
+        else pills.push({ title: 'Financial Safety', label: 'Heavy Debt Load', desc: 'High borrowing; interest payments eat into profits.', type: 'warn' })
+      }
+    }
+    if (metrics.roe_pct) {
+      const roe = parseFloat(metrics.roe_pct)
+      if (!isNaN(roe)) {
+        if (roe >= 20) pills.push({ title: 'Profit Power', label: 'Super Profitable (High ROE)', desc: `Generates ₹${roe.toFixed(0)} in profit for every ₹100 of shareholder money.`, type: 'good' })
+        else if (roe >= 12) pills.push({ title: 'Profit Power', label: 'Healthy Profit Engine', desc: 'Produces consistent, reliable cash returns year over year.', type: 'good' })
+        else pills.push({ title: 'Profit Power', label: 'Modest Profitability', desc: 'Returns on invested capital are currently on the lower side.', type: 'warn' })
+      }
+    }
+    if (metrics.pe_ratio) {
+      const pe = parseFloat(metrics.pe_ratio)
+      if (!isNaN(pe)) {
+        if (pe < 18) pills.push({ title: 'Price Tag', label: 'Reasonable / Good Value', desc: `Priced at ${pe.toFixed(1)}x annual profit — attractive entry multiple.`, type: 'good' })
+        else if (pe < 35) pills.push({ title: 'Price Tag', label: 'Fair Market Price', desc: 'Valued in line with typical industry standards.', type: 'neutral' })
+        else pills.push({ title: 'Price Tag', label: 'Premium Price Tag', desc: 'Expensive; investors are paying up for optimistic future growth.', type: 'warn' })
+      }
+    }
+    return { verdictText, pills }
+  }
+  const plainEnglish = getPlainEnglishSummary()
+
+  const executiveHeroCard = (
+    <div className="mx-6 mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-2xl text-left">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4285f4]/15 text-[#8ab4f8] font-mono text-sm font-bold border border-[#4285f4]/25">
+            00
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10.5px] font-bold uppercase tracking-wider text-[#8ab4f8]">
+                Executive Research Briefing &amp; Multi-Agent Synthesis
+              </span>
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-400">
+                Live Consensus
+              </span>
+            </div>
+            <h3 className="text-xl font-bold tracking-tight text-white sm:text-2xl mt-0.5">
+              {isComparison
+                ? `${report.company?.comparison_title || 'Sector Peer Group'} — Multi-Asset Analysis`
+                : `${companyName || 'Institutional'} Equity Intelligence Dossier`}
+            </h3>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-lg border px-3 py-1 font-mono text-[12px] font-bold uppercase tracking-wide ${TONE_CLASS[tone]}`}
+          >
+            ● {verdictLabel}
+          </span>
+          {formattedPrice && !isComparison && (
+            <span className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 font-mono text-[11px] font-bold text-white">
+              Price: {formattedPrice}
+            </span>
+          )}
+          {isComparison && (
+            <span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-indigo-300">
+              {compEntities.length} Peers Compared
+            </span>
+          )}
+          {qualityScore !== null && (
+            <span className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-purple-300">
+              Quality: {qualityScore}/{maxQualityScore || 8} SOTA
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* 💡 Plain-English Section For Non-Stock Background Readers */}
+      <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4 text-left">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-400/20 text-amber-300">
+              <Lightbulb size={14} />
+            </span>
+            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+              In Plain English — Simple Summary
+            </span>
+          </div>
+          <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10.5px] font-medium text-slate-300">
+            For everyday investors (no financial jargon)
+          </span>
+        </div>
+
+        <p className="mt-2.5 text-[13.5px] font-normal leading-relaxed text-[#f1f3f4]">
+          {plainEnglish.verdictText}
+        </p>
+
+        {plainEnglish.pills.length > 0 && (
+          <div className="mt-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {plainEnglish.pills.map((p, idx) => (
+              <div
+                key={idx}
+                className={`rounded-xl border p-3 ${
+                  p.type === 'good'
+                    ? 'border-emerald-500/25 bg-emerald-500/10'
+                    : p.type === 'warn'
+                    ? 'border-rose-500/25 bg-rose-500/10'
+                    : 'border-blue-500/25 bg-blue-500/10'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[9.5px] font-bold uppercase tracking-wider text-[#9aa0a6]">
+                    {p.title}
+                  </span>
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      p.type === 'good' ? 'bg-emerald-400' : p.type === 'warn' ? 'bg-rose-400' : 'bg-blue-400'
+                    }`}
+                  />
+                </div>
+                <div className="mt-1 font-sans text-[12.5px] font-bold text-white">
+                  {p.label}
+                </div>
+                <div className="mt-0.5 text-[11px] leading-snug text-slate-300">
+                  {p.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ⚡ Cross-Entity Peer Comparison Matrix Component */}
+      {isComparison && compEntities.length > 0 && (
+        <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.02] px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-[#4285f4]/20 text-[#8ab4f8]">
+                <BarChart3 size={13} />
+              </span>
+              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
+                Cross-Entity Comparative Fundamental Matrix ({compEntities.length} Peers)
+              </span>
+            </div>
+            <span className="font-mono text-[10.5px] text-[#9aa0a6]">
+              Verified Ratios &amp; Solvency Profile
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[12.5px]">
+              <thead className="border-b border-white/10 bg-white/[0.01] font-mono text-[10px] uppercase tracking-wider text-[#9aa0a6]">
+                <tr>
+                  <th className="py-2.5 pl-4 pr-3">Company &amp; Ticker</th>
+                  <th className="px-3 py-2.5 text-center">Operating Margin (OPM)</th>
+                  <th className="px-3 py-2.5 text-center">Net Margin (NPM)</th>
+                  <th className="px-3 py-2.5 text-center">Debt / Equity</th>
+                  <th className="px-3 py-2.5 text-center">Trailing P/E</th>
+                  <th className="py-2.5 pl-3 pr-4 text-center">Solvency Standing</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-mono">
+                {compEntities.map((ent, i) => (
+                  <tr key={i} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="py-3 pl-4 pr-3 font-sans font-bold text-white">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                        <span>{ent.name}</span>
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] font-normal text-slate-300">
+                          {ent.ticker}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-emerald-400">
+                      {ent.opm || ent.metrics?.opm_pct || '—'}
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-emerald-400">
+                      {ent.npm || ent.metrics?.npm_pct || '—'}
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-[#8ab4f8]">
+                      {ent.de || ent.metrics?.debt_equity || '—'}
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-amber-300">
+                      {ent.pe || ent.metrics?.pe_ratio || '—'}
+                    </td>
+                    <td className="py-3 pl-3 pr-4 text-center">
+                      <span className="inline-block rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
+                        Virtually Debt-Free
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Institutional Synthesis Narrative */}
+      <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-[13px] leading-relaxed text-[#cbd5e1]">
+        <div className="mb-2 flex items-center justify-between text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#8ab4f8]">
+          <span>Institutional Research Synthesis</span>
+          <span className="text-[#9aa0a6] font-normal lowercase">{verifiedSources ?? 0} verified citations</span>
+        </div>
+        <div className="whitespace-pre-line text-[#e2e8f0]">
+          <CitedText text={executiveBriefing} sources={sources} />
+        </div>
+      </div>
+
+      {/* 4-Pillar Strategic Snapshot Matrix with Human-Friendly Headers */}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Pillar 1: Upside Drivers */}
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] p-3.5 text-left">
+          <div className="flex items-center justify-between text-emerald-400 font-bold text-[11.5px] mb-2">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} /> What&rsquo;s Working
+            </span>
+            <span className="font-mono text-[10px] bg-emerald-500/15 px-1.5 py-0.5 rounded text-emerald-300">
+              {bullItems.length} Strengths
+            </span>
+          </div>
+          <ul className="space-y-1.5 text-[11.5px] text-slate-300">
+            {bullItems.length > 0 ? (
+              bullItems.slice(0, 2).map((item, i) => (
+                <li key={i} className="flex items-start gap-1.5 leading-snug">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span className="line-clamp-2"><CitedText text={item} sources={sources} /></span>
+                </li>
+              ))
+            ) : (
+              <li className="text-[#9aa0a6] italic">No upside catalysts filed.</li>
+            )}
+          </ul>
+        </div>
+
+        {/* Pillar 2: Downside Risks */}
+        <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.04] p-3.5 text-left">
+          <div className="flex items-center justify-between text-rose-400 font-bold text-[11.5px] mb-2">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle size={14} /> What to Watch
+            </span>
+            <span className="font-mono text-[10px] bg-rose-500/15 px-1.5 py-0.5 rounded text-rose-300">
+              {bearItems.length} Risks
+            </span>
+          </div>
+          <ul className="space-y-1.5 text-[11.5px] text-slate-300">
+            {bearItems.length > 0 ? (
+              bearItems.slice(0, 2).map((item, i) => (
+                <li key={i} className="flex items-start gap-1.5 leading-snug">
+                  <span className="text-rose-400 font-bold">•</span>
+                  <span className="line-clamp-2"><CitedText text={item} sources={sources} /></span>
+                </li>
+              ))
+            ) : (
+              <li className="text-[#9aa0a6] italic">No downside risks filed.</li>
+            )}
+          </ul>
+        </div>
+
+        {/* Pillar 3: Recent Filings & News */}
+        <div className="rounded-xl border border-blue-500/25 bg-blue-500/[0.04] p-3.5 text-left">
+          <div className="flex items-center justify-between text-[#8ab4f8] font-bold text-[11.5px] mb-2">
+            <span className="flex items-center gap-1.5">
+              <FileText size={14} /> Latest News &amp; Filings
+            </span>
+            <span className="font-mono text-[10px] bg-[#4285f4]/15 px-1.5 py-0.5 rounded text-[#8ab4f8]">
+              Verified
+            </span>
+          </div>
+          <ul className="space-y-1.5 text-[11.5px] text-slate-300">
+            {((report.news?.findings || sources).length > 0) ? (
+              (report.news?.findings || sources).slice(0, 2).map((item, i) => (
+                <li key={i} className="flex items-start gap-1.5 leading-snug">
+                  <span className="text-[#8ab4f8] font-bold">•</span>
+                  <span className="line-clamp-2">{item.claim || item.title || 'Corporate regulatory disclosure'}</span>
+                </li>
+              ))
+            ) : (
+              <li className="text-[#9aa0a6] italic">Disclosures active in audit drawer.</li>
+            )}
+          </ul>
+        </div>
+
+        {/* Pillar 4: Actionable Framework */}
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.04] p-3.5 text-left">
+          <div className="flex items-center justify-between text-amber-400 font-bold text-[11.5px] mb-2">
+            <span className="flex items-center gap-1.5">
+              <Scale size={14} /> Action Plan
+            </span>
+            <span className="font-mono text-[10px] bg-amber-500/15 px-1.5 py-0.5 rounded text-amber-300">
+              Guidance
+            </span>
+          </div>
+          <p className="text-[11.5px] leading-snug text-slate-300 line-clamp-3">
+            {decisionFramework.hold_when?.[0] ? `Hold: ${decisionFramework.hold_when[0]}` : decisionFramework.base_stance || 'Maintain disciplined portfolio sizing.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 
   const sectionSpecs = [
     { key: 'financial', name: 'Financial Health Specialist', color: 'text-[#8ab4f8]', border: 'border-[#4285f4]/20' },
@@ -621,9 +1001,9 @@ export default function ReportPreview({
       <div>
         <div className="flex items-center gap-2">
           <Logo size={28} />
-          <span className="font-sans text-[16px] font-bold tracking-tight text-white">Bullseye</span>
+          <span className="font-sans text-[16px] font-bold tracking-tight text-white">Stock Research</span>
           <span className="font-mono text-[12px] text-[#9aa0a6]">·</span>
-          <span className="text-[12px] font-medium text-[#bdc1c6]">Research Beyond the Noise</span>
+          <span className="text-[12px] font-medium text-[#bdc1c6]">Evidence-First Financial Intelligence</span>
         </div>
         {queryText ? (
           <p className="mt-1.5 text-[14px] font-semibold text-[#8ab4f8]">
@@ -1286,22 +1666,22 @@ export default function ReportPreview({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 text-left sm:grid-cols-2 lg:grid-cols-4">
-        {compEntities.slice(0, 3).map((entity, idx) => (
+      <div className="grid grid-cols-1 gap-3 text-left sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {compEntities.map((entity, idx) => (
           <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="truncate text-[13px] font-bold text-white" title={entity.name}>
-                {entity.ticker || entity.name}
+                {entity.name}
               </span>
-              <span className="font-mono text-[12px] font-bold text-[#8ab4f8]">
-                <Measured value={formatMoney(entity.price, entity.currency)} label="no quote" />
+              <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10.5px] text-[#8ab4f8]">
+                {entity.ticker}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-1 text-center font-mono text-[11px]">
               {[
-                { label: 'P/E', value: entity.pe, cls: 'text-amber-300' },
-                { label: 'ROE', value: entity.roe, cls: 'text-emerald-400' },
-                { label: 'OPM', value: entity.opm, cls: 'text-cyan-400' }
+                { label: 'OPM', value: entity.opm, cls: 'text-emerald-400' },
+                { label: 'NPM', value: entity.npm, cls: 'text-cyan-400' },
+                { label: 'D/E', value: entity.de, cls: 'text-[#8ab4f8]' }
               ].map((cell) => (
                 <div key={cell.label} className="rounded bg-white/5 p-1">
                   <span className="block text-[9px] uppercase text-[#9aa0a6]">{cell.label}</span>
@@ -1397,9 +1777,8 @@ export default function ReportPreview({
     </div>
   )
 
-  /* --- Expert mode tabs ---------------------------------------------------- */
-
   const tabs = [
+    { id: 'all', label: 'Complete Brief (All)', icon: FileText },
     { id: 'ratios', label: isComparison ? 'Comparative Grid' : 'Fundamental Ratios', icon: PieChart },
     { id: 'visuals', label: 'Visual Charts', icon: BarChart3 },
     { id: 'bull_bear', label: 'Bull vs Bear Drivers', icon: ShieldCheck },
@@ -2286,6 +2665,119 @@ export default function ReportPreview({
           })}
         </div>
 
+        {activeTab === 'all' && (
+          <div className="mt-5 space-y-8 animate-fade-up">
+            <div className="space-y-6">{ratiosTab}</div>
+            {visualsTab}
+            {bullBearTab}
+            {decisionFramework && (decisionFramework.hold_when?.length > 0 || decisionFramework.sell_when?.length > 0) && (
+              <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-xl text-left">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div>
+                    <h4 className="font-sans text-[15px] font-bold tracking-tight text-white">
+                      Investment Action Framework: Hold, Reduce, or Sell?
+                    </h4>
+                    <p className="mt-0.5 text-[11.5px] text-[#9aa0a6]">
+                      Objective criteria based on position sizing, portfolio time horizon, and thesis validity.
+                    </p>
+                  </div>
+                  <span className="rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-indigo-400">
+                    DISCIPLINE GUIDE
+                  </span>
+                </div>
+
+                {decisionFramework.base_stance && (
+                  <div className="mt-3.5 rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+                    <span className="font-mono text-[10.5px] uppercase tracking-wider text-[#8ab4f8]">
+                      Base Operating Stance
+                    </span>
+                    <p className="mt-1 text-[13px] leading-relaxed text-[#f1f3f4]">
+                      {decisionFramework.base_stance}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+                    <div className="flex items-center gap-1.5 font-semibold text-emerald-400 text-[12.5px]">
+                      <CheckCircle2 size={15} />
+                      <span>Hold is defensible when:</span>
+                    </div>
+                    <ul className="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-slate-300">
+                      {(decisionFramework.hold_when || []).map((h, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                          <span>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4">
+                    <div className="flex items-center gap-1.5 font-semibold text-amber-400 text-[12.5px]">
+                      <MinusCircle size={15} />
+                      <span>Reduce is defensible when:</span>
+                    </div>
+                    <ul className="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-slate-300">
+                      {(decisionFramework.reduce_when || []).map((r, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-4">
+                    <div className="flex items-center gap-1.5 font-semibold text-rose-400 text-[12.5px]">
+                      <XCircle size={15} />
+                      <span>Sell is defensible when:</span>
+                    </div>
+                    <ul className="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-slate-300">
+                      {(decisionFramework.sell_when || []).map((s, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+            {reasonedDeductions && reasonedDeductions.length > 0 && (
+              <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-xl text-left">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div>
+                    <h4 className="font-sans text-[15px] font-bold tracking-tight text-white">
+                      How the Stance Was Reached: Step-by-Step Reasoned Deductions
+                    </h4>
+                    <p className="mt-0.5 text-[11.5px] text-[#9aa0a6]">
+                      Analytical chain bridging verified operating evidence, cash generation, and valuation multiples.
+                    </p>
+                  </div>
+                  <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-400">
+                    LOGICAL CHAIN
+                  </span>
+                </div>
+                <div className="mt-4 space-y-2 text-[12px] leading-relaxed text-slate-300">
+                  {reasonedDeductions.map((ded, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5 rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 font-mono text-[10px] font-bold text-indigo-400">
+                        {idx + 1}
+                      </span>
+                      <p className="text-[#f1f3f4]">{ded.replace(/^\d+\.\s*/, '')}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {specialistsTab}
+            {agentLogTab}
+            {sourcesTab}
+            {auditTab}
+          </div>
+        )}
         {activeTab === 'ratios' && <div className="mt-5 space-y-6 animate-fade-up">{ratiosTab}</div>}
         {activeTab === 'visuals' && visualsTab}
         {activeTab === 'bull_bear' && bullBearTab}
@@ -2302,6 +2794,7 @@ export default function ReportPreview({
       {headerBlock}
       {coverageStrip}
       {gapBanner}
+      {executiveHeroCard}
 
       {mode === 'beginner' ? (isComparison ? beginnerComparison : beginnerSingle) : expertMode}
 

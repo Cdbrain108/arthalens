@@ -129,16 +129,29 @@ def _calculate_ratio(name: str, inputs: dict | str, **_kwargs) -> dict:
             "error": None}
 
 
+TICKER_ALIASES = {
+    "TATAMOTORS": "TMCV",
+    "TATAMTRDVR": "TMCV",
+    "TATA_MOTORS": "TMCV",
+    "M&M": "M_M",
+    "L&T": "LT",
+    "BAJAJ-AUTO": "BAJAJ_AUTO",
+}
+
+
 def _resolve_symbol(ticker: str, exchange: str) -> str:
     """Append the yfinance exchange suffix (Indian listings need .NS/.BO;
-    US tickers like AAPL are used bare)."""
+    US tickers like AAPL are used bare). Also resolve known restructured/NSE aliases."""
     from .base import clean_str
-    ticker = (clean_str(ticker, "") or "").lstrip("$").strip()
+    raw = (clean_str(ticker, "") or "").lstrip("$").strip().upper()
+    base = raw.replace(".NS", "").replace(".BO", "")
+    if base in TICKER_ALIASES:
+        base = TICKER_ALIASES[base]
     exchange = clean_str(exchange, "NSE") or "NSE"
-    if "." in ticker or ticker.startswith("^") or not exchange:
-        return ticker
+    if "." in base or base.startswith("^") or not exchange:
+        return base
     ex = exchange.upper()
-    return ticker + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
+    return base + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
 
 
 def _get_financials(ticker: str, statement: str = "income", period: str = "annual",

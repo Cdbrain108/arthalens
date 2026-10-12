@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="gm-edge" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4285F4"/><stop offset=".55" stop-color="#7FA8FF"/><stop offset="1" stop-color="#F5A623"/>
+    </linearGradient>
+    <linearGradient id="gm-tile" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1220"/><stop offset="1" stop-color="#05080F"/>
+    </linearGradient>
+    <radialGradient id="gm-dot" cx="42%" cy="36%" r="70%">
+      <stop stop-color="#9CC2FF"/><stop offset=".55" stop-color="#3B82F6"/><stop offset="1" stop-color="#1D5FD6"/>
+    </radialGradient>
+  </defs>
+  <!-- Favicon master: same identity, detail removed for 16px legibility -->
+  <rect width="64" height="64" rx="14" fill="url(#gm-tile)"/>
+  <rect x=".8" y=".8" width="62.4" height="62.4" rx="13.2" fill="none" stroke="url(#gm-edge)" stroke-width="1.6" opacity=".85"/>
+  <g stroke-width="5.6" stroke-linecap="round" fill="none">
+    <path d="M9.35 28A23 23 0 0 1 28 9.35" stroke="#34A853"/>
+    <path d="M36 9.35A23 23 0 0 1 54.65 28" stroke="#EA4335"/>
+    <path d="M54.65 36A23 23 0 0 1 36 54.65" stroke="#F5A623"/>
+    <path d="M28 54.65A23 23 0 0 1 9.35 36" stroke="#4285F4"/>
+  </g>
+  <g fill="#F5C542">
+    <rect x="30.3" y="4" width="3.4" height="11.8" rx="1.7"/>
+    <rect x="30.3" y="48.2" width="3.4" height="11.8" rx="1.7"/>
+    <rect x="4" y="30.3" width="11.8" height="3.4" rx="1.7"/>
+    <rect x="48.2" y="30.3" width="11.8" height="3.4" rx="1.7"/>
+  </g>
+  <circle cx="32" cy="32" r="9.8" stroke="#E9EEF4" stroke-width="1.8" opacity=".9"/>
+  <circle cx="32" cy="32" r="4.6" fill="url(#gm-dot)"/>
+</svg>

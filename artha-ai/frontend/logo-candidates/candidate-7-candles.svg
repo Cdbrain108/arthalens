@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="c7bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0c1220"/><stop offset="1" stop-color="#07090e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#c7bg)"/>
+  <!-- Crosshair arms -->
+  <path d="M32 4v4M32 56v4M4 32h4M56 32h4" stroke="#4285F4" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
+  <!-- Target rings -->
+  <circle cx="32" cy="32" r="21" stroke="#4285F4" stroke-width="2.4" opacity="0.9"/>
+  <circle cx="32" cy="32" r="12.5" stroke="#FBBC05" stroke-width="2.2" opacity="0.9"/>
+  <!-- Bull candle (green, up) -->
+  <path d="M28 23v19" stroke="#34A853" stroke-width="2.2" stroke-linecap="round"/>
+  <rect x="24.5" y="25.5" width="7" height="12.5" rx="1.5" fill="#34A853"/>
+  <!-- Bear candle (red, down) -->
+  <path d="M37 25v16" stroke="#EA4335" stroke-width="2.2" stroke-linecap="round"/>
+  <rect x="33.5" y="29" width="7" height="9.5" rx="1.5" fill="#EA4335"/>
+</svg>

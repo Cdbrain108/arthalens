@@ -51,20 +51,32 @@ class TechnicalsArgs(BaseModel):
     windows: list[int] = [20, 50]
 
 
+TICKER_ALIASES = {
+    "TATAMOTORS": "TMCV",
+    "TATAMTRDVR": "TMCV",
+    "TATA_MOTORS": "TMCV",
+    "M&M": "M_M",
+    "L&T": "LT",
+    "BAJAJ-AUTO": "BAJAJ_AUTO",
+}
+
+
 def _suffix(ticker: str, exchange: str) -> str:
     # Index/benchmark symbols (^NSEI, ^GSPC) and pre-suffixed tickers pass through.
     # Models often prefix tickers with $ ($TCS, $NIFTY) — strip that first.
     from .base import clean_str
-    ticker = (clean_str(ticker, "") or "").lstrip("$").strip()
-    # "" means "no suffix" (benchmark path); None/"null" means default NSE.
+    raw = (clean_str(ticker, "") or "").lstrip("$").strip().upper()
+    base = raw.replace(".NS", "").replace(".BO", "")
+    if base in TICKER_ALIASES:
+        base = TICKER_ALIASES[base]
     if exchange == "":
         pass
     else:
         exchange = clean_str(exchange, "NSE") or "NSE"
-    if not ticker or "." in ticker or ticker.startswith("^") or not exchange:
-        return ticker
+    if not base or "." in base or base.startswith("^") or not exchange:
+        return base
     ex = exchange.upper()
-    return ticker + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
+    return base + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
 
 
 def _get_quote(ticker: str, exchange: str = "NSE") -> dict:

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="c1bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0c1220"/>
+      <stop stop-color="#07090e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#c1bg)"/>
+  <!-- Outer aperture: four staggered arcs in Google colors -->
+  <circle cx="32" cy="32" r="23" stroke="#4285F4" stroke-width="3" stroke-linecap="round"
+          stroke-dasharray="27.3 117.2" stroke-dashoffset="0"/>
+  <circle cx="32" cy="32" r="23" stroke="#EA4335" stroke-width="3" stroke-linecap="round"
+          stroke-dasharray="27.3 117.2" stroke-dashoffset="-36.1"/>
+  <circle cx="32" cy="32" r="23" stroke="#FBBC05" stroke-width="3" stroke-linecap="round"
+          stroke-dasharray="27.3 117.2" stroke-dashoffset="-72.3"/>
+  <circle cx="32" cy="32" r="23" stroke="#34A853" stroke-width="3" stroke-linecap="round"
+          stroke-dasharray="27.3 117.2" stroke-dashoffset="-108.4"/>
+  <!-- Calm inner ring -->
+  <circle cx="32" cy="32" r="14.5" stroke="#FBBC05" stroke-width="2.5" opacity="0.95"/>
+  <!-- Focus point -->
+  <circle cx="32" cy="32" r="3.5" fill="#34A853"/>
+</svg>

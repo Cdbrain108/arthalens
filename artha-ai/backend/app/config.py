@@ -9,7 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # the repo root, or anywhere else. The README's setup puts .env at the project
 # root; a CWD-relative env_file never found it when uvicorn ran from backend/
 # (run_backend.bat), silently discarding the provider key and forcing mock.
-BASE_DIR = Path(__file__).resolve().parents[2]
+import os
+
+BASE_DIR = Path(os.environ.get("BASE_DIR", str(Path(__file__).resolve().parents[2])))
 
 
 def _usable_key(key: str | None) -> bool:
@@ -23,15 +25,32 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(BASE_DIR / ".env"),
                                       env_file_encoding="utf-8", extra="ignore")
 
-    # Model gateway: "gemini" | "ollama" | "openrouter" | "agentrouter" | "mock"
-    # (mock = ₹0 offline, deterministic; auto-selected when no provider key is usable)
-    model_provider: str = "gemini"
+    # Model gateway: "sota" | "vyce" | "nvidia" | "inception" | "gemini" | "openrouter" | "agentrouter" | "mock"
+    # SOTA dynamically routes across Tier 1 (VyceAI + Nvidia), Tier 2 (InceptionLabs + OpenRouter), Tier 3 (Gemini Tier 1)
+    model_provider: str = "sota"
+
+    # --- SOTA Tier 1: VyceAI ---
+    vyce_api_key: str | None = None
+    vyce_base_url: str = "https://vyceai.com/v1"
+    vyce_model: str = "deepseek-v4-flash"
+    vyce_model_synthesis: str = "claude-sonnet-4-6"
+
+    # --- SOTA Tier 1: Nvidia NIM (round-robin keys) ---
+    nvidia_api_keys: str = ""
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+    nvidia_model: str = "nvidia/nemotron-3-super-120b-a12b"
+
+    # --- SOTA Tier 2: InceptionLabs (ultra-fast Mercury-2.5) ---
+    inception_api_keys: str = ""
+    inception_base_url: str = "https://api.inceptionlabs.ai/v1"
+    inception_model: str = "mercury-2.5"
+
     gemini_api_key: str | None = None
     # Extra Gemini keys (comma-separated) round-robin with the primary for
     # free-tier rate-limit headroom.
     gemini_backup_keys: str = ""
-    gemini_model: str = "gemini-2.0-flash"
-    gemini_model_fast: str | None = None  # cheap model for extraction roles
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_model_fast: str | None = "gemini-2.5-flash"  # cheap model for extraction roles
     # OpenRouter: free models; keys are used round-robin so parallel
     # specialists don't exhaust one free-tier rate limit.
     openrouter_api_key: str | None = None
@@ -101,6 +120,16 @@ class Settings(BaseSettings):
         return self
 
     @property
+    def nvidia_key_list(self) -> list[str]:
+        """Usable Nvidia NIM keys de-duplicated in configured order."""
+        return list(dict.fromkeys(k.strip() for k in self.nvidia_api_keys.split(",") if _usable_key(k.strip())))
+
+    @property
+    def inception_key_list(self) -> list[str]:
+        """Usable InceptionLabs keys de-duplicated in configured order."""
+        return list(dict.fromkeys(k.strip() for k in self.inception_api_keys.split(",") if _usable_key(k.strip())))
+
+    @property
     def gemini_key_list(self) -> list[str]:
         """Usable Gemini keys, primary first, then extras (de-duplicated)."""
         extras = [k.strip() for k in self.gemini_backup_keys.split(",") if k.strip()]
@@ -121,6 +150,18 @@ class Settings(BaseSettings):
     @property
     def effective_provider(self) -> str:
         """Resolve the real provider: fall back to mock when no usable key is set."""
+        if self.model_provider == "sota":
+            if (self.nvidia_key_list or _usable_key(self.vyce_api_key) or
+                    self.inception_key_list or _usable_key(self.openrouter_api_key) or
+                    self.gemini_key_list):
+                return "sota"
+            return "mock"
+        if self.model_provider == "vyce" and not _usable_key(self.vyce_api_key):
+            return "mock"
+        if self.model_provider == "nvidia" and not self.nvidia_key_list:
+            return "mock"
+        if self.model_provider == "inception" and not self.inception_key_list:
+            return "mock"
         if self.model_provider == "gemini" and not self.gemini_key_list:
             return "mock"
         if self.model_provider == "openrouter" and not (

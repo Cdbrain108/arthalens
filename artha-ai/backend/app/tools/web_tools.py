@@ -24,18 +24,51 @@ class FetchPageArgs(BaseModel):
 
 
 def _search_web(query: str) -> dict:
+    from ..config import settings
+    hits = []
+    
+    # 1. Try DuckDuckGo
     try:
         from ddgs import DDGS
-
-        with DDGS() as ddgs:
+        with DDGS(timeout=10) as ddgs:
             hits = list(ddgs.text(query, max_results=8)) or []
+    except Exception:
+        pass
+
+    # 2. Resilient Fallback: Tavily API (when DDGS hits h2/rate-limit issues)
+    if not hits and settings.tavily_enabled:
+        try:
+            import httpx
+            resp = httpx.post(
+                f"{settings.tavily_base_url}/search",
+                json={"query": query, "api_key": settings.tavily_api_key, "max_results": 6},
+                timeout=12
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                for r in data.get("results", []):
+                    hits.append({"title": r.get("title", ""), "body": r.get("content", ""), "href": r.get("url", "")})
+        except Exception:
+            pass
+
+    # 3. Fallback: Google News RSS Search
+    if not hits:
+        try:
+            from .news_tools import _search_rss
+            rss_hits = _search_rss(query, limit=6)
+            for r in rss_hits:
+                hits.append({"title": r.get("title", ""), "body": r.get("snippet", ""), "href": r.get("url", "")})
+        except Exception:
+            pass
+
+    if hits:
         return {"ok": True, "data": {"query": query, "results": hits},
-                "source": _source("DuckDuckGo search", provider="ddgs"),
+                "source": _source("Web search", provider="multi"),
                 "error": None}
-    except Exception as exc:
-        return {"ok": False, "error": str(exc),
-                "data": {"query": query, "results": []},
-                "source": _source("DuckDuckGo search", provider="ddgs")}
+
+    return {"ok": False, "error": "Search exhausted all backends",
+            "data": {"query": query, "results": []},
+            "source": _source("Web search", provider="multi")}
 
 
 _BLOCKED_SCRAPE_DOMAINS = ("linkedin.com",)

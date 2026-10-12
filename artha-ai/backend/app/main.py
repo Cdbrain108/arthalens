@@ -37,12 +37,26 @@ app = FastAPI(title="Bullseye", version="1.0.0", lifespan=lifespan,
               description="Multi-agent company research — one question, "
                           "specialist agents, evidence, synthesis, PDF.")
 
+import os
+
+cors_env = os.environ.get("CORS_ORIGINS", "")
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+if cors_env:
+    allowed_origins.extend([o.strip() for o in cors_env.split(",") if o.strip()])
+elif os.environ.get("K_SERVICE") or os.environ.get("ENV") == "production":
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", "http://127.0.0.1:5173",
-    ],
-    allow_methods=["*"], allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(research_routes.router, prefix="/api")

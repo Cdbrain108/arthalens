@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en" data-theme="midnight">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulls Eye - Research Beyond the Noise</title>
+<style>
+:root{--good:#22C55E;--bad:#EF4444;--watch:#F59E0B;--radius:16px}
+[data-theme=midnight]{--bg:#0B1020;--card:#131A30;--line:#243051;--ink:#EAEEFF;--muted:#9AA6C8;--accent:#6C7CFF;--onaccent:#fff}
+[data-theme=green]{--bg:#07140F;--card:#0E1F18;--line:#1D3A2E;--ink:#E8FFF3;--muted:#8DB5A2;--accent:#22C55E;--onaccent:#052e16}
+[data-theme=light]{--bg:#F7F8FB;--card:#FFFFFF;--line:#DDE2EE;--ink:#141B34;--muted:#5B6478;--accent:#3B5BFF;--onaccent:#fff}
+[data-theme=amber]{--bg:#130F07;--card:#1D170B;--line:#3A2E15;--ink:#FFF4DD;--muted:#BFA676;--accent:#F59E0B;--onaccent:#2b1a00}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55;transition:background .3s,color .3s}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+a{color:inherit;text-decoration:none}
+/* ---------- splash ---------- */
+#splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:100;transition:opacity .5s,visibility .5s}
+#splash.hide{opacity:0;visibility:hidden}
+#splash svg{width:min(60vw,240px);height:auto}
+.bull{fill:none;stroke:var(--accent);stroke-width:7;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:700;stroke-dashoffset:700;animation:draw 1.1s ease-out .1s forwards}
+.nos{fill:var(--accent);opacity:0;animation:fade .3s ease .9s forwards}
+.chart{fill:none;stroke:var(--good);stroke-width:9;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:420;stroke-dashoffset:420;animation:draw 1.3s cubic-bezier(.6,0,.3,1) .4s forwards}
+.eye{opacity:0;transform-origin:206px 78px;animation:fade .2s ease 1.6s forwards,pulse 1s ease-in-out 1.6s 2}
+.eyeS{fill:none;stroke:var(--good);stroke-width:5}
+.eyeD{fill:var(--good)}
+.brand{font-weight:800;font-size:28px;letter-spacing:.5px;opacity:0;animation:fade .4s ease 1.6s forwards}
+.brand span{color:var(--accent)}
+#skip{position:absolute;right:16px;top:16px;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 14px;border-radius:999px;cursor:pointer;font-size:14px}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fade{to{opacity:1}}
+@keyframes pulse{50%{transform:scale(1.3)}}
+/* ---------- nav ---------- */
+header{position:sticky;top:0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);z-index:50}
+nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;white-space:nowrap}
+.logo svg{width:34px;height:34px}
+.links{display:flex;gap:22px;color:var(--muted);font-size:15px}
+.links a:hover{color:var(--ink)}
+.right{display:flex;align-items:center;gap:10px}
+select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px}
+.btn{display:inline-block;background:var(--accent);color:var(--onaccent);padding:12px 20px;border-radius:12px;font-weight:700;border:0;cursor:pointer;font-size:16px;min-height:44px;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 35%,transparent)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.menu{display:none;background:none;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:18px;min-height:44px}
+/* ---------- sections ---------- */
+section{padding:72px 0}
+h1{font-size:clamp(32px,6vw,56px);line-height:1.1;margin:0 0 16px;letter-spacing:-1px}
+h2{font-size:clamp(24px,4vw,36px);margin:0 0 10px;letter-spacing:-.5px}
+.lead{color:var(--muted);font-size:clamp(17px,2.2vw,20px);max-width:640px}
+.hero{padding-top:56px;text-align:center}
+.hero .lead{margin:0 auto 28px}
+.ask{display:flex;gap:10px;max-width:680px;margin:0 auto;flex-wrap:wrap}
+.ask input{flex:1;min-width:220px;font-size:16px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:48px}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer}
+.chip:hover{color:var(--ink);border-color:var(--accent)}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:28px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.card h3{margin:0 0 6px;font-size:18px}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.step-n{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center;font-weight:800;margin-bottom:10px}
+.agent{transition:border-color .3s,transform .3s}
+.agent.on{border-color:var(--accent);transform:translateY(-3px)}
+/* demo */
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:18px 0}
+.tabs button{background:var(--card);color:var(--muted);border:0;padding:12px 22px;font-size:16px;cursor:pointer;min-height:44px}
+.tabs button.active{background:var(--accent);color:var(--onaccent);font-weight:700}
+.verdict{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.pill{font-weight:800;padding:8px 16px;border-radius:999px;background:color-mix(in srgb,var(--watch) 20%,transparent);color:var(--watch);font-size:20px}
+.tag{font-weight:700;font-size:13px;padding:3px 10px;border-radius:999px}
+.tag.good{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good)}
+.tag.watch{background:color-mix(in srgb,var(--watch) 20%,transparent);color:var(--watch)}
+.tag.bad{background:color-mix(in srgb,var(--bad) 20%,transparent);color:var(--bad)}
+.row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:flex-start}
+.row:first-child{border-top:0}
+.row small{color:var(--muted);display:block}
+.expert{display:none}
+.mode-expert .expert{display:block}.mode-expert .beginner{display:none}
+.bars{margin-top:18px}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden;margin:6px 0 14px}
+.bar i{display:block;height:100%;width:0;border-radius:99px;transition:width 1.2s ease}
+.sample{font-size:13px;color:var(--muted);margin-top:10px}
+.trust li{margin:8px 0;color:var(--muted)}
+.trust b{color:var(--ink)}
+details{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0;background:var(--card)}
+summary{cursor:pointer;font-weight:700}
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:14px}
+/* reveal */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .6s,transform .6s}
+.rv.in{opacity:1;transform:none}
+/* ---------- responsive ---------- */
+@media (max-width:780px){
+  .links{display:none;position:absolute;left:0;right:0;top:64px;background:var(--bg);border-bottom:1px solid var(--line);flex-direction:column;padding:12px 16px;gap:14px}
+  .links.open{display:flex}
+  .menu{display:block}
+  .right .btn{display:none}
+  section{padding:48px 0}
+  .ask .btn{width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}
+  .bull,.chart{stroke-dashoffset:0}.nos,.eye,.brand{opacity:1}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ SPLASH: bull + chart that goes down and up ============ -->
+<div id="splash" aria-label="Loading Bulls Eye">
+  <button id="skip">Skip</button>
+  <svg viewBox="0 0 240 240" aria-hidden="true">
+    <path class="bull" d="M82 72 L158 72 C168 102 166 134 154 160 C148 178 132 190 120 190 C108 190 92 178 86 160 C74 134 72 102 82 72 Z"/><path class="bull" d="M82 76 C58 80 36 68 28 40 C46 58 64 58 80 60"/><path class="bull" d="M158 76 C182 80 204 68 212 40 C194 58 176 58 160 60"/><path class="bull" d="M82 90 C66 90 54 98 50 108 C66 108 76 104 83 98"/><path class="bull" d="M158 90 C174 90 186 98 190 108 C174 108 164 104 157 98"/>
+    <circle class="nos" cx="108" cy="166" r="4"/><circle class="nos" cx="132" cy="166" r="4"/>
+    <polyline class="chart" points="28,196 60,176 82,190 112,150 134,162 170,112 196,86"/>
+    <g class="eye"><circle cx="206" cy="78" r="17" fill="var(--bg)" class="eyeS"/><circle cx="206" cy="78" r="8" class="eyeS" stroke-width="4"/><circle cx="206" cy="78" r="3" class="eyeD"/></g>
+  </svg>
+  <div class="brand">Bulls <span>Eye</span></div>
+</div>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="logo" href="#top">
+        <svg viewBox="0 0 240 240" aria-hidden="true"><path d="M82 72 L158 72 C168 102 166 134 154 160 C148 178 132 190 120 190 C108 190 92 178 86 160 C74 134 72 102 82 72 Z" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><path d="M82 76 C58 80 36 68 28 40 C46 58 64 58 80 60" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><path d="M158 76 C182 80 204 68 212 40 C194 58 176 58 160 60" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><path d="M82 90 C66 90 54 98 50 108 C66 108 76 104 83 98" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><path d="M158 90 C174 90 186 98 190 108 C174 108 164 104 157 98" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><polyline points="28,196 60,176 82,190 112,150 134,162 170,112 196,86" fill="none" stroke="var(--good)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/><circle cx="206" cy="78" r="12" fill="var(--good)"/></svg>
+        Bulls Eye
+      </a>
+      <div class="links" id="links">
+        <a href="#how">How it works</a><a href="#demo">Beginner vs Expert</a><a href="#agents">Agents</a><a href="#trust">Trust</a><a href="#faq">FAQ</a>
+      </div>
+      <div class="right">
+        <select id="theme" aria-label="Theme">
+          <option value="midnight">Midnight</option><option value="green">Bull Green</option><option value="light">Light</option><option value="amber">Amber</option>
+        </select>
+        <a class="btn" href="#top" style="padding:10px 16px">Try RKI</a>
+        <button class="menu" id="menu" aria-label="Menu">&#9776;</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <h1>Should you buy this share?<br><span style="color:var(--accent)">Get a clear answer in plain words.</span></h1>
+    <p class="lead">Ask RKI about any company. A team of research agents checks the numbers, the news and the risks, then explains the answer simply, with a source for every number.</p>
+    <form class="ask" onsubmit="event.preventDefault();alert('Prototype only. In the real app this starts a research job.')">
+      <input id="q" type="text" placeholder="Ask RKI about any company, e.g. Should I hold TCS for 5 years?" aria-label="Your question">
+      <button class="btn" type="submit">Run research</button>
+    </form>
+    <div class="chips">
+      <span class="chip" data-q="Should I hold TCS for the next 5 years?">Should I hold TCS for 5 years?</span>
+      <span class="chip" data-q="Why did TCS move today?">Why did TCS move today?</span>
+      <span class="chip" data-q="Compare TCS and Infosys on financial health and valuation">Compare TCS vs Infosys</span>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap rv">
+    <h2>How it works</h2>
+    <p class="lead">One question in, one clear report out.</p>
+    <div class="grid">
+      <div class="card"><div class="step-n">1</div><h3>You ask</h3><p>Type a question in normal language. RKI works out the company and what you really want to know.</p></div>
+      <div class="card"><div class="step-n">2</div><h3>Agents research</h3><p>Only the agents needed for your question run, in parallel: financials, valuation, price, news, growth, risk.</p></div>
+      <div class="card"><div class="step-n">3</div><h3>Evidence is checked</h3><p>Numbers are calculated by code, sources are listed, and disagreements between sources are shown.</p></div>
+      <div class="card"><div class="step-n">4</div><h3>You get the report</h3><p>A plain-words answer first, expert details underneath, and a PDF you can download.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="demo">
+  <div class="wrap rv">
+    <h2>Same answer, two ways to read it</h2>
+    <p class="lead">Beginners get short sentences and simple tags. Experts get the ratios, formulas and sources.</p>
+    <div class="tabs" role="tablist">
+      <button class="active" id="tb" role="tab">Beginner</button><button id="te" role="tab">Expert</button>
+    </div>
+    <div class="card" id="demoCard">
+      <div class="verdict"><span class="pill">HOLD</span><span class="beginner">Good company, but the price is under pressure. Don't panic-sell; don't rush to buy a lot more.</span><span class="expert">Conditional hold. Fundamentals strong, valuation de-rated, headline risk elevated.</span></div>
+      <div style="margin-top:14px">
+        <div class="row"><div><b class="beginner">Makes strong profits</b><b class="expert">Operating margin 24.0%</b><small class="beginner">Rs 24 left from every Rs 100 of sales</small><small class="expert">Operating profit / revenue, Q1 FY27</small></div><span class="tag good">GOOD</span></div>
+        <div class="row"><div><b class="beginner">Almost no debt</b><b class="expert">Debt / equity 0.10x</b><small class="beginner">A bad year is unlikely to cause money trouble</small><small class="expert">Total debt / shareholders' equity</small></div><span class="tag good">GOOD</span></div>
+        <div class="row"><div><b class="beginner">Price is lower than before</b><b class="expert">P/E 15.1x, P/B 6.85x</b><small class="beginner">Rs 15 paid for each Rs 1 of yearly profit</small><small class="expert">Price / EPS (INR 137.64). Source: yfinance + deterministic calc</small></div><span class="tag watch">WATCH</span></div>
+        <div class="row"><div><b class="beginner">Share fell about 25% in a year</b><b class="expert">1-year return -25.5%</b><small class="beginner">Worries: weak IT spending, AI, Tata group dispute</small><small class="expert">52-week range INR 1,972 - 3,204</small></div><span class="tag bad">BAD</span></div>
+      </div>
+      <div class="bars" id="bars">
+        <div class="beginner expert" style="display:block"><small style="color:var(--muted)">Reasons for (Bull) vs reasons against (Bear), count from sample report</small></div>
+        <div>Bull reasons: 4</div><div class="bar"><i data-w="57" style="background:var(--good)"></i></div>
+        <div>Bear reasons: 5</div><div class="bar"><i data-w="71" style="background:var(--bad)"></i></div>
+      </div>
+      <p class="sample">Sample data copied from a test report. Not live. Not investment advice.</p>
+    </div>
+  </div>
+</section>
+
+<section id="agents">
+  <div class="wrap rv">
+    <h2>Meet the research team</h2>
+    <p class="lead">Each agent has one job and shows its evidence.</p>
+    <div class="grid" id="agentGrid">
+      <div class="card agent"><h3>Financial</h3><p>Sales, profit, margins, debt, cash.</p></div>
+      <div class="card agent"><h3>Valuation</h3><p>Is the price cheap or expensive for what you get?</p></div>
+      <div class="card agent"><h3>Market</h3><p>Price moves, volume, 52-week range.</p></div>
+      <div class="card agent"><h3>News</h3><p>Dated events, good and bad.</p></div>
+      <div class="card agent"><h3>Growth</h3><p>Projects, deals, expansion.</p></div>
+      <div class="card agent"><h3>Risk</h3><p>What could break the story.</p></div>
+      <div class="card agent"><h3>Workforce <small>(when asked)</small></h3><p>Hiring signals from permitted sources.</p></div>
+      <div class="card agent"><h3>Document <small>(when you upload)</small></h3><p>Reads annual reports and filings with page citations.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="trust">
+  <div class="wrap rv">
+    <h2>Why you can trust it</h2>
+    <ul class="trust">
+      <li><b>Every number has a source.</b> Click a number to see where it came from.</li>
+      <li><b>Maths is done by code,</b> not guessed by AI.</li>
+      <li><b>Gaps are shown, not hidden.</b> If something could not be confirmed, the report says so.</li>
+      <li><b>Both sides are argued.</b> Bull case and Bear case sit side by side.</li>
+      <li><b>Learning tool, not advice.</b> Decisions are yours.</li>
+    </ul>
+    <a class="btn" href="../05_SAMPLE_BEGINNER_REPORT_TCS.pdf" style="margin-top:14px">See a sample report (PDF)</a>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap rv">
+    <h2>FAQ</h2>
+    <details><summary>Is this financial advice?</summary><p>No. It is a research summary for learning. It does not know your money, taxes or plans.</p></details>
+    <details><summary>Where does the data come from?</summary><p>Market and company data from free public sources, news headlines from public feeds, and documents you upload. Each item lists its source and date.</p></details>
+    <details><summary>Why does it sometimes say "could not confirm"?</summary><p>Because inventing a number would be worse. Honest gaps make the report more trustworthy.</p></details>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">Bulls Eye - Research Beyond the Noise. Assistant: RKI. For learning only. Not investment advice. Prototype page: all figures are sample data.</div>
+</footer>
+
+<script>
+// splash: play once per session, skippable
+const splash=document.getElementById('splash');
+const seen=(()=>{try{return sessionStorage.getItem('be_seen')}catch(e){return null}})();
+function closeSplash(){splash.classList.add('hide');try{sessionStorage.setItem('be_seen','1')}catch(e){}}
+if(seen){splash.style.display='none'}else{setTimeout(closeSplash,2600)}
+document.getElementById('skip').onclick=closeSplash;
+// theme
+const sel=document.getElementById('theme');
+try{const t=localStorage.getItem('be_theme');if(t){document.documentElement.dataset.theme=t;sel.value=t}}catch(e){}
+sel.onchange=()=>{document.documentElement.dataset.theme=sel.value;try{localStorage.setItem('be_theme',sel.value)}catch(e){}};
+// mobile menu
+const links=document.getElementById('links');
+document.getElementById('menu').onclick=()=>links.classList.toggle('open');
+links.querySelectorAll('a').forEach(a=>a.onclick=()=>links.classList.remove('open'));
+// example chips
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{const i=document.getElementById('q');i.value=c.dataset.q;i.focus()});
+// beginner / expert
+const card=document.getElementById('demoCard'),tb=document.getElementById('tb'),te=document.getElementById('te');
+function mode(m){card.classList.toggle('mode-expert',m==='e');tb.classList.toggle('active',m==='b');te.classList.toggle('active',m==='e')}
+tb.onclick=()=>mode('b');te.onclick=()=>mode('e');
+// scroll reveal + bar animation + agent highlight
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');
+  e.target.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%')}}),{threshold:.15});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+const ag=[...document.querySelectorAll('.agent')];let k=0;
+setInterval(()=>{ag.forEach(a=>a.classList.remove('on'));ag[k%6].classList.add('on');k++},1100);
+</script>
+</body>
+</html>

@@ -75,10 +75,13 @@ def _detect_conflicts(items: list[EvidenceItem]) -> list[Conflict]:
     for item in items:
         if item.value is None or item.claim_type != "fact":
             continue
-        key = (item.metric or item.claim.lower().strip(), item.unit,
-               item.entity, item.period, item.basis)
+        # Group by metric + entity when available, or by normalized claim text
+        if item.metric:
+            key = (item.metric, item.unit or "", item.entity or "")
+        else:
+            key = (item.claim.lower().strip(), item.unit or "", item.entity or "")
         by_key.setdefault(key, []).append(item)
-    for (claim, _unit, _entity, _period, _basis), group in by_key.items():
+    for (claim, _unit, _entity), group in by_key.items():
         numeric = [g for g in group if isinstance(g.value, (int, float))]
         # Every pair, not just adjacent ones: a disagreement between two sources
         # was previously missed whenever the pair sitting between them happened

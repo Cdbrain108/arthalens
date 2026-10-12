@@ -1,0 +1,150 @@
+WHAT I HAVE DONE — Bulls Eye (artha-ai) Pipeline & Workflow Fixes
+====================================================================
+
+STATUS SUMMARY
+--------------
+- Backend pipeline bugs: FIXED (all items below)
+- Tests: 62/62 passing (pytest), 25/25 frontend tests passing
+- Live pipeline (real Gemini API): runs end-to-end — job lifecycle, all
+  pipeline stages, report generation, PDF export all work.
+- Remaining issue: Gemini free-tier rate limits (429) still cut down some
+  specialist agents mid-run. Rate limiter + retry + key rotation code is
+  implemented and unit-verified; final live validation run was interrupted.
+
+
+1. CONFIG (backend/app/config.py)
+---------------------------------
+- Fixed .env loading bug: BASE_DIR is now root-anchored. Before, running the
+  server from any other working directory silently skipped .env and forced
+  mock mode.
+- Placeholder-key guard (_usable_key): rejects fake keys like "your-key" so
+  they can never be sent to providers.
+- All storage paths (sqlite, checkpoints, faiss, documents, reports) are now
+  absolute — no more CWD-dependent files.
+- New settings: gemini_backup_keys, gemini_model_fast, openrouter keys/model
+  chain, gemini_key_list property.
+
+2. JOB STORAGE (backend/app/storage/jobs.py)
+--------------------------------------------
+- Fixed SQLite connection leaks (contextlib.closing everywhere).
+- attach_report no longer swallows errors silently (was "except: pass");
+  returns True/False and logs.
+- New get_pdf_path() so the PDF route serves the persisted file.
+- New fail_stale_jobs(): jobs stuck in "running" after a crash/restart are
+  marked failed on startup (crash recovery).
+- History limit clamped 1-200; corrupt rows skipped instead of crashing.
+
+3. API ROUTES (backend/app/api/research_routes.py)
+---------------------------------------------------
+- Fixed asyncio task garbage-collection pitfall: background research tasks
+  are now strongly referenced (_running_tasks set) — jobs can no longer be
+  silently killed mid-run.
+- steps / failed_agents / agent_failed events now populate JobStatus per
+  API_SPEC (frontend can show per-agent progress and failures).
+- CancelledError (server shutdown) now marks the job failed instead of
+  leaving it "running" forever.
+- PDF route uses the persisted pdf_path with backward-compatible fallback.
+
+4. SERVER (backend/app/main.py)
+-------------------------------
+- Lifespan startup logs the active provider and fails stale jobs.
+- CORS tightened.
+
+5. LLM GATEWAY (backend/app/llm.py)
+-----------------------------------
+- Full rewrite: round-robin key rotation across ALL Gemini keys
+  (GEMINI_API_KEY + GEMINI_BACKUP_KEYS) and both OpenRouter keys.
+- Per-role models: cheap fast model (gemini-3.1-flash-lite) for
+  analyzer/planner/validator, main model (gemini-3.5-flash) for specialists
+  and synthesis.
+- _RobustStructured: retry wrapper for structured output (3-5 attempts,
+  fresh key per attempt, model-chain fallback on OpenRouter).
+- 429-aware backoff: parses "retry in Xs" from quota errors and waits the
+  advised window before retrying.
+- NEW: Global Gemini rate limiter (gemini_slot) — every Gemini request in
+  the process is spaced through one queue sized to stay under the free-tier
+  per-key RPM limit.
+- NEW: _RateLimitedGemini — ChatGoogleGenerativeAI subclass that paces
+  every stage-level request (generate + stream).
+
+6. LANGGRAPH ORCHESTRATOR (backend/app/graph/)
+-----------------------------------------------
+- 10-node StateGraph (ResearchState) deterministic research pipeline.
+- Removed all CrewAI components, dependencies, and wrappers completely.
+- Concurrent specialist execution with isolated timeouts and error containment.
+- Structured LLM tool-calling with key rotation and rate-limiting gateway.
+- Adversarial bull/bear thesis challenge, validation truth audit, and PDF synthesis.
+
+7. TOOLS
+--------
+- Web search (web_tools.py): FIXED — the ddgs package was never installed;
+  removed the useless langchain_community path. search_web + fetch_page now
+  verified working live.
+- Financial tools (financial_tools.py): FIXED two real bugs —
+  a) get_financials passed bare tickers (e.g. "TCS") to yfinance, which
+     needs the exchange suffix ("TCS.NS"); statements always came back empty.
+     Now auto-appends .NS/.BO per exchange with bare-symbol retry for US
+     listings.
+  b) get_company_metrics returned ok:true with all-null data for unknown
+     tickers; now detects and reports "no company" properly.
+- All tools verified live: financials (income/balance/cashflow), metrics,
+  quote, price history, news (RSS), web search, page fetch — all OK.
+
+8. REPORT / PDF (backend/app/report/pdf.py)
+--------------------------------------------
+- print -> logging; fpdf2 fallback works (WeasyPrint needs GTK on Windows —
+  known limitation, warning is expected).
+
+9. FRONTEND
+-----------
+- package.json test script fixed: "node --test src/api/client.test.js
+  src/hooks/researchJob.test.js" (directory arg doesn't work on this setup).
+
+10. DOCS
+--------
+- API_SPEC.md: documented 422 handling + stale-job recovery contract.
+- README.md: test instructions + provider configuration section.
+
+11. TESTS
+---------
+- tests/test_pipeline_e2e.py: full HTTP lifecycle, stale-job recovery,
+  persistence, route contracts, CWD-independence, provider fallback, key
+  rotation (Gemini + OpenRouter).
+- tests/test_pipeline_regressions.py: event-sequence regression coverage.
+- Total: 62 backend tests passing, 25 frontend tests passing.
+
+12. DEPENDENCIES INSTALLED
+--------------------------
+- langchain-openai, yfinance, faiss-cpu, langchain-google-genai, ddgs
+  (full requirements.txt now installed).
+
+13. ENVIRONMENT (.env)
+----------------------
+- MODEL_PROVIDER=gemini, gemini-3.5-flash + gemini-3.1-flash-lite
+- All 3 Gemini keys configured (primary + 2 backups, round-robin rotated).
+- OpenRouter keys kept as fallback (both exhausted for today — 50 req/day
+  free-tier cap).
+- AGENT_TIMEOUT_S=600 (specialists with paced requests need runway).
+
+
+LIVE RUN EVIDENCE (latest completed run)
+----------------------------------------
+- Job: research_88b9083f37f8 — status=succeeded, 161s end-to-end.
+- analyze_query, create_plan, market_agent, validate_evidence,
+  bull_bear_risk, synthesize, build_report, generate_pdf: ALL OK.
+- PDF generated (3,208 bytes, valid %PDF).
+- 5 of 6 specialists were killed by Gemini 429 quota errors — this is the
+  remaining problem. Root cause: free-tier keys have different RPM limits
+  (5-20/min per key) and six parallel agents x multi-step tool loops
+  saturate them. The pacing + retry + rotation fix for this is implemented
+  and probe-verified (pacer intercepts 100% of calls, key rotation works);
+  the final full live run to confirm all 6 agents complete was interrupted
+  before it finished.
+
+NEXT STEP (not yet done)
+------------------------
+- Re-run the live E2E (python _live_run.py, ~5-10 min) to confirm all 6
+  specialists complete under the new rate limiter. If a key's limit is
+  still too small, lower the per-key pace (interval in gemini_slot) or
+  drop the weakest key.
+- Delete the temporary scripts afterward: _live_run.py, _probe_specialist.py.

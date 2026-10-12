@@ -24,7 +24,7 @@ export default function StudioWaitCarousel({ running = true }) {
     {
       id: 1,
       title: 'Deterministic Grounding: Zero Arbitrary Scores',
-      description: 'Bullseye computes ratios from available inputs and shows missing data as gaps. Verify important claims against the original sources.',
+      description: 'Stock Research computes ratios from available inputs and shows missing data as gaps. Verify important claims against the original sources.',
       tag: 'Audited Reliability',
       gradient: 'from-[#ea4335] via-[#fbbc04] to-[#34a853]'
     },

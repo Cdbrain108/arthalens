@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="c3bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0c1220"/>
+      <stop stop-color="#07090e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#c3bg)"/>
+  <!-- Bear arc (red) sweeping the lower-left -->
+  <path d="M41.72 52.84 A23 23 0 0 1 11.16 22.28" stroke="#EA4335" stroke-width="3.4" stroke-linecap="round"/>
+  <!-- Bull arc (green) sweeping the upper-right -->
+  <path d="M22.28 11.16 A23 23 0 0 1 52.84 41.72" stroke="#34A853" stroke-width="3.4" stroke-linecap="round"/>
+  <!-- Shared evidence ring + focus -->
+  <circle cx="32" cy="32" r="15.5" stroke="#4285F4" stroke-width="2.5" opacity="0.95"/>
+  <circle cx="32" cy="32" r="8.5" stroke="#FBBC05" stroke-width="2.5" opacity="0.95"/>
+  <circle cx="32" cy="32" r="3" fill="#34A853"/>
+</svg>

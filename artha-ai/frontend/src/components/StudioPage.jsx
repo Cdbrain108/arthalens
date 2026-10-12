@@ -18,12 +18,17 @@ import {
   TrendingUp,
   BarChart2,
   Search,
-  BookOpen
+  BookOpen,
+  Menu,
+  AlertTriangle,
 } from 'lucide-react'
 import LiveAgentStream from './LiveAgentStream'
 import ResearchProcessGraph from './ResearchProcessGraph'
 import ReportPreview from './ReportPreview'
+import Sidebar from './Sidebar'
 import Logo from './Logo'
+import { api } from '../api/client'
+import { persistReportPdfToStorage } from '../storage/chatSessions'
 
 // Display names for the backend's routing intents. Mirrors ROUTING_TABLE in
 // `backend/app/crew/routing.py` — previously every non-compare intent was
@@ -41,38 +46,30 @@ const INTENT_LABEL = {
 // ─── Utility: detect if a query is stock/finance related ────────────────────
 function detectQueryType(q = '') {
   const s = q.toLowerCase().trim()
+  if (!s) return 'stock'
 
-  // Pure conversational / greetings
-  const conversationalPhrases = [
+  // Only classify as conversational if it is EXPLICITLY a greeting/chit-chat without ANY research/stock intent
+  const isExplicitGreeting = [
     'hi', 'hello', 'hey', 'greetings', 'help', 'who are you',
     'what can you do', 'good morning', 'good afternoon', 'good evening',
     'how are you', 'what is your name', 'tell me about yourself',
-    'what do you do', 'can you help', 'thanks', 'thank you', 'bye', 'goodbye'
-  ]
-  if (conversationalPhrases.some(p => s === p || s.startsWith(p + ' ') || s.startsWith(p + '?') || s.startsWith(p + '!'))) {
-    return 'conversational'
-  }
-  // Very short with no financial context
-  if (s.split(' ').length <= 2 && !s.match(/nse|bse|stock|share|equity|rupe|price|nifty|sensex|₹|\$|pe|roe|eps|cagr/)) {
+    'what do you do', 'can you help', 'thanks', 'thank you', 'bye', 'goodbye', 'who r u', 'how r u'
+  ].some(p => s === p || s.startsWith(p + ' ') || s.startsWith(p + '?') || s.startsWith(p + '!'))
+
+  const hasResearchIntent = [
+    'research', 'analyze', 'analysis', 'compare', 'vs', 'versus', 'report',
+    'stock', 'share', 'equity', 'invest', 'ticker', 'company', 'valuation',
+    'price', 'revenue', 'profit', 'earnings', 'pe', 'roe', 'eps', 'margin',
+    'debt', 'dividend', 'hold', 'buy', 'sell', 'tcs', 'reliance', 'infy',
+    'infosys', 'wipro', 'hdfc', 'icici', 'sbi', 'aapl', 'msft', 'nvda'
+  ].some(term => s.includes(term))
+
+  if (isExplicitGreeting && !hasResearchIntent) {
     return 'conversational'
   }
 
-  // Stock / financial signals
-  const stockSignals = [
-    'stock', 'share', 'equity', 'invest', 'buy', 'sell', 'hold', 'portfolio',
-    'market', 'nse', 'bse', 'sensex', 'nifty', 'valuation', 'pe ratio', 'price',
-    'revenue', 'profit', 'loss', 'earnings', 'dividend', 'fundamental', 'technical',
-    'tcs', 'infosys', 'infy', 'reliance', 'wipro', 'hdfc', 'icici', 'sbi',
-    'tata', 'bajaj', 'hcl', 'roe', 'eps', 'cagr', 'debt', 'margin',
-    'compare', 'vs', 'versus', 'sector', 'industry', 'midcap', 'largecap',
-    'smallcap', 'bluechip', 'ipo', 'demat', 'broker', '₹', 'rupee', 'lakh', 'crore'
-  ]
-  if (stockSignals.some(sig => s.includes(sig))) {
-    return 'stock'
-  }
-
-  // Default to conversational if nothing matches
-  return 'conversational'
+  // Any other query (tickers, company names, investment questions) triggers stock research pipeline!
+  return 'stock'
 }
 
 // ─── Conversational AI Reply suggestions ──────────────────────────────────────
@@ -94,17 +91,17 @@ function getCopilotResponse(rawQuery = '', user) {
   if (nameMatch) {
     const saidName = nameMatch[1].trim().replace(/[?.!]+$/, '')
     const display = saidName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    return `Nice to meet you, **${display}!** I'm **Bullseye**, a stock research aid. Ask about a company or compare two tickers to get started.`
+    return `Nice to meet you, **${display}!** I'm **Stock Research**, an evidence-first financial research platform. Ask about a company or compare two tickers to get started.`
   }
 
   // 2. Creator / maker — handles typo "creater" too
   if (/(creater|creator|created|who made|who built|who developed|built you|made you|developed you|your founder|your maker|your developer|your team|your company|your owner|behind you)/.test(qLower)) {
-    return `I'm **Bullseye**, a research application using specialist tools and optional language models. The landing page shows the configured agent registry. Try *"Analyze TCS fundamentals"*.`
+    return `I'm **Stock Research**, an autonomous equity research application using specialist tools, primary filings, and deterministic math. The landing page shows the configured agent registry. Try *"Analyze TCS fundamentals"*.`
   }
 
   // 3. Identity
   if (qLower.includes('your name') || qLower.includes('who are you') || qLower === 'who r u') {
-    return `I'm **Bullseye**, your stock research assistant. I collect evidence, check provenance and show gaps. Verify important claims against original sources. Try *"Compare Infosys vs Wipro"*.`
+    return `I'm **Stock Research**, your equity intelligence assistant. I collect evidence, check provenance, audit downside risks, and highlight gaps. Verify important claims against original sources. Try *"Compare Infosys vs Wipro"*.`
   }
 
   // 4. Capabilities
@@ -129,12 +126,12 @@ function getCopilotResponse(rawQuery = '', user) {
 
   // 8. Time-of-day greetings
   if (/(good morning|good afternoon|good evening|namaste|sat sri akal|ram ram)/.test(qLower)) {
-    return `Namaste${userName ? `, **${userName}**` : ''}! I'm **Bullseye**. What's on your watchlist today? Try *"Research TCS"*.`
+    return `Namaste${userName ? `, **${userName}**` : ''}! I'm **Stock Research**. What's on your watchlist today? Try *"Research TCS"*.`
   }
 
   // 9. Plain hi/hello/hey
   if (['hi', 'hello', 'hey', 'hey there', 'hii', 'hiii', 'hello there', 'greetings'].some(g => qLower === g || qLower.startsWith(g + ' ') || qLower.startsWith(g + '!') || qLower.startsWith(g + ','))) {
-    return `Hello${userName ? `, **${userName}**` : ''}! I'm **Bullseye**. Explore company research, comparisons and opposing perspectives. This is a research aid, not financial advice. Try *"Research TCS"* or *"Compare AAPL and MSFT"*.`
+    return `Hello${userName ? `, **${userName}**` : ''}! I'm **Stock Research**. Explore company research, comparisons and opposing perspectives. This is a research aid, not financial advice. Try *"Research TCS"* or *"Compare AAPL and MSFT"*.`
   }
 
   // 10. Contextual fallback — echo the actual query so it never feels "fixed"
@@ -191,7 +188,7 @@ function ConversationalCopilot({ query, onStartResearch, user }) {
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#4285f4] to-[#1a73e8]">
             <Bot size={14} className="text-white" />
           </div>
-          <span className="text-[12px] font-semibold text-[#a5d99d]">Bullseye Copilot</span>
+          <span className="text-[12px] font-semibold text-[#22c55e]">Stock Research Copilot</span>
           {!isDone && (
             <span className="flex gap-0.5 ml-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#4285f4] animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -239,43 +236,53 @@ function StudioTopHeader({
   running,
   pdfUrl,
   user,
+  onToggleSidebar,
+  onOpenAuth,
+  onLogout,
 }) {
-  // Title names the securities the router resolved. It used to be two
-  // hardcoded substring tests, so "Compare Infosys vs TCS" read as the
-  // "Infosys Research Workspace" and every other company read as generic.
   const resolved = (entities || []).map((e) => e.name || e.ticker).filter(Boolean)
   const workspaceTitle = isConversational
-    ? 'Bullseye Copilot'
+    ? 'Stock Research Copilot'
     : resolved.length === 1
     ? `${resolved[0]} Research Workspace`
     : resolved.length > 1
     ? `${resolved.join(' vs ')} — Comparison Workspace`
-    : 'Equity Research Workspace'
+    : 'Stock Research Workspace'
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#181a1f] px-4 sm:px-6 z-20">
-      <div className="flex items-center gap-3">
+    <header className="studio-top-header flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#181a1f] px-3 sm:px-6 z-20">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-[12px] font-medium text-[#f1f3f4] transition hover:bg-white/10 hover:text-white"
+          title="Open Research History & Reports"
+        >
+          <Menu size={15} />
+          <span className="hidden lg:inline text-xs">History</span>
+        </button>
+
         <button
           type="button"
           onClick={onBackToStart}
-          className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-[#f1f3f4] transition hover:bg-white/10 hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-[12px] font-medium text-[#f1f3f4] transition hover:bg-white/10 hover:text-white"
         >
           <ArrowLeft size={14} />
-          <span>Back to start</span>
+          <span className="studio-actions-label hidden xs:inline">Home</span>
         </button>
-        <div className="hidden sm:flex items-center gap-2 text-[12.5px] font-mono text-[#9aa0a6]">
+        <div className="studio-query hidden sm:flex items-center gap-2 text-[12.5px] font-mono text-[#9aa0a6]">
           <span>/</span>
-          <span className="text-[#8ab4f8] font-medium truncate max-w-[280px]">
-            {activeQuery || 'Bullseye Research'}
+          <span className="text-[#22c55e] font-medium truncate max-w-[280px]">
+            {activeQuery || 'Stock Research'}
           </span>
         </div>
       </div>
 
       <div className="hidden md:flex items-center gap-2">
-        <Logo size={27} />
-        <span className="truncate max-w-[340px] text-[13.5px] font-medium text-[#f1f3f4]">
+        <Logo size={28} />
+        <span className="studio-title truncate max-w-[340px] text-[13.5px] font-medium text-[#f1f3f4]">
           {workspaceTitle}
         </span>
-        <span className="rounded-full bg-[#4285f4]/15 px-2 py-0.5 text-[10.5px] font-mono text-[#8ab4f8]">
+        <span className="rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10.5px] font-mono text-emerald-400">
           {isConversational ? 'Chat Mode' : 'Multi-Agent'}
         </span>
       </div>
@@ -334,15 +341,24 @@ function StudioTopHeader({
 
         <button
           type="button"
+          onClick={() => {
+            navigator.clipboard?.writeText(window.location.href)
+            alert('Research workspace link copied to clipboard!')
+          }}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#9aa0a6] transition hover:text-white"
-          title="Share session"
+          title="Share workspace link"
         >
           <Share2 size={14} />
         </button>
 
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#4285f4] to-[#1a73e8] text-[11px] font-bold text-white shadow ml-1">
-          {(user?.name || 'U').trim().charAt(0).toUpperCase()}
-        </span>
+        <button
+          type="button"
+          onClick={user?.guest ? onOpenAuth : onLogout}
+          title={user?.guest ? "Sign in to persist research history" : `Signed in as ${user?.name || user?.email || 'User'} · Click to sign out`}
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow ml-1 hover:ring-2 hover:ring-white/20 transition cursor-pointer"
+        >
+          {(user?.name || user?.email || 'U').trim().charAt(0).toUpperCase()}
+        </button>
       </div>
     </header>
   )
@@ -359,7 +375,7 @@ function StudioChatInputBar({
 }) {
   const hasText = value.trim().length > 0
   return (
-    <div className="border-t border-white/10 bg-[#181a1f]/85 backdrop-blur-xl p-3">
+    <div className="studio-chat-input border-t border-white/10 bg-[#181a1f]/85 backdrop-blur-xl p-3">
       <div className="relative group">
         {/* Aurora glow — lights up only on focus-within */}
         <div className="pointer-events-none absolute -inset-[2px] rounded-[16px] bg-gradient-to-r from-[#4285f4]/60 via-[#9b72cb]/50 to-[#34a853]/50 opacity-0 blur-lg transition-opacity duration-300 group-focus-within:opacity-100" />
@@ -437,15 +453,23 @@ export default function StudioPage({
   query,
   running,
   submitting,
+  error,
   onStartResearch,
   onAskReport,
   onNewResearch,
   onBackToStart,
-  user
+  user,
+  sessions = [],
+  onSelectSession,
+  onDeleteSession,
+  onLogout,
+  onOpenAuth,
 }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [followupText, setFollowupText] = useState('')
-  const [researchMode, setResearchMode] = useState('beginner')
+  const [researchMode, setResearchMode] = useState('expert')
   const [rightTab, setRightTab] = useState('preview')
+  const [mobilePane, setMobilePane] = useState('chat')
   const [qaMessages, setQaMessages] = useState([])
   const [askingReport, setAskingReport] = useState(false)
   const chatScrollRef = useRef(null)
@@ -454,6 +478,14 @@ export default function StudioPage({
   const isDone = job?.status === 'succeeded'
   const activeQuery = job?.query || query || ''
   const canAskReport = isDone && Boolean(job?.job_id) && typeof onAskReport === 'function'
+
+  // Automatically persist generated PDF report to Firebase Storage for authenticated users
+  useEffect(() => {
+    if (isDone && job?.job_id && user?.uid && !user?.guest) {
+      persistReportPdfToStorage(user.uid, job.job_id, job.query || query || 'Stock Research Report')
+        .catch((err) => console.warn('Could not auto-archive PDF report to Firebase Storage:', err))
+    }
+  }, [isDone, job?.job_id, user?.uid, user?.guest, job?.query, query])
 
   useEffect(() => {
     setQaMessages([])
@@ -472,6 +504,12 @@ export default function StudioPage({
   useEffect(() => {
     if (!running && !askingReport) inputRef.current?.focus()
   }, [running, askingReport])
+
+  // On phones/tablets the report lives behind a tab — surface it the moment
+  // the run finishes so the result is never hidden behind a tap.
+  useEffect(() => {
+    if (isDone && window.innerWidth < 768) setMobilePane('report')
+  }, [isDone])
 
   const handleSubmit = async (e) => {
     e?.preventDefault()
@@ -517,21 +555,32 @@ export default function StudioPage({
   const isStockQuery = !isConversational
 
   // ── Entity badges come from the router's resolved securities ──────────────
-  // The four `qLower.includes('infosys' | 'tcs' | 'tata motors' | 'reliance')`
-  // tests that used to live here asserted a ticker and exchange the pipeline
-  // may never have resolved, and covered only those four companies.
   const pdfUrl = job?.job_id ? `/api/research/${encodeURIComponent(job.job_id)}/pdf` : null
-
-  // NOTE: ChatInputBar + TopHeader now live outside this component as
-  // StudioChatInputBar / StudioTopHeader so typing never remounts the <input>
-  // and focus is preserved. See top of file.
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LAYOUT A: CONVERSATIONAL — Full-width single chat (no split, no agents)
   // ═══════════════════════════════════════════════════════════════════════════
   if (isConversational) {
     return (
-      <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#131518] text-[#f1f3f4] font-sans antialiased">
+      <div className="studio-root flex h-screen w-full flex-col overflow-hidden bg-[#131518] text-[#f1f3f4] font-sans antialiased relative">
+        <Sidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          sessions={sessions}
+          onSelectSession={(sess) => {
+            setSidebarOpen(false)
+            onSelectSession?.(sess)
+          }}
+          onDeleteSession={onDeleteSession}
+          onNewChat={() => {
+            setSidebarOpen(false)
+            onNewResearch?.()
+          }}
+          user={user}
+          onLogout={onLogout}
+          onOpenAuth={onOpenAuth}
+        />
+
         <StudioTopHeader
           activeQuery={activeQuery}
           isConversational={isConversational}
@@ -544,6 +593,9 @@ export default function StudioPage({
           running={running}
           pdfUrl={pdfUrl}
           user={user}
+          onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+          onOpenAuth={onOpenAuth}
+          onLogout={onLogout}
         />
 
         {/* Full-width centered chat area */}
@@ -582,7 +634,25 @@ export default function StudioPage({
   // LAYOUT B: STOCK RESEARCH — Split-pane (Left: Agent Stream, Right: Report)
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#131518] text-[#f1f3f4] font-sans antialiased">
+    <div className="studio-root flex h-screen w-full flex-col overflow-hidden bg-[#131518] text-[#f1f3f4] font-sans antialiased relative">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        sessions={sessions}
+        onSelectSession={(sess) => {
+          setSidebarOpen(false)
+          onSelectSession?.(sess)
+        }}
+        onDeleteSession={onDeleteSession}
+        onNewChat={() => {
+          setSidebarOpen(false)
+          onNewResearch?.()
+        }}
+        user={user}
+        onLogout={onLogout}
+        onOpenAuth={onOpenAuth}
+      />
+
       <StudioTopHeader
         activeQuery={activeQuery}
         isConversational={isConversational}
@@ -595,14 +665,45 @@ export default function StudioPage({
         running={running}
         pdfUrl={pdfUrl}
         user={user}
+        onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        onOpenAuth={onOpenAuth}
+        onLogout={onLogout}
       />
 
-      {/* 2-column split workspace */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* 2-column split workspace (stacks into tabs on mobile) */}
+      <div className="studio-split flex flex-1 overflow-hidden">
 
         {/* ══ LEFT COLUMN: Chat & Agent Stream ══ */}
-        <section className="flex w-full md:w-[420px] lg:w-[460px] shrink-0 flex-col border-r border-white/10 bg-[#181a1f] overflow-hidden">
+        <section
+          data-active={mobilePane === 'chat'}
+          className="studio-left-pane flex w-full md:w-[420px] lg:w-[460px] shrink-0 flex-col border-r border-white/10 bg-[#181a1f] overflow-hidden"
+        >
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 scroll-slim">
+
+            {error && (
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-left shadow-lg animate-fade-up">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-[13px] font-semibold text-rose-200">Research pipeline unreachable</h4>
+                      <p className="mt-1 text-[11.5px] leading-relaxed text-rose-300/80">
+                        {error}
+                      </p>
+                    </div>
+                  </div>
+                  {activeQuery && (
+                    <button
+                      type="button"
+                      onClick={() => onStartResearch(activeQuery)}
+                      className="rounded-lg bg-rose-500/20 hover:bg-rose-500/30 px-2.5 py-1 text-[11px] font-medium text-rose-200 transition shrink-0"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* User Prompt Card */}
             <div className="rounded-2xl border border-white/15 bg-[#1e2026] p-4 shadow-md text-left animate-fade-up">
@@ -709,7 +810,11 @@ export default function StudioPage({
         </section>
 
         {/* ══ RIGHT COLUMN: Preview & Carousel ══ */}
-        <section className="hidden md:flex flex-1 flex-col bg-[#131518] overflow-hidden">
+        <section
+          id="studio-report-pane"
+          data-active={mobilePane === 'report'}
+          className="studio-right-pane flex flex-1 flex-col bg-[#131518] overflow-hidden"
+        >
           {/* Right Pane Tab Bar */}
           <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/10 bg-[#181a1f] px-6">
             <div className="flex items-center gap-2">
@@ -829,6 +934,26 @@ export default function StudioPage({
             )}
           </div>
         </section>
+      </div>
+
+      {/* Mobile-only pane switcher: Research stream ↔ Report */}
+      <div className="studio-mobile-tabs" role="group" aria-label="Workspace views">
+        <button
+          type="button"
+          aria-pressed={mobilePane === 'chat'}
+          onClick={() => setMobilePane('chat')}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-[#4285f4]" />
+          Research stream
+        </button>
+        <button
+          type="button"
+          aria-pressed={mobilePane === 'report'}
+          onClick={() => setMobilePane('report')}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-[#34a853]" />
+          Report
+        </button>
       </div>
     </div>
   )

@@ -35,16 +35,16 @@ export default function LandingHero({ onRun, running, submitting, initialQuery =
     <div className="flex min-h-[90vh] flex-col items-center justify-center px-4 py-12 text-center animate-fade-up">
       {/* Sleek Header Branding */}
       <div className="mb-3 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1 text-[11px] font-mono tracking-wider text-muted">
-        <span className="flex h-2 w-2 rounded-full bg-[#4285f4] animate-pulse" />
-        ARTHAAI MULTI-AGENT EQUITY RESEARCH
+        <span className="flex h-2 w-2 rounded-full bg-[#22c55e] animate-pulse" />
+        STOCK RESEARCH · MULTI-AGENT EQUITY PLATFORM
       </div>
 
-      {/* Main Headline — Google AI Studio Clean Typography */}
+      {/* Main Headline */}
       <h1 className="max-w-3xl text-3xl font-normal tracking-tight text-white sm:text-5xl md:text-6xl font-sans">
-        Explore the evidence with <span className="font-serif italic text-[#a5d99d]">Bullseye</span>
+        Explore the evidence with <span className="font-serif italic text-[#22c55e]">Stock Research</span>
       </h1>
       <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-muted sm:text-[16px]">
-        Evidence-first stock research. Ask any company question and Bullseye routes the relevant configured specialists — to challenge, audit, and synthesize the available evidence.
+        Evidence-first financial analysis. Ask any company question and Stock Research routes the relevant configured specialists — to audit, challenge, and synthesize verified evidence.
       </p>
 
       {/* Google AI Studio Rotating RGB Neon Input Box */}
@@ -65,7 +65,7 @@ export default function LandingHero({ onRun, running, submitting, initialQuery =
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) submit(e)
               }}
-              placeholder="Ask Bullseye about a company, ticker or investment question…"
+              placeholder="Ask Stock Research about a company, ticker or investment thesis…"
               disabled={running}
               className="w-full resize-none bg-transparent px-2 text-[14px] sm:text-[15px] text-white placeholder-slate-500 focus:outline-none scroll-slim"
             />

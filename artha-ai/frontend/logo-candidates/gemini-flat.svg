@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="gf-edge" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4285F4"/><stop offset=".55" stop-color="#7FA8FF"/><stop offset="1" stop-color="#F5A623"/>
+    </linearGradient>
+    <linearGradient id="gf-tile" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1220"/><stop offset="1" stop-color="#05080F"/>
+    </linearGradient>
+    <radialGradient id="gf-dot" cx="42%" cy="36%" r="70%">
+      <stop stop-color="#9CC2FF"/><stop offset=".55" stop-color="#3B82F6"/><stop offset="1" stop-color="#1D5FD6"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Tile + neon edge (blue -> warm), matching the source artwork -->
+  <rect width="64" height="64" rx="14" fill="url(#gf-tile)"/>
+  <rect x=".8" y=".8" width="62.4" height="62.4" rx="13.2" fill="none" stroke="url(#gf-edge)" stroke-width="1.6" opacity=".85"/>
+
+  <!-- Outer ring, four quadrants: bull green / bear red / gold / evidence blue -->
+  <g stroke-width="5.2" stroke-linecap="round" fill="none">
+    <path d="M9.35 28A23 23 0 0 1 28 9.35" stroke="#34A853"/>
+    <path d="M36 9.35A23 23 0 0 1 54.65 28" stroke="#EA4335"/>
+    <path d="M54.65 36A23 23 0 0 1 36 54.65" stroke="#F5A623"/>
+    <path d="M28 54.65A23 23 0 0 1 9.35 36" stroke="#4285F4"/>
+  </g>
+
+  <!-- Gold crosshair capsules at N / E / S / W -->
+  <g fill="#F5C542">
+    <rect x="30.3" y="3.4" width="3.4" height="12.4" rx="1.7"/>
+    <rect x="30.3" y="48.2" width="3.4" height="12.4" rx="1.7"/>
+    <rect x="3.4" y="30.3" width="12.4" height="3.4" rx="1.7"/>
+    <rect x="48.2" y="30.3" width="12.4" height="3.4" rx="1.7"/>
+  </g>
+
+  <!-- Inner evidence ring + vertical crosshair line -->
+  <circle cx="32" cy="32" r="9.6" stroke="#E9EEF4" stroke-width="1.7" opacity=".95"/>
+  <path d="M32 16.5v10.4M32 47.5V36.6" stroke="#E9EEF4" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>
+
+  <!-- BULL (green, facing right) -->
+  <g transform="translate(1.96 6.04) scale(0.8)">
+    <path d="M18.4 21.4C16.6 18.6 16.4 15.2 18.6 13.4c1.2-1 2.6-.3 2.4 1.1-.8 2.1-.4 4.1 1.2 6.3Z" fill="#D9A12F"/>
+    <path d="M15 31c-.4-5.5 2.5-9.6 7.5-10.5l6 1c2.5 1.5 3.7 4.1 3.3 6.7-.3 2.2-2 3.6-4.3 4.1l.3 3.1-3-1.2-1.4 3-1.8-2.6c-3.3-.2-6.1-1.2-6.6-3.6Z" fill="#34A853"/>
+    <path d="M21.8 20.6C21 16.4 23.6 12.8 28 12.4c1.8-.2 2.9.9 2.2 2.4-3.6 1.3-5.9 3.7-6 6.8Z" fill="#F5C542"/>
+    <ellipse cx="29.6" cy="28.7" rx="1" ry=".8" fill="#1E7A38"/>
+    <path d="M26.8 31.7q1.6 1.2 3.5.4" stroke="#1E7A38" stroke-width="1" stroke-linecap="round"/>
+    <path d="M23.2 26.5 26.5 24.6l.7 1.4-3.3 1.8Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- BEAR (red, facing left) -->
+  <g transform="translate(12.28 5.88) scale(0.8)">
+    <circle cx="44.6" cy="24.6" r="3" fill="#EA4335"/>
+    <circle cx="44.8" cy="24.9" r="1.5" fill="#A61F14"/>
+    <path d="M31.9 31.4c.2-2.8 1.8-5.1 4.2-6.4 2.8-1.5 6-1.2 8.4.6 3 2.3 5.1 5.7 5.4 9.7.3 4.6-1.9 8.4-5.7 10.2-3.8 1.8-8.2.5-10.4-2.8-1.6-2.4-2-5.4-1.8-8.2Z" fill="#EA4335"/>
+    <ellipse cx="33.9" cy="32.8" rx="2.4" ry="1.9" fill="#C62A1E"/>
+    <ellipse cx="32.4" cy="31.3" rx="1.1" ry=".9" fill="#8C1810"/>
+    <path d="M33.3 34.9c2.1 1.7 4.9 2 7.1 1-1.8 2.9-5.4 2.5-7.1-1Z" fill="#7A120B"/>
+    <path d="M34.7 35.8l.8 2 .9-1.8Zm2.7.6.6 1.9 1-1.7Z" fill="#FFFFFF"/>
+    <path d="M36.2 29.6 39.8 28.5l.3 1.4-3.6 1.1Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- The conclusion, held at the center -->
+  <circle cx="32" cy="32" r="4.1" fill="url(#gf-dot)"/>
+</svg>

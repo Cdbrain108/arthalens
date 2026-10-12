@@ -1,0 +1,35 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ========================================================================
+    // SAMVAAD AI (Preserved - Do Not Modify)
+    // ========================================================================
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ========================================================================
+    // STOCK RESEARCH - Private Generated PDF Reports
+    // Storage Path: stock-research/{userId}/reports/{reportId}.pdf
+    // ========================================================================
+    match /stock-research/{userId}/reports/{reportId} {
+      // Only the authenticated owner can read or download their generated PDF report
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Only the authenticated owner can upload a report, capped at 50MB and must be PDF
+      allow create, update: if request.auth != null 
+                            && request.auth.uid == userId
+                            && request.resource.size < 50 * 1024 * 1024
+                            && request.resource.contentType.matches('application/pdf');
+
+      // Only owner can delete their report
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

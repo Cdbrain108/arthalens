@@ -1,5 +1,5 @@
 export default function UserProfile({ user }) {
-  const name = user?.name || 'Bullseye Researcher'
+  const name = user?.name || 'Stock Researcher'
   const initial = name.trim().charAt(0).toUpperCase() || 'A'
   return (
     <div className="flex items-center gap-2.5 border-t border-line px-4 py-3">
