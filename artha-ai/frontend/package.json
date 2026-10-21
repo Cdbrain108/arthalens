@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --import ./src/test/register.mjs --test src/api/client.test.js src/hooks/researchJob.test.js src/test/components.test.js src/test/queryRouter.test.js",
+    "test": "node --import ./src/test/register.mjs --test src/api/client.test.js src/hooks/researchJob.test.js src/test/components.test.js src/test/queryRouter.test.js src/test/platformVerification.test.js",
     "test:e2e": "playwright test",
     "lint": "eslint src e2e *.js"
   },

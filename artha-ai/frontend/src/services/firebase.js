@@ -33,12 +33,12 @@ import {
 
 // Firebase configuration — defaults to existing Samvaad AI shared deployment
 const firebaseConfig = {
-  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY || '').trim(),
-  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '').trim() || 'samvaad-ai-db3a1.firebaseapp.com',
-  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID || '').trim() || 'samvaad-ai-db3a1',
-  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '').trim() || 'samvaad-ai-db3a1.firebasestorage.app',
-  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '').trim() || '293750023914',
-  appId: (import.meta.env.VITE_FIREBASE_APP_ID || '').trim() || '1:293750023914:web:753705201ae0bfd07e9993',
+  apiKey: (import.meta.env?.VITE_FIREBASE_API_KEY || '').trim(),
+  authDomain: (import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || '').trim() || 'samvaad-ai-db3a1.firebaseapp.com',
+  projectId: (import.meta.env?.VITE_FIREBASE_PROJECT_ID || '').trim() || 'samvaad-ai-db3a1',
+  storageBucket: (import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || '').trim() || 'samvaad-ai-db3a1.firebasestorage.app',
+  messagingSenderId: (import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || '').trim() || '293750023914',
+  appId: (import.meta.env?.VITE_FIREBASE_APP_ID || '').trim() || '1:293750023914:web:753705201ae0bfd07e9993',
 }
 
 export const isFirebaseConfigured = Boolean(
