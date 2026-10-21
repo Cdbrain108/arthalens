@@ -164,7 +164,7 @@ test('ResearchProcessGraph reflects live pipeline state', () => {
   assert.ok(html.includes('Jump to live action'))
 })
 
-test('ArthaReasoningBlock renders in generating mode with reasoning badge and stage progress', () => {
+test('ArthaReasoningBlock renders in generating mode with conversational reasoning pill and 0 agents', () => {
   const html = renderToStaticMarkup(
     React.createElement(ArthaReasoningBlock, {
       query: 'Explain PE ratio simply',
@@ -172,11 +172,12 @@ test('ArthaReasoningBlock renders in generating mode with reasoning badge and st
       generationStep: 1,
     })
   )
-  assert.ok(html.includes('Artha AI Copilot'))
+  assert.ok(html.includes('Artha Copilot · Financial Intelligence'))
   assert.ok(html.includes('Reasoning'))
-  assert.ok(html.includes('Auditing valuation multiples, balance sheets &amp; SEC filings...'))
-  assert.ok(html.includes('Financial Health Specialist') || html.includes('Financial Health'))
-  assert.ok(html.includes('Valuation Multiples Specialist') || html.includes('Valuation Multiples'))
+  assert.ok(html.includes('Synthesizing verified definitions &amp; practical financial examples...'))
+  assert.ok(html.includes('0 Agents Dispatched'))
+  // Crucial: Specialist agents are omitted for conversational queries
+  assert.ok(!html.includes('Specialists Dispatched &amp; Live Process:'))
 })
 
 test('ArthaReasoningBlock showcases which agents are doing what and live process', () => {

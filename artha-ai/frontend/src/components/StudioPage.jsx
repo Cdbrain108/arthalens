@@ -35,7 +35,12 @@ import Logo from './Logo'
 import ArthaCopilot from './ArthaCopilot'
 import CopilotMarkdown from './CopilotMarkdown'
 import { api } from '../api/client'
-import { persistReportPdfToStorage, saveChatQuery } from '../storage/chatSessions'
+import {
+  persistReportPdfToStorage,
+  saveChatQuery,
+  canGuestGenerateReport,
+  recordGuestReportUsage,
+} from '../storage/chatSessions'
 import {
   detectQueryType,
   getCopilotResponse,
@@ -615,6 +620,22 @@ export default function StudioPage({
           { id: aId, role: 'assistant', text: reply, suggestions },
         ])
       } else {
+        // Enforce 1-time free report limit for non-logged-in users
+        if (!canGuestGenerateReport(user)) {
+          const aId = `a_${Date.now()}`
+          setCopilotMessages((prev) => [
+            ...prev,
+            {
+              id: aId,
+              role: 'assistant',
+              text: `### 🔒 Sign In Required for Additional Research\n\nYou have completed your **1 free equity research report**! To research **${text}**, unlock deeper valuation models, and export institutional PDFs, please sign in.\n\n*Tap Sign In in the top navigation or use Google to continue.*`,
+            },
+          ])
+          onOpenAuth?.()
+          requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+          return
+        }
+
         const aId = `a_${Date.now()}`
         setCopilotMessages((prev) => [
           ...prev,
@@ -830,6 +851,7 @@ export default function StudioPage({
                   <ArthaReasoningBlock
                     query={activeQuery}
                     isGenerating={true}
+                    isConversational={true}
                     generationStep={generationStep}
                   />
                 )}
@@ -873,6 +895,7 @@ export default function StudioPage({
                   running={running}
                   submitting={submitting}
                   isDone={isDone}
+                  isConversational={false}
                   askingReport={askingReport}
                   onViewReport={() => {
                     setViewMode('report')

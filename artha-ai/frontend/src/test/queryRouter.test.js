@@ -70,11 +70,17 @@ test('getCopilotResponse generates summarized P/E ratio explainer in simple word
   assert.ok(!response.includes('\\frac{'))
 })
 
-test('getCopilotResponse enforces mandatory authentication guard for unauthenticated users', () => {
+test('getCopilotResponse allows 1-time free report and prompts sign in when free limit exceeded', () => {
   const guestUser = { uid: 'guest_456', guest: true }
-  const response = getCopilotResponse('Explain PE ratio simply', guestUser)
+  // 1. Guest can ask questions on initial free report / educational queries
+  const freeResponse = getCopilotResponse('Explain PE ratio simply', guestUser)
+  assert.ok(freeResponse.includes('P/E Ratio'))
+  assert.ok(!freeResponse.includes('Sorry, I cannot proceed as you are not logged in'))
 
-  assert.ok(response.includes('Sorry, I cannot proceed as you are not logged in'))
+  // 2. When guest attempts to exceed free report allowance, prompt to sign in
+  const blockedResponse = getCopilotResponse('Analyze Reliance', guestUser, { exceededFreeLimit: true })
+  assert.ok(blockedResponse.includes('Free Research Report Limit Reached'))
+  assert.ok(blockedResponse.includes('sign in'))
 })
 
 test('getFollowupSuggestions provides pure research actions initially, reserving concepts for after-report', () => {

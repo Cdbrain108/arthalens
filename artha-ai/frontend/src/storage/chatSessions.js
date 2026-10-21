@@ -8,6 +8,41 @@ import {
 
 const LOCAL_KEY = 'stock_research_sessions_v2'
 const MAX_SESSIONS = 50
+const GUEST_REPORT_COUNT_KEY = 'artha_guest_report_count_v1'
+export const GUEST_ALLOWED_REPORTS = 1
+
+export function getGuestReportCount() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(GUEST_REPORT_COUNT_KEY) : null
+    if (raw !== null) {
+      const parsed = parseInt(raw, 10)
+      if (!Number.isNaN(parsed)) return parsed
+    }
+    const sessions = loadSessions()
+    const researchSessions = sessions.filter((s) => s.job_id && !s.job_id.startsWith('chat_'))
+    return researchSessions.length
+  } catch {
+    return 0
+  }
+}
+
+export function recordGuestReportUsage() {
+  try {
+    const next = getGuestReportCount() + 1
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(GUEST_REPORT_COUNT_KEY, String(next))
+    }
+    return next
+  } catch {
+    return 1
+  }
+}
+
+export function canGuestGenerateReport(user) {
+  const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
+  if (isLoggedIn) return true
+  return getGuestReportCount() < GUEST_ALLOWED_REPORTS
+}
 
 function safeParse(raw) {
   try {

@@ -179,17 +179,23 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
   const userName = isLoggedIn ? (user.name || '').trim() : ''
 
-  // Mandatory authentication guard
-  if (!isLoggedIn) {
-    if (q) {
-      return `Sorry, I cannot proceed as you are not logged in. Please log in to proceed further.`
-    }
-    return `Hello! I'm **ArthaLens AI Copilot**, your autonomous equity intelligence assistant.\n\nBehind every stock, there's more than one story. I orchestrate 11 specialized autonomous agents cross-examining balance sheets, earnings calls, news catalysts, and downside stress with 100% deterministic math.\n\nSorry, I cannot proceed as you are not logged in. Please log in to proceed further.`
+  // 1-time free report rule: Guest users are allowed 1 free report generation + Q&A on that report.
+  // Only prompt login when guest attempts to exceed the 1 free report allowance:
+  if (!isLoggedIn && context.exceededFreeLimit) {
+    return `### 🔒 Free Research Report Limit Reached\n\nYou have already used your **1 free equity research report**. Please **sign in** with Google or your email to unlock unlimited autonomous research reports, valuation modeling, and PDF downloads.`
   }
 
   // 0. Welcome introduction when opened directly without a query
   if (!q) {
-    return `Hello${userName ? `, **${userName}**` : ''}! I'm **ArthaLens AI Copilot**, your autonomous equity intelligence assistant.\n\nBehind every stock, there's more than one story. I orchestrate 11 specialized autonomous agents cross-examining balance sheets, earnings calls, news catalysts, and downside stress with 100% deterministic math.\n\nAsk about any company or financial question below to get started, or tap one of the suggested prompts! ✨`
+    const greeting = userName ? `Hello, **${userName}**!` : `Hello! Welcome to **ArthaLens AI**`
+    const trialNote = !isLoggedIn ? `\n\n💡 *Guest Pass Active: 1 free institutional research report included.*` : ''
+    return `${greeting}! I'm **ArthaLens AI Copilot**, your autonomous equity intelligence assistant.\n\nBehind every stock, there's more than one story. I orchestrate 11 specialized autonomous agents cross-examining balance sheets, earnings calls, news catalysts, and downside stress with 100% deterministic math.${trialNote}\n\nAsk about any company or financial question below to get started, or tap one of the suggested prompts! ✨`
+  }
+
+  // Stock research dispatch response when user triggers a stock query
+  const queryType = detectQueryType(q)
+  if (queryType === 'stock' && !context.job && !context.companyName) {
+    return `### 🚀 Dispatching Autonomous Multi-Agent Research: **${q}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining balance sheets, valuation multiples, news catalysts, and adversarial Bull vs Bear risk audit in real-time.\n\n*Review live progress in the execution stream below.*`
   }
 
   // 1. EDUCATIONAL: Price-to-Earnings (P/E) Ratio

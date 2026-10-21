@@ -14,6 +14,8 @@ import {
   deleteSession,
   loadUserSessions,
   saveChatQuery,
+  canGuestGenerateReport,
+  recordGuestReportUsage,
 } from './storage/chatSessions'
 import { detectQueryType } from './utils/queryRouter'
 
@@ -105,9 +107,27 @@ export default function App() {
       if (!trimmed) {
         return
       }
+      // Conversational/conceptual queries stay in Copilot without launching backend LangGraph
+      if (detectQueryType(trimmed) === 'conversational') {
+        reset()
+        return
+      }
+
+      // Enforce 1-time free report limit for non-logged-in users
+      if (!canGuestGenerateReport(user)) {
+        setAuthModalOpen(true)
+        return
+      }
+
+      // Record 1st report usage for guest
+      const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
+      if (!isLoggedIn) {
+        recordGuestReportUsage()
+      }
+
       start(trimmed)
     },
-    [start, navigate, running]
+    [start, navigate, running, reset, user]
   )
 
   const handleSelectSession = useCallback(
