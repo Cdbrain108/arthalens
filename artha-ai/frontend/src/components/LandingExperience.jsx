@@ -1386,7 +1386,7 @@ export default function LandingExperience({
               <div className="be-hero-copy">
                 <p className="be-hero-pill">
                   <span className="be-status-dot green live" />
-                  Artha AI · Evidence-First Equity Research
+                  Artha AI · Autonomous Multi-Agent Stock Research Platform
                 </p>
 
                 <h1 id="hero-heading">
@@ -1400,10 +1400,7 @@ export default function LandingExperience({
                 </h1>
 
                 <p className="be-hero-description">
-                  Ask about a company, a ticker or a comparison. A planner selects the specialists
-                  the question needs, they gather evidence in parallel, the numbers are computed in
-                  Python rather than guessed, and you get a bull case, a bear case and a list of
-                  what is still missing.
+                  Artha AI is an autonomous multi-agent stock research platform. Ask about any company, ticker, or peer comparison. 11 specialized AI agents audit filings and earnings in parallel, calculate financial models with deterministic Python math, and synthesize institutional Bull &amp; Bear research memos in 60 seconds.
                 </p>
 
                 <div

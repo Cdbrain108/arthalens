@@ -46,12 +46,6 @@ const MOBILE_TICKERS = [
   { name: 'Tata Motors', ticker: 'TATAMOTORS', exchange: 'NSE', color: '#10b981', tag: '+2.1%', tagClass: 'green' },
 ]
 
-const QUICK_PROMPTS = [
-  { text: 'Compare TCS & Infosys on operating margins', label: '⚡ TCS vs Infosys' },
-  { text: 'Explain P/E ratio and DCF multiples', label: '📊 Explain P/E & DCF' },
-  { text: 'Should I hold Reliance for 5 years?', label: '🛡️ Reliance Thesis' },
-]
-
 const SPECIALISTS = [
   { id: 'financial', name: 'Financial Health', icon: BarChart3, desc: 'Balance sheet, debt maturities & multi-year cash flows', tag: 'P&L' },
   { id: 'valuation', name: 'Valuation Multiples', icon: PieChart, desc: 'Historical & peer multiples, EV/EBITDA, P/E & DCF', tag: 'Multiples' },
@@ -300,7 +294,7 @@ export default function MobileLanding({
           <Logo size={22} />
           <div className="arg-nav-brand-text">
             <span className="arg-nav-word">Artha AI</span>
-            <span className="arg-nav-tagline">Autonomous Equity Intelligence</span>
+            <span className="arg-nav-tagline">Multi-Agent Stock Research</span>
           </div>
         </a>
 
@@ -456,48 +450,48 @@ export default function MobileLanding({
       <section className="mobile-page-section hero-page" id="m-hero">
         <div className="mobile-hero-badge">
           <span className="live-pulse" />
-          <span>Artha AI · Multi-Agent Research Engine</span>
+          <span>AUTONOMOUS MULTI-AGENT PLATFORM</span>
         </div>
 
         <h1 className="mobile-hero-title">
-          Institutional equity research with <span className="highlight-text">Artha AI</span>.
+          Artha AI — Powerful <span className="highlight-text">Multi-Agent</span> Stock Research Platform
         </h1>
 
         <p className="mobile-hero-subtitle">
-          Artha AI orchestrates 11 autonomous specialist agents to audit regulatory filings, compute deterministic valuation models, and synthesize audit-grade briefs in 60s.
+          11 autonomous AI agents audit regulatory filings, calculate valuation models, stress-test balance sheets, and synthesize institutional stock research in 60s.
         </p>
 
         {/* 3-Pill Institutional Metric Bar */}
         <div className="mobile-hero-stats">
           <div className="mobile-hero-stat-pill">
-            <span className="mobile-hero-stat-val">11</span>
-            <span className="mobile-hero-stat-lbl">Specialists</span>
+            <span className="mobile-hero-stat-val">11 Agents</span>
+            <span className="mobile-hero-stat-lbl">Autonomous Specialists</span>
           </div>
           <div className="mobile-hero-stat-pill">
             <span className="mobile-hero-stat-val">60s</span>
-            <span className="mobile-hero-stat-lbl">Synthesis</span>
+            <span className="mobile-hero-stat-lbl">Full Synthesis</span>
           </div>
           <div className="mobile-hero-stat-pill">
-            <span className="mobile-hero-stat-val">100%</span>
-            <span className="mobile-hero-stat-lbl">Deterministic</span>
+            <span className="mobile-hero-stat-val">100% Math</span>
+            <span className="mobile-hero-stat-lbl">Deterministic &amp; Audited</span>
           </div>
         </div>
 
         {/* Mobile Action Card: Start Research / Active Research */}
         <div className="mobile-search-card">
           {running || submitting ? (
-            <div className="w-full space-y-3 animate-fade-in text-left">
+            <div className="w-full space-y-2 animate-fade-in text-left">
               <div className="flex items-center justify-between gap-2 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
+                  <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
                   </span>
-                  <span className="text-[12px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
+                  <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
                     Research Active
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400 font-mono">11 Specialists Running</span>
+                <span className="text-[10px] text-slate-400 font-mono">11 Specialists Running</span>
               </div>
 
               <button
@@ -505,66 +499,54 @@ export default function MobileLanding({
                 onClick={() => onResume?.()}
                 className="mobile-cta-running group cursor-pointer active:scale-98 transition-transform"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div className="mobile-cta-icon-box relative">
-                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   </div>
-                  <div className="mobile-cta-text">
-                    <span className="mobile-cta-title flex items-center gap-2 text-white font-extrabold text-[15.5px]">
-                      Research is Running
-                      <span className="h-2 w-2 rounded-full bg-emerald-300 animate-ping" />
-                    </span>
-                    <span className="mobile-cta-sub text-emerald-100 font-semibold text-[11.5px]">
-                      Want to go back? Tap to view live workspace →
-                    </span>
-                  </div>
+                  <span className="mobile-cta-title text-white font-bold text-[13.5px] truncate">
+                    Research Running · Tap to View Live
+                  </span>
                 </div>
-                <div className="mobile-cta-arrow group-hover:translate-x-1 transition-transform">
-                  <ArrowRight size={18} />
-                </div>
+                <ArrowRight size={15} className="text-white shrink-0 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           ) : (
-            <div className="w-full space-y-3 animate-fade-in text-left">
+            <div className="w-full space-y-2.5 animate-fade-in text-left">
+              {/* Sleek Ergonomic Start Research CTA Button */}
               <button
                 type="button"
                 onClick={() => onResume?.()}
                 className="mobile-cta-primary group cursor-pointer active:scale-98 transition-all"
               >
-                <div className="flex items-center gap-3.5 min-w-0 z-10">
-                  <div className="mobile-cta-icon-box relative shadow-lg">
-                    <Bot size={22} className="text-white group-hover:scale-110 transition-transform" />
-                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <div className="flex items-center gap-2.5 min-w-0 z-10">
+                  <div className="mobile-cta-icon-box relative">
+                    <Bot size={17} className="text-white" />
+                    <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-300" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300" />
                     </span>
                   </div>
-                  <div className="mobile-cta-text">
-                    <div className="flex items-center gap-2">
-                      <span className="mobile-cta-title text-white font-extrabold text-[16px]">Start Research</span>
-                      <span className="rounded-full bg-white/20 border border-white/30 px-2 py-0.5 text-[9.5px] font-mono font-bold tracking-tight text-white uppercase">
-                        AI Copilot
-                      </span>
-                    </div>
-                    <span className="mobile-cta-sub text-emerald-50 font-medium text-[11.5px]">
-                      Launch Artha AI Copilot &amp; Multi-Agent Studio →
-                    </span>
-                  </div>
+                  <span className="mobile-cta-title text-white font-bold text-[14px] tracking-tight">
+                    Start Stock Research
+                  </span>
+                  <span className="rounded-full bg-white/20 border border-white/25 px-1.5 py-0.5 text-[9px] font-mono font-bold text-white uppercase tracking-wider">
+                    Studio
+                  </span>
                 </div>
-                <div className="mobile-cta-arrow group-hover:translate-x-1 transition-transform z-10">
-                  <ArrowRight size={18} />
+                <div className="mobile-cta-arrow group-hover:translate-x-0.5 transition-transform z-10">
+                  <ArrowRight size={15} />
                 </div>
               </button>
 
               {/* Live Ticker Diligence Track */}
               <div className="mobile-ticker-header">
                 <div className="mobile-ticker-header-lbl">
-                  <TrendingUp size={12} className="text-emerald-400" />
-                  <span>Diligence Stream</span>
+                  <TrendingUp size={11} className="text-emerald-400" />
+                  <span>Quick 1-Tap Stock Research</span>
                 </div>
                 <div className="mobile-ticker-badge-live">
                   <span className="live-pulse" />
-                  <span>1-TAP RESEARCH</span>
+                  <span>TAP TICKER</span>
                 </div>
               </div>
               <div className="mobile-ticker-scroll">
@@ -582,23 +564,10 @@ export default function MobileLanding({
                 ))}
               </div>
 
-              {/* Quick Prompts */}
-              <div className="mobile-quick-prompts">
-                {QUICK_PROMPTS.map((p, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => onRun?.(p.text)}
-                    className="mobile-prompt-pill hover:border-emerald-500/50 hover:text-white transition-colors cursor-pointer"
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-center gap-2 text-[11px] font-mono text-slate-400 pt-0.5">
-                <Sparkles size={13} className="text-emerald-400 shrink-0" />
-                <span>Autonomous reasoning, peer comparison &amp; valuation audit</span>
+              {/* Micro footer guarantee */}
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-slate-400 pt-0.5">
+                <Sparkles size={11} className="text-emerald-400 shrink-0" />
+                <span>11 Autonomous Agents · SEC &amp; NSE Filings · Deterministic Math</span>
               </div>
             </div>
           )}
@@ -606,8 +575,8 @@ export default function MobileLanding({
 
         {/* Scroll Indicator */}
         <div className="mobile-scroll-hint">
-          <span>Swipe to explore multi-agent architecture</span>
-          <ChevronDown size={14} className="animate-bounce" />
+          <span>Swipe up to explore agent graph</span>
+          <ChevronDown size={13} className="animate-bounce" />
         </div>
       </section>
 
