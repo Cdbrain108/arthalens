@@ -1597,83 +1597,38 @@
     padding: 0 8px !important;
   }
 
-  /* Responsive HUD for ResearchProcessGraph */
-  .research-process-graph {
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 4px 2px !important;
-  }
-
-  .research-process-header {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 8px !important;
-    margin-bottom: 10px !important;
-  }
-
-  .research-process-header h2 {
-    font-size: 16px !important;
-    line-height: 1.3 !important;
-    margin: 4px 0 2px !important;
-  }
-
-  .research-process-count {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: 100% !important;
-    justify-content: space-between !important;
-    padding-top: 0 !important;
-  }
-
-  .research-process-count strong {
-    font-size: 16px !important;
-  }
-
-  /* Mobile compact process nodes */
-  .process-node {
-    min-height: 48px !important;
-    padding: 8px 10px !important;
-    gap: 8px !important;
-    border-radius: 10px !important;
-  }
-
-  .process-node-label {
-    font-size: 12px !important;
-  }
-
-  .process-node-detail {
-    font-size: 10px !important;
-    margin-top: 2px !important;
-  }
-
-  .process-connector {
-    height: 14px !important;
-  }
-
-  /* Mobile Parallel Specialist branch: 2-column grid matrix */
-  .process-branch {
-    padding-left: 0 !important;
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 6px !important;
-  }
-
-  .process-branch-rail,
-  .process-agent::before {
+  /* Single Line Mobile Pipeline Flow */
+  .pipeline-desktop-tree {
     display: none !important;
   }
 
-  .process-agent {
-    min-height: 34px !important;
-    padding: 6px 8px !important;
-    font-size: 10.5px !important;
-    border-radius: 8px !important;
+  .pipeline-single-line-wrap {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 2px 0 !important;
   }
 
-  .process-agent-icon {
-    width: 14px !important;
-    height: 14px !important;
+  .pipeline-single-track {
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .pipeline-single-track::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .research-process-graph {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 2px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   /* Mobile Floating Bottom Workspace Tabs */

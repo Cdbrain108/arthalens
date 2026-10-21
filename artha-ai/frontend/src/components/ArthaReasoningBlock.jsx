@@ -469,7 +469,7 @@ export default function ArthaReasoningBlock({
               </div>
 
               {reasoningView === 'pipeline' ? (
-                <div className="rounded-xl border border-white/10 bg-black/40 p-3 overflow-x-auto animate-fade-in max-h-[340px] scroll-slim">
+                <div className="rounded-xl border border-white/10 bg-black/40 p-2 sm:p-3 overflow-x-auto animate-fade-in max-h-none sm:max-h-[340px] scroll-slim">
                   <ResearchProcessGraph job={job} running={active && !isDone} isDone={isDone} />
                 </div>
               ) : (
