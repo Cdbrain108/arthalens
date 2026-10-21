@@ -557,6 +557,30 @@
   margin: 0;
   position: relative;
   z-index: 1;
+  min-height: 33px;
+  display: block;
+}
+
+.mobile-typed-text {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.mobile-typed-caret {
+  display: inline-block;
+  width: 2px;
+  height: 12px;
+  background-color: #10b981;
+  margin-left: 2px;
+  vertical-align: -1px;
+  border-radius: 1px;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.85);
+  animation: mobile-caret-pulse 0.8s infinite;
+}
+
+@keyframes mobile-caret-pulse {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.15; transform: scaleY(0.7); }
 }
 
 /* ── Live Stats Pill Strip ──────────────────────────────────────────────── */

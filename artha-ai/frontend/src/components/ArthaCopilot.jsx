@@ -340,7 +340,10 @@ export default function ArthaCopilot({
   }, [messages, asking])
 
   useEffect(() => {
-    inputRef.current?.focus()
+    const isTouch = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0)
+    if (!isTouch) {
+      inputRef.current?.focus()
+    }
   }, [])
 
   const handleAsk = async (queryText) => {
@@ -394,7 +397,10 @@ export default function ArthaCopilot({
       ])
     } finally {
       setAsking(false)
-      requestAnimationFrame(() => inputRef.current?.focus())
+      const isTouch = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0)
+      if (!isTouch) {
+        requestAnimationFrame(() => inputRef.current?.focus())
+      }
     }
   }
 

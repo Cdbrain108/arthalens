@@ -41,7 +41,10 @@ export default function ChatWindow({
     if (followupQuery.trim() && !running) {
       onFollowupResearch(followupQuery.trim())
       setFollowupQuery('')
-      requestAnimationFrame(() => inputRef.current?.focus())
+      const isTouch = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0)
+      if (!isTouch) {
+        requestAnimationFrame(() => inputRef.current?.focus())
+      }
     }
   }
 

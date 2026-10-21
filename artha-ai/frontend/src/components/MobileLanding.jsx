@@ -60,6 +60,62 @@ const SPECIALISTS = [
   { id: 'management', name: 'Management & Governance', icon: ShieldCheck, desc: 'Promoter pledging, capital allocation & board audit', tag: 'Governance' },
 ]
 
+const SIMPLE_TAGLINES = [
+  'Research any stock in 60 seconds with 11 specialized AI agents.',
+  '11 AI agents read real company filings so you don\'t have to.',
+  'Checks if a stock is cheap, expensive, or fairly priced.',
+  'Spots hidden debt, red flags & risks before you invest.',
+  'Shows both sides — why to buy and why to be cautious in plain English.',
+]
+
+/** Types out each simple explainer phrase, pauses, deletes, and cycles smoothly */
+function useTypewriter(phrases, { typingSpeed = 38, deletingSpeed = 20, pauseDelay = 2200 } = {}) {
+  const reduced =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const [text, setText] = useState(phrases[0] || '')
+
+  useEffect(() => {
+    if (reduced || !phrases.length) return undefined
+
+    let phraseIdx = 0
+    let charIdx = phrases[0].length
+    let isDeleting = true
+    let timer = null
+
+    const tick = () => {
+      const currentPhrase = phrases[phraseIdx]
+      if (isDeleting) {
+        charIdx = Math.max(0, charIdx - 1)
+        setText(currentPhrase.slice(0, charIdx))
+        if (charIdx === 0) {
+          isDeleting = false
+          phraseIdx = (phraseIdx + 1) % phrases.length
+          timer = setTimeout(tick, 300)
+          return
+        }
+        timer = setTimeout(tick, deletingSpeed)
+      } else {
+        charIdx = Math.min(currentPhrase.length, charIdx + 1)
+        setText(currentPhrase.slice(0, charIdx))
+        if (charIdx === currentPhrase.length) {
+          isDeleting = true
+          timer = setTimeout(tick, pauseDelay)
+          return
+        }
+        timer = setTimeout(tick, typingSpeed)
+      }
+    }
+
+    timer = setTimeout(tick, pauseDelay)
+    return () => clearTimeout(timer)
+  }, [phrases, reduced, typingSpeed, deletingSpeed, pauseDelay])
+
+  return text
+}
+
 export default function MobileLanding({
   onRun,
   running,
@@ -83,6 +139,7 @@ export default function MobileLanding({
   const taskbarHideTimerRef = useRef(null)
   const containerRef = useRef(null)
   const progressRef = useRef(null)
+  const typedTagline = useTypewriter(SIMPLE_TAGLINES)
 
   useEffect(() => {
     setLocalQuery(query)
@@ -294,7 +351,7 @@ export default function MobileLanding({
           <Logo size={22} />
           <div className="arg-nav-brand-text">
             <span className="arg-nav-word">Artha AI</span>
-            <span className="arg-nav-tagline">11 Autonomous AI Agents</span>
+            <span className="arg-nav-tagline">Multi-Agent Stock Research</span>
           </div>
         </a>
 
@@ -449,34 +506,32 @@ export default function MobileLanding({
       {/* ════ PAGE 1: MOBILE HERO & COMMAND CENTER ════ */}
       <section className="mobile-page-section hero-page" id="m-hero">
         <div className="mobile-hero-badge">
-          <Bot size={12} className="text-emerald-400" />
           <span className="live-pulse" />
-          <span>11 AUTONOMOUS AI AGENTS</span>
-          <span className="opacity-40">·</span>
-          <span className="text-emerald-300 font-extrabold">REAL-TIME RESEARCH</span>
+          <span>AUTONOMOUS MULTI-AGENT PLATFORM</span>
         </div>
 
         <h1 className="mobile-hero-title">
-          Artha AI — Stock Research by <span className="highlight-text">11 Autonomous AI Agents</span>
+          Artha AI — Powerful <span className="highlight-text">Multi-Agent</span> Stock Research Platform
         </h1>
 
-        <p className="mobile-hero-subtitle">
-          Behind every stock, 11 specialized AI agents audit SEC &amp; NSE filings, calculate valuation models, and cross-examine downside risks in 60s.
+        <p className="mobile-hero-subtitle" aria-live="polite">
+          <span className="mobile-typed-text">{typedTagline}</span>
+          <span className="mobile-typed-caret" aria-hidden="true" />
         </p>
 
         {/* 3-Pill Institutional Metric Bar */}
         <div className="mobile-hero-stats">
           <div className="mobile-hero-stat-pill">
             <span className="mobile-hero-stat-val">11 AI Agents</span>
-            <span className="mobile-hero-stat-lbl">Autonomous Specialists</span>
+            <span className="mobile-hero-stat-lbl">Reads All Filings</span>
           </div>
           <div className="mobile-hero-stat-pill">
-            <span className="mobile-hero-stat-val">60s</span>
-            <span className="mobile-hero-stat-lbl">Full Synthesis</span>
+            <span className="mobile-hero-stat-val">60 Seconds</span>
+            <span className="mobile-hero-stat-lbl">Full Stock Report</span>
           </div>
           <div className="mobile-hero-stat-pill">
-            <span className="mobile-hero-stat-val">100% Math</span>
-            <span className="mobile-hero-stat-lbl">Deterministic &amp; Audited</span>
+            <span className="mobile-hero-stat-val">Zero Guesswork</span>
+            <span className="mobile-hero-stat-lbl">100% Real Math</span>
           </div>
         </div>
 
@@ -514,16 +569,7 @@ export default function MobileLanding({
               </button>
             </div>
           ) : (
-            <div className="w-full space-y-2 animate-fade-in text-left">
-              {/* Tagline Ribbon */}
-              <div className="flex items-center justify-between px-0.5 text-[10.5px] font-mono text-emerald-400">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <Bot size={12} className="text-emerald-400" />
-                  <span>11 Autonomous AI Agents</span>
-                </div>
-                <span className="text-[9.5px] text-slate-400 font-sans font-medium">Deterministic Audit</span>
-              </div>
-
+            <div className="w-full space-y-2.5 animate-fade-in text-left">
               {/* Sleek Ergonomic Start Research CTA Button */}
               <button
                 type="button"
@@ -542,7 +588,7 @@ export default function MobileLanding({
                     Start Stock Research
                   </span>
                   <span className="rounded-full bg-white/20 border border-white/25 px-1.5 py-0.5 text-[9px] font-mono font-bold text-white uppercase tracking-wider">
-                    11 Agents
+                    Studio
                   </span>
                 </div>
                 <div className="mobile-cta-arrow group-hover:translate-x-0.5 transition-transform z-10">

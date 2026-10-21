@@ -427,11 +427,20 @@ export default function StudioPage({
   onLogout,
   onOpenAuth,
 }) {
+  const isTouchDevice = () => {
+    if (typeof window === 'undefined') return false
+    return (
+      window.innerWidth < 768 ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0
+    )
+  }
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [followupText, setFollowupText] = useState('')
   const [researchMode, setResearchMode] = useState('beginner')
   const [rightTab, setRightTab] = useState('preview')
-  const [mobilePane, setMobilePane] = useState('chat')
+  const [mobilePane, setMobilePane] = useState(() => (job?.report || job?.status === 'succeeded' ? 'report' : 'chat'))
   const [viewMode, setViewMode] = useState('report') // 'report' | 'copilot'
   const [qaMessages, setQaMessages] = useState([])
   const [askingReport, setAskingReport] = useState(false)
@@ -449,21 +458,26 @@ export default function StudioPage({
   const currentJobId = job?.job_id || sessions?.find((s) => s.job_id && !s.job_id.startsWith('chat_'))?.job_id || null
   const pdfUrl = currentJobId ? api.pdfUrl(currentJobId) : null
 
-  // Reset viewMode and Q&A messages on new job
+  // Reset viewMode and Q&A messages on new job, switch to report pane on mobile when report is ready
   useEffect(() => {
     setQaMessages([])
     setViewMode('report')
-  }, [job?.job_id])
+    if (job?.report || job?.status === 'succeeded') {
+      setMobilePane('report')
+    }
+  }, [job?.job_id, job?.report, job?.status])
 
-
-
-  // Focus input on mount + refocus when research finishes (never steal while typing)
+  // Focus input on mount + refocus when research finishes (DESKTOP ONLY — never on mobile/touch screens to avoid popping virtual keyboard)
   useEffect(() => {
-    inputRef.current?.focus()
+    if (!isTouchDevice()) {
+      inputRef.current?.focus()
+    }
   }, [])
 
   useEffect(() => {
-    if (!running && !askingReport) inputRef.current?.focus()
+    if (!running && !askingReport && !isTouchDevice()) {
+      inputRef.current?.focus()
+    }
   }, [running, askingReport])
 
   // Auto-dismiss the inline toast
@@ -618,8 +632,10 @@ export default function StudioPage({
     } else {
       handleCopilotAction(q)
     }
-    // Keep focus in the box after send — no more re-click needed
-    requestAnimationFrame(() => inputRef.current?.focus())
+    // Keep focus in the box after send on desktop only
+    if (!isTouchDevice()) {
+      requestAnimationFrame(() => inputRef.current?.focus())
+    }
   }
 
   // ── LAYOUT DECISION ────────────────────────────────────────────────────────
