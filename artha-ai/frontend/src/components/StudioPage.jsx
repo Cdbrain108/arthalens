@@ -403,7 +403,7 @@ function StudioChatInputBar({
         >
           <button
             type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white"
+            className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white"
             title="Add context"
           >
             <Plus size={16} />
@@ -753,16 +753,71 @@ export default function StudioPage({
     if (!q || running || askingReport || isGenerating) return
 
     setFollowupText('')
+
+    // Check if the user is asking to research a NEW / DIFFERENT stock or comparison
+    const isNewStock = (() => {
+      const qLower = q.toLowerCase()
+      // Skip greetings, identity, concepts, hold/sell/verdict/comparison follow-ups
+      if (/^(hi|hello|hey|who are you|who r u|what are you|help|introduce)/i.test(qLower)) return false
+      if (/what is|explain|define|how to|meaning of/i.test(qLower)) return false
+      if (/which.*(better|winner|pick)|should i (hold|buy|sell)|can i hold|hold or sell|what to do|summarize|verdict|risks|downside/i.test(qLower)) return false
+      
+      const currentTickers = (job?.entities || []).map((ent) => (ent.ticker || '').toLowerCase()).filter(Boolean)
+      const currentNames = (job?.entities || []).map((ent) => (ent.name || '').toLowerCase()).filter(Boolean)
+      
+      const type = detectQueryType(q)
+      if (type === 'stock') {
+        const words = qLower.split(/[\s,vs\-\/]+/)
+        const mentionsNewEntity = words.some((w) =>
+          ['reliance', 'nvidia', 'nvda', 'apple', 'aapl', 'microsoft', 'msft', 'tesla', 'tsla', 'wipro', 'hdfc', 'sbi', 'itc', 'tata', 'tatamotors', 'meta', 'google', 'googl', 'amazon', 'amzn', 'l&t', 'icici'].includes(w) &&
+          !currentTickers.includes(w) && !currentNames.some((n) => n.includes(w))
+        )
+        if (mentionsNewEntity || (words.includes('compare') && !currentTickers.every((t) => qLower.includes(t)))) {
+          return true
+        }
+      }
+      return false
+    })()
+
+    if (isNewStock) {
+      handleCopilotAction(q)
+      if (!isTouchDevice()) {
+        requestAnimationFrame(() => inputRef.current?.focus())
+      }
+      return
+    }
+
     if (canAskReport) {
       setQaMessages((messages) => [...messages, { role: 'user', text: q }])
       setAskingReport(true)
       try {
-        const response = await onAskReport(job.job_id, q)
+        let answerText = ''
+        let sources = []
+        let followUp = false
+
+        try {
+          const response = await onAskReport(job.job_id, q)
+          if (response?.answer && !response.answer.includes('not established by the completed report')) {
+            answerText = response.answer
+            sources = response.sources || []
+            followUp = response.follow_up_research_needed
+          }
+        } catch (_) {}
+
+        if (!answerText) {
+          answerText = getCopilotResponse(q, user, {
+            companyName: job?.entities?.[0]?.name || activeQuery,
+            ticker: job?.entities?.[0]?.ticker,
+            reportData: job?.report_json || job?.report,
+            job,
+          })
+        }
+
         setQaMessages((messages) => [...messages, {
           role: 'assistant',
-          text: response.answer || 'The report did not return an answer.',
-          sources: response.sources || [],
-          followUp: response.follow_up_research_needed,
+          text: answerText || 'The report did not return an answer.',
+          sources,
+          followUp,
         }])
       } catch (error) {
         setQaMessages((messages) => [...messages, {
@@ -1002,9 +1057,11 @@ export default function StudioPage({
                       : 'mr-3 rounded-xl border border-white/10 bg-[#1e2026] p-3 text-[12.5px] leading-relaxed text-[#d2d6dc]'}
                   >
                     <span className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-emerald-400">
-                      {message.role === 'user' ? 'You' : 'Report answer'}
+                      {message.role === 'user' ? 'You' : 'Artha Copilot'}
                     </span>
-                    <p className="whitespace-pre-wrap">{message.text}</p>
+                    <div className="text-[12.5px] leading-relaxed text-[#d2d6dc]">
+                      <CopilotMarkdown content={message.text} />
+                    </div>
                     {message.followUp && (
                       <p className="mt-2 border-t border-white/10 pt-2 text-[11px] text-[#fbbc04]">
                         This asks for information outside the completed report; a fresh research run is needed for a current answer.
@@ -1036,27 +1093,6 @@ export default function StudioPage({
           {/* Studio Chat Input Bar — visible when idle/done; replaced by slim status strip during running so reasoning cards have full screen height on mobile */}
           {!running && !submitting ? (
             <div className="flex flex-col border-t border-white/10 bg-[#181a1f]/95 backdrop-blur-xl">
-              {isDone && (
-                <div className="flex items-center justify-between gap-2 px-3.5 py-2 border-b border-white/5 bg-[#14161b] text-[11.5px]">
-                  <div className="flex items-center gap-2 text-emerald-400 min-w-0">
-                    <Sparkles size={13} className="shrink-0" />
-                    <span className="truncate text-slate-300 font-medium">
-                      Evidence dossier &amp; PDF attached · Ask anything about this report
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewMode('copilot')
-                      setMobilePane('report')
-                    }}
-                    className="flex items-center gap-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition shrink-0 cursor-pointer"
-                  >
-                    <span>Open Deep Q&A</span>
-                    <ChevronRight size={12} />
-                  </button>
-                </div>
-              )}
               <StudioChatInputBar
                 value={followupText}
                 onValueChange={setFollowupText}
@@ -1065,10 +1101,8 @@ export default function StudioPage({
                 inputRef={inputRef}
                 placeholder={
                   isDone
-                    ? 'Ask anything about this report, test assumptions, valuation...'
-                    : copilotMessages.length <= 1
-                    ? 'Ask anything: PE ratio, compare stocks, DCF...'
-                    : 'Ask follow-up, test assumptions, request DCF...'
+                    ? 'Ask about this report (e.g. PE, risks, horizon)...'
+                    : 'Ask about any stock or financial concept...'
                 }
               />
             </div>
@@ -1098,103 +1132,57 @@ export default function StudioPage({
           data-active={String(mobilePane === 'report')}
           className="studio-right-pane flex flex-1 flex-col bg-[#131518] overflow-hidden"
         >
-          {isDone && viewMode === 'copilot' ? (
-            <ArthaCopilot
-              job={job}
-              pdfUrl={pdfUrl}
-              onBackToReport={() => setViewMode('report')}
-              onAskReport={onAskReport}
-              user={user}
-            />
-          ) : (
-            <>
-              {/* Right Pane Tab Bar — scrolls horizontally rather than
-                  squeezing labels on narrow screens. */}
-              <div className="studio-pane-tabs flex h-11 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#181a1f] px-3 sm:px-6">
-                <div
-                  className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scroll-slim"
-                  role="group"
-                  aria-label="Report views"
-                  tabIndex={0}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setRightTab('preview')}
-                    aria-pressed={rightTab === 'preview'}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition ${
-                      rightTab === 'preview'
-                        ? 'bg-white/15 text-white shadow-sm border border-white/20'
-                        : 'text-[#9aa0a6] hover:text-white'
-                    }`}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#4285f4]" />
-                    <span>Report Preview</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRightTab('pdf')}
-                    aria-pressed={rightTab === 'pdf'}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition ${
-                      rightTab === 'pdf'
-                        ? 'bg-emerald-500/25 text-emerald-300 shadow-sm border border-emerald-500/40'
-                        : 'text-[#9aa0a6] hover:text-white'
-                    }`}
-                  >
-                    <FileText size={13} className="text-emerald-400" />
-                    <span>In-App PDF Dossier</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRightTab('graph')}
-                    aria-pressed={rightTab === 'graph'}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition ${
-                      rightTab === 'graph'
-                        ? 'bg-white/15 text-white shadow-sm border border-white/20'
-                        : 'text-[#9aa0a6] hover:text-white'
-                    }`}
-                  >
-                    <Layers size={13} />
-                    <span>Pipeline Flow</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRightTab('data')}
-                    aria-pressed={rightTab === 'data'}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition ${
-                      rightTab === 'data'
-                        ? 'bg-white/15 text-white shadow-sm border border-white/20'
-                        : 'text-[#9aa0a6] hover:text-white'
-                    }`}
-                  >
-                    <Code2 size={13} />
-                    <span>Specialist Data</span>
-                  </button>
-                  {isDone && (
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('copilot')}
-                      className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition cursor-pointer"
-                    >
-                      <Sparkles size={13} className="text-emerald-400" />
-                      <span>Ask Artha Copilot</span>
-                    </button>
-                  )}
-                </div>
+          {/* Right Pane Tab Bar — clean, uncluttered report views */}
+          <div className="studio-pane-tabs flex h-11 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#181a1f] px-3 sm:px-6">
+            <div
+              className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scroll-slim"
+              role="group"
+              aria-label="Report views"
+              tabIndex={0}
+            >
+              <button
+                type="button"
+                onClick={() => setRightTab('preview')}
+                aria-pressed={rightTab === 'preview'}
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition cursor-pointer ${
+                  rightTab === 'preview'
+                    ? 'bg-white/15 text-white shadow-sm border border-white/20'
+                    : 'text-[#9aa0a6] hover:text-white'
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-[#4285f4]" />
+                <span>Report Preview</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRightTab('pdf')}
+                aria-pressed={rightTab === 'pdf'}
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition cursor-pointer ${
+                  rightTab === 'pdf'
+                    ? 'bg-emerald-500/25 text-emerald-300 shadow-sm border border-emerald-500/40'
+                    : 'text-[#9aa0a6] hover:text-white'
+                }`}
+              >
+                <FileText size={13} className="text-emerald-400" />
+                <span>In-App PDF Dossier</span>
+              </button>
+            </div>
 
-                <div className="flex shrink-0 items-center gap-3 text-[#9aa0a6]">
-                  <span className="hidden lg:inline text-[11px] font-mono text-[#bdc1c6]">
-                     {isDone ? 'Evidence audit complete' : running ? 'Synthesizing...' : 'Report ready'}
-                  </span>
-                  <button
-                    type="button"
-                    className="hidden sm:block hover:text-white transition p-1"
-                    title="Fullscreen"
-                    aria-label="Fullscreen"
-                  >
-                    <Maximize2 size={14} />
-                  </button>
-                </div>
-              </div>
+            <div className="flex shrink-0 items-center gap-3 text-[#9aa0a6]">
+              <span className="hidden lg:inline text-[11px] font-mono text-[#bdc1c6]">
+                {isDone ? 'Evidence audit complete' : running ? 'Synthesizing...' : 'Report ready'}
+              </span>
+              <button
+                type="button"
+                className="hidden sm:block hover:text-white transition p-1"
+                title="Fullscreen"
+                aria-label="Fullscreen"
+              >
+                <Maximize2 size={14} />
+              </button>
+            </div>
+          </div>
+
 
               {/* Right Pane Body */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-8 scroll-slim scroll-smooth">
@@ -1354,45 +1342,52 @@ export default function StudioPage({
               </div>
             )}
           </div>
-        </>
-      )}
-    </section>
-  </div>
 
-  {/* Mobile-only pane switcher: rendered ONLY after report is generated so running research has 100% viewport height */}
-  {isDone && (
-    <div className="studio-mobile-tabs" role="group" aria-label="Workspace views">
-      <button
-        type="button"
-        aria-pressed={mobilePane === 'report' && viewMode === 'report'}
-        onClick={() => {
-          setViewMode('report')
-          setMobilePane('report')
-        }}
-        className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
-          mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
-        }`}
-        title="View completed research report"
-      >
-        <FileText size={15} className={mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400' : 'text-slate-400'} />
-        <span>Report Dossier</span>
-      </button>
-      <button
-        type="button"
-        aria-pressed={mobilePane === 'chat' || (mobilePane === 'report' && viewMode === 'copilot')}
-        onClick={() => {
-          setViewMode('copilot')
-          setMobilePane('chat')
-        }}
-        className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
-          mobilePane === 'chat' || (mobilePane === 'report' && viewMode === 'copilot') ? 'text-emerald-400 font-semibold' : 'text-slate-400'
-        }`}
-      >
-        <Sparkles size={15} className={mobilePane === 'chat' || (mobilePane === 'report' && viewMode === 'copilot') ? 'text-emerald-400' : 'text-slate-400'} />
-        <span>Ask Copilot / Q&A</span>
-      </button>
-    </div>
-  )}
+          {/* Floating Action Button on mobile: Ask a Question -> jumps straight into chat */}
+          {mobilePane === 'report' && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobilePane('chat')
+                setTimeout(() => inputRef.current?.focus(), 150)
+              }}
+              className="sm:hidden fixed bottom-16 right-4 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white px-4 py-2.5 shadow-[0_4px_24px_rgba(245,158,11,0.5)] border border-amber-300/40 text-xs font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <Sparkles size={14} className="text-amber-200 animate-pulse" />
+              <span>Ask a Question →</span>
+            </button>
+          )}
+        </section>
+      </div>
+
+      {/* Mobile-only pane switcher: rendered ONLY after report is generated so running research has 100% viewport height */}
+      {isDone && (
+        <div className="studio-mobile-tabs" role="group" aria-label="Workspace views">
+          <button
+            type="button"
+            aria-pressed={mobilePane === 'chat'}
+            onClick={() => setMobilePane('chat')}
+            className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
+              mobilePane === 'chat' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
+            }`}
+          >
+            <Sparkles size={15} className={mobilePane === 'chat' ? 'text-emerald-400' : 'text-slate-400'} />
+            <span>Artha Copilot</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={mobilePane === 'report'}
+            onClick={() => setMobilePane('report')}
+            className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
+              mobilePane === 'report' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
+            }`}
+            title="View completed research report"
+          >
+            <FileText size={15} className={mobilePane === 'report' ? 'text-emerald-400' : 'text-slate-400'} />
+            <span>Report Dossier</span>
+          </button>
+        </div>
+      )}
 
       {toast && (
         <div className="studio-toast" role="status" aria-live="polite">

@@ -229,8 +229,11 @@ def answer_report_question(question: str, report: dict[str, Any], context: dict[
             key_sections[k] = report[k]
 
     prompt = (
+        "You are Artha AI Copilot, an autonomous equity research assistant built by Artha AI. "
         "Answer the user's question using ONLY the provided report sections and evidence packet. "
-        "Distinguish clearly between what the report establishes and what would require fresh research.\n"
+        "Distinguish clearly between what the report establishes and what would require fresh research. "
+        "Always provide complete, grammatically sound, finished sentences — never leave sentences cut off mid-thought. "
+        "Never identify as DeepSeek, OpenAI, or any underlying model provider; your identity is always Artha AI Copilot.\n"
         f"Question: {question}\n"
         f"Key Report Sections: {json.dumps(key_sections, default=str)[:14000]}\n"
         f"Evidence Excerpts: {json.dumps((context or {}).get('evidence', [])[:20], default=str)[:6000]}"

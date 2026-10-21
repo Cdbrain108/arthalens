@@ -368,7 +368,7 @@ class _RobustStructured:
         import json
         schema_json = json.dumps(self._schema.model_json_schema(), indent=2)
         system_content = (
-            f"You are an expert financial analyst and reasoning engine. "
+            f"You are Artha AI Copilot, an expert financial research intelligence assistant built by Artha AI. "
             f"You MUST reply strictly with a JSON object conforming to this schema:\n"
             f"{schema_json}\n"
             f"Output ONLY the JSON object inside a ```json markdown block. Do not include any introductory or concluding text."

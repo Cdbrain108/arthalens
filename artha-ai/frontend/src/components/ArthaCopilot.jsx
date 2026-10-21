@@ -807,14 +807,14 @@ export default function ArthaCopilot({
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             disabled={asking}
-            placeholder={`Ask Artha Copilot about this report (e.g. debt, DCF, peer margins)...`}
-            className="flex-1 bg-transparent text-[13.5px] sm:text-[14.5px] text-white placeholder-slate-500 focus:outline-none"
+            placeholder={`Ask about this report (e.g. PE, risks, horizon)...`}
+            className="flex-1 bg-transparent text-[13px] sm:text-[14px] text-white placeholder-slate-500 focus:outline-none min-w-0"
           />
           <button
             type="submit"
             disabled={!question.trim() || asking}
             title={asking ? 'Asking Copilot…' : 'Send message to Copilot'}
-            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-extrabold text-white transition-all duration-200 shadow-md cursor-pointer hover:brightness-115 hover:scale-105 active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-[13px] font-extrabold text-white transition-all duration-200 shadow-md cursor-pointer hover:brightness-115 hover:scale-105 active:scale-95 shrink-0"
             style={{
               background: question.trim() && !asking
                 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
@@ -831,7 +831,7 @@ export default function ArthaCopilot({
             ) : (
               <Send size={15} className="text-white" style={{ stroke: '#ffffff', color: '#ffffff', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
             )}
-            <span className="font-extrabold text-white" style={{ color: '#ffffff' }}>Send</span>
+            <span className="hidden sm:inline font-extrabold text-white" style={{ color: '#ffffff' }}>Send</span>
           </button>
         </form>
       </div>

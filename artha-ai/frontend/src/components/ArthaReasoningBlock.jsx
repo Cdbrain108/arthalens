@@ -23,6 +23,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { detectQueryType } from '../utils/queryRouter'
+import ResearchProcessGraph from './ResearchProcessGraph'
 
 const SPECIALIST_META = {
   financial: {
@@ -154,6 +155,7 @@ export default function ArthaReasoningBlock({
 
   // In conversational mode, keep collapsed by default to avoid cluttering mobile UI
   const [expanded, setExpanded] = useState(() => !isConversationalMode)
+  const [reasoningView, setReasoningView] = useState('specialists') // 'specialists' | 'pipeline'
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const timerRef = useRef(null)
   const finalSecondsRef = useRef(null)
@@ -263,14 +265,14 @@ export default function ArthaReasoningBlock({
       stageTitle = 'Stage 5/6: Adversarial Confrontation · Stress-testing Bull thesis against Bear risks...'
       progressPct = 88
     } else if (node === 'synthesize_report' || node === 'build_report' || node === 'generate_pdf') {
-      stageTitle = 'Stage 6/6: Institutional Synthesis · Generating executive brief & PDF dossier...'
+      stageTitle = 'Stage 6/6: Autonomous Research Synthesis · Generating executive brief & PDF dossier...'
       progressPct = 95
     } else if (node === 'done' || isDone) {
-      stageTitle = 'Institutional Audit Complete · All evidence verified with primary filings.'
+      stageTitle = 'Autonomous Audit Complete · All evidence verified with primary filings.'
       progressPct = 100
     }
   } else if (isDone) {
-    stageTitle = 'Institutional Audit Complete · All evidence verified with primary filings.'
+    stageTitle = 'Autonomous Audit Complete · All evidence verified with primary filings.'
     progressPct = 100
   }
 
@@ -434,14 +436,45 @@ export default function ArthaReasoningBlock({
           ) : (
             /* Stock Multi-Agent Diligence: Specialists & Dual-Thesis */
             <>
-              {/* Section Header */}
-              <div className="flex items-center justify-between text-[#94a3b8] font-mono text-[10px] uppercase tracking-wider">
-                <span>Specialists Dispatched &amp; Live Process:</span>
-                <span className="text-emerald-400">Deterministic Math &amp; Provenance</span>
+              {/* Section Header with In-Block Pipeline Flow Toggle */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center p-0.5 rounded-lg bg-black/40 border border-white/10 text-[10.5px]">
+                  <button
+                    type="button"
+                    onClick={() => setReasoningView('specialists')}
+                    className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer ${
+                      reasoningView === 'specialists'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    ⚡ Specialists ({selectedAgentKeys.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReasoningView('pipeline')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition cursor-pointer ${
+                      reasoningView === 'pipeline'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Layers size={11} />
+                    <span>Pipeline Flow</span>
+                  </button>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-400 hidden sm:inline">
+                  Deterministic Math &amp; Provenance
+                </span>
               </div>
 
-              {/* Active Specialists Live Cards */}
-              <div className="grid grid-cols-1 gap-1.5 max-h-[220px] overflow-y-auto scroll-slim pr-1">
+              {reasoningView === 'pipeline' ? (
+                <div className="rounded-xl border border-white/10 bg-black/40 p-3 overflow-x-auto animate-fade-in max-h-[340px] scroll-slim">
+                  <ResearchProcessGraph job={job} running={active && !isDone} isDone={isDone} />
+                </div>
+              ) : (
+                /* Active Specialists Live Cards */
+                <div className="grid grid-cols-1 gap-1.5 max-h-[220px] overflow-y-auto scroll-slim pr-1 animate-fade-in">
                 {selectedAgentKeys.map((agentKey) => {
                   const meta = SPECIALIST_META[agentKey] || {
                     name: `${agentKey} Specialist`,
@@ -517,6 +550,7 @@ export default function ArthaReasoningBlock({
                   )
                 })}
               </div>
+            )}
 
               {/* Adversarial Bull vs Bear Dual-Thesis Phase */}
               <div className="flex items-center justify-between p-2 rounded-xl border border-white/10 bg-black/30 text-[10.5px]">

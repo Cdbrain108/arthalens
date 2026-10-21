@@ -610,17 +610,17 @@ ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-speci
   if (nameMatch) {
     const saidName = nameMatch[1].trim().replace(/[?.!]+$/, '')
     const display = saidName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    return `Nice to meet you, **${display}!** I'm **ArthaLens AI Copilot**, an evidence-first financial research platform. Ask about any financial concept or compare two stock tickers to get started.`
+    return `Nice to meet you, **${display}!** I'm **Artha AI Copilot**, an evidence-first financial research platform. Ask about any financial concept or compare two stock tickers to get started.`
   }
 
   // 9. Creator / maker
   if (/(creater|creator|created|who made|who built|who developed|built you|made you|developed you|your founder|your maker|your developer|your team|your company|your owner|behind you)/.test(qLower)) {
-    return `I'm **ArthaLens AI Copilot**, an autonomous equity research engine developed with 11 specialist agents, primary regulatory filings, and deterministic financial math. Try *"Analyze TCS fundamentals"*.`
+    return `I'm **Artha AI Copilot**, an autonomous equity research engine developed with 11 specialist agents, primary regulatory filings, and deterministic financial math. Try *"Analyze TCS fundamentals"*.`
   }
 
   // 10. Identity
   if (qLower.includes('your name') || qLower.includes('who are you') || qLower === 'who r u') {
-    return `I'm **ArthaLens AI Copilot**, your equity intelligence assistant. I collect evidence, check provenance, audit downside risks, and highlight gaps. Verify important claims against original sources. Try *"Compare Infosys vs Wipro"*.`
+    return `I'm **Artha AI Copilot**, your equity intelligence assistant. I collect evidence, check provenance, audit downside risks, and highlight gaps. Verify important claims against original sources. Try *"Compare Infosys vs Wipro"*.`
   }
 
   // 11. Capabilities
