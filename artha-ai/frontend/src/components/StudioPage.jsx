@@ -315,7 +315,7 @@ function StudioTopHeader({
             type="button"
             onClick={onViewPdf}
             className="hidden sm:flex h-8 sm:h-9 items-center gap-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-400 transition hover:bg-emerald-500/25 cursor-pointer active:scale-95"
-            title="View Institutional Research Report PDF In-App"
+            title="View Research Report PDF In-App"
           >
             <FileText size={13} />
             <span className="hidden lg:inline">PDF</span>

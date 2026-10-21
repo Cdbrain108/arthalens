@@ -275,7 +275,7 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
   // 0. Welcome introduction when opened directly without a query
   if (!q) {
     const greeting = userName ? `Hello, **${userName}**!` : `Hello! Welcome to **ArthaLens AI**`
-    const trialNote = !isLoggedIn ? `\n\n💡 *Guest Pass Active: 1 free institutional research report included.*` : ''
+    const trialNote = !isLoggedIn ? `\n\n💡 *Guest Pass Active: 1 free stock research report included.*` : ''
     return `${greeting}! I'm **ArthaLens AI Copilot**, your autonomous equity intelligence assistant.\n\nBehind every stock, there's more than one story. I orchestrate 11 specialized autonomous agents cross-examining balance sheets, earnings calls, news catalysts, and downside stress with 100% deterministic math.${trialNote}\n\nAsk about any company or financial question below to get started, or tap one of the suggested prompts! ✨`
   }
 

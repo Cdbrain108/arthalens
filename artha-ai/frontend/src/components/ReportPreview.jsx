@@ -921,7 +921,7 @@ export default function ReportPreview({
       {/* Institutional Synthesis Narrative */}
       <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-[13px] leading-relaxed text-[#cbd5e1]">
         <div className="mb-2 flex items-center justify-between text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#8ab4f8]">
-          <span>Institutional Research Synthesis</span>
+          <span>Autonomous Research Synthesis</span>
           <span className="text-[#9aa0a6] font-normal lowercase">{verifiedSources ?? 0} verified citations</span>
         </div>
         <div className="whitespace-pre-line text-[#e2e8f0]">
@@ -1708,7 +1708,7 @@ export default function ReportPreview({
             </h4>
           </div>
           <p className="mt-2 text-[11.5px] text-[#9aa0a6]">
-            To ensure zero false precision, this institutional research explicitly does NOT claim:
+            To ensure zero false precision, this research dossier explicitly does NOT claim:
           </p>
           <ul className="mt-2.5 space-y-1.5 text-[12px] text-slate-300">
             {intentionalLimitations.map((lim, idx) => (

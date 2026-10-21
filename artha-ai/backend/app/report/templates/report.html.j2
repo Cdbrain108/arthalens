@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ArthaLens AI Institutional Research Brief</title>
+<title>Artha AI Stock Research Dossier</title>
 <style>
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm 10mm 10mm;
+    margin: 8.5mm 10mm 10mm 10mm;
     @top-center { content: none; }
     @bottom-center { content: none; }
   }
@@ -18,8 +18,8 @@
     background: #ffffff;
     margin: 0;
     padding: 0;
-    font-size: 7.0pt;
-    line-height: 1.28;
+    font-size: 7.25pt;
+    line-height: 1.30;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -840,12 +840,12 @@
       <div class="brand-logo-fallback">⯁</div>
     {% endif %}
     <div>
-      <div class="brand-title">ArthaLens AI</div>
-      <div class="brand-sub">Evidence-First Autonomous Equity Research &amp; Fiduciary Intelligence</div>
+      <div class="brand-title">Artha AI</div>
+      <div class="brand-sub">Evidence-First Autonomous Stock Research &amp; Valuation Intelligence</div>
     </div>
   </div>
   <div class="brand-masthead-right">
-    <div class="masthead-badge">INSTITUTIONAL EQUITY BRIEF · AUDIT GRADE</div>
+    <div class="masthead-badge">EQUITY RESEARCH DOSSIER · AUDIT GRADE</div>
     <div class="masthead-meta">Date: 2026-10-14 · Primary Statutory Exchange Filings</div>
   </div>
 </div>
@@ -1021,7 +1021,7 @@
       <div class="market-card-top">
         <div>
           <span class="role-badge" style="font-size: 5.6pt;">★ {{ c.role_badge or 'INVESTMENT PERSONA' }}</span>
-          <div style="font-size: 6.8pt; font-weight: 800; color: #1e3a8a; margin-top: 1px;">{{ c.investment_role or 'Institutional Compounder' }}</div>
+          <div style="font-size: 6.8pt; font-weight: 800; color: #1e3a8a; margin-top: 1px;">{{ c.investment_role or 'Long-Term Compounder' }}</div>
         </div>
         <div class="action-pill" style="font-size: 5.6pt;">{{ c.action_stance or 'ACCUMULATE ON DIPS' }}</div>
       </div>
@@ -1072,14 +1072,14 @@
     <div class="sec-num-title">
       <span class="sec-title-text">Core Investment Thesis &amp; Strategic Pillars Rubric</span>
     </div>
-    <span class="sec-sub-tag">• Institutional Research Framework</span>
+    <span class="sec-sub-tag">• Strategic Research Framework</span>
   </div>
   <table class="investment-diff-table">
     <thead>
       <tr>
         <th style="width: 22%;">Strategic Pillar</th>
         <th style="width: 26%;">Audited Fundamental Metric</th>
-        <th style="width: 38%;">Institutional Analysis &amp; Analytical Context</th>
+        <th style="width: 38%;">Strategic Analysis &amp; Analytical Context</th>
         <th style="width: 14%; text-align: center;">Pillar Status</th>
       </tr>
     </thead>
@@ -1138,8 +1138,8 @@
 <!-- PAGE 2: MULTIPLES MATRIX, QUARTERLY PROGRESSION & VALUATION         -->
 <!-- =================================================================== -->
 <div class="running-header-strip">
-  <div class="running-header-left">ArthaLens AI Institutional Research | {{ c.get('name') or c.get('ticker') or 'Institutional Peer Benchmark' }} (Multiples Audit &amp; Valuation Sensitivity)</div>
-  <div class="running-header-right">Page 2 · Fundamental Core &amp; Valuation Scenarios</div>
+  <div class="running-header-left">Artha AI Research | {% if is_comp %}{{ c.get('comparison_title') or (comp_list|map(attribute='ticker')|join(' vs ')) or 'Peer Analysis' }}{% else %}{{ c.get('name') or c.get('ticker') or 'Equity Research' }}{% endif %} (Fundamentals &amp; Growth Drivers)</div>
+  <div class="running-header-right">Page 2 · Fundamental Core, Scenarios &amp; Dialectic</div>
 </div>
 
 <div class="sec-header">
@@ -1253,7 +1253,7 @@
         <th style="width: 25%;">Measured Ratio</th>
         <th style="width: 15%; text-align: right;">Reported Value</th>
         <th style="width: 15%; text-align: center;">Verdict Tag</th>
-        <th style="width: 45%;">Institutional Meaning &amp; Formula</th>
+        <th style="width: 45%;">Metric Meaning &amp; Formula</th>
       </tr>
     </thead>
     <tbody>
@@ -1305,9 +1305,9 @@
 {% endif %}
 
 <div class="reading-guide">
-  <div class="reading-guide-title">[I] Dual Reading Guide (Beginner &amp; Institutional Expert)</div>
+  <div class="reading-guide-title">[I] Dual Reading Guide (Beginner &amp; Advanced Investor)</div>
   <div><strong>Beginner Reading Guide:</strong> {% if 'bank' in (c.name or '')|lower or 'bank' in (c.ticker or '')|lower or (is_comp and cv.winner_ticker in ['HDFCBANK', 'ICICIBANK', 'SBIN', 'KOTAKBANK']) %}Net Interest Margin (NIM) measures how profitably the bank lends money compared to what it pays depositors. Return on Assets (ROA &gt; 2.0%) shows strong management efficiency. High Capital Adequacy (&gt;16% CRAR) and low bad loans (Net NPA &lt; 0.5%) guarantee high financial safety.{% else %}Operating margin (OPM) shows how many rupees of operating profit the company keeps from every ₹100 of revenue. Return on Equity (ROE) measures how well management turns shareholder capital into profit. Low debt (&lt; 0.3x) means high balance-sheet safety.{% endif %}</div>
-  <div><strong>Institutional Context:</strong> Cross-peer operational benchmarking isolates fixed-cost absorption efficiency, underwriting spread defense, and capital return discipline across reporting periods.</div>
+  <div><strong>Fundamental Context:</strong> Cross-peer operational benchmarking isolates fixed-cost absorption efficiency, underwriting spread defense, and capital return discipline across reporting periods.</div>
 </div>
 
 <!-- Section 02: Audited Quarterly Trajectory -->
@@ -1440,24 +1440,14 @@
 <div class="reading-guide" style="margin-bottom: 0;">
   <div class="reading-guide-title">[I] How to Interpret Valuation Scenarios</div>
   <div><strong>Beginner Guide:</strong> This table does not predict the future price. It answers: <em>"If the company continues to earn the same profit, what would the stock be worth if investors become very fearful (Gloomy) or very optimistic (Peak)?"</em></div>
-  <div><strong>Institutional Context:</strong> Mechanical sensitivity isolates equity multiple compression risk against multiple expansion upside, calibrating margin of safety relative to historical cycle bands.</div>
-</div>
-
-<div class="page-break"></div>
-
-<!-- =================================================================== -->
-<!-- PAGE 3: EVIDENCE BALANCE, ACTION FRAMEWORK, MONITORING & DEDUCTIONS -->
-<!-- =================================================================== -->
-<div class="running-header-strip">
-  <div class="running-header-left">ArthaLens AI Institutional Research | {{ c.get('name') or c.get('ticker') or 'Institutional Peer Benchmark' }} (Thematic Drivers &amp; Action Framework)</div>
-  <div class="running-header-right">Page 3 · Adversarial Dialectic &amp; Monitoring</div>
+  <div><strong>Valuation Context:</strong> Mechanical sensitivity isolates equity multiple compression risk against multiple expansion upside, calibrating margin of safety relative to historical cycle bands.</div>
 </div>
 
 <!-- Section 04: Growth Drivers vs Vulnerabilities (NO ANIMAL ICONS) -->
 <div class="sec-header">
   <div class="sec-num-title">
     <span class="sec-num-badge">04</span>
-    <span class="sec-title-text">Institutional Evidence Balance: Growth Drivers vs Thesis Vulnerabilities</span>
+    <span class="sec-title-text">Evidence Balance: Strategic Growth Drivers vs Downside Vulnerabilities</span>
   </div>
   <span class="sec-sub-tag">• Dialectical Analysis</span>
 </div>
@@ -1499,6 +1489,18 @@
     </ul>
   </div>
 </div>
+
+<div class="page-break"></div>
+
+<!-- =================================================================== -->
+<!-- PAGE 3: ACTION FRAMEWORK, INVESTOR GUIDANCE, MONITORING & DEDUCTIONS -->
+<!-- =================================================================== -->
+<div class="running-header-strip">
+  <div class="running-header-left">Artha AI Research | {% if is_comp %}{{ c.get('comparison_title') or (comp_list|map(attribute='ticker')|join(' vs ')) or 'Peer Analysis' }}{% else %}{{ c.get('name') or c.get('ticker') or 'Equity Research' }}{% endif %} (Action Framework &amp; Watchlist)</div>
+  <div class="running-header-right">Page 3 · Portfolio Actions &amp; Reasoned Deductions</div>
+</div>
+
+
 
 <!-- Section 05: Situational Investment Action Framework (Hold / Reduce / Sell) -->
 <div class="sec-header">
@@ -1557,32 +1559,110 @@
   </div>
   <span class="sec-sub-tag">• Portfolio Action Rubric</span>
 </div>
+{% if is_comp and comp_list|length >= 2 %}
 <table class="guidance-table">
   <thead>
     <tr>
-      <th style="width: 36%;">Your Situation / Investor Profile</th>
-      <th style="width: 64%;">Actionable Guidance &amp; Analytical Reasoning</th>
+      <th style="width: 23%;">Your Situation / Profile</th>
+      {% for item in comp_list %}
+        <th style="width: {{ (54 / comp_list|length)|round }}%;">
+          Action for {{ item.ticker }} ({{ item.name|truncate(18, True, '') }})
+        </th>
+      {% endfor %}
+      <th style="width: 23%;">Comparative Allocation Stance</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><strong>I already own these shares and have a 3–5 year horizon</strong></td>
-      <td><strong style="color: #15803d;">Hold is defensible.</strong> Fundamental cash generation and balance sheets (&lt;0.25x D/E) remain solid; panic selling at cyclical sentiment pullbacks is unwarranted.</td>
+      <td><strong>Already own shares (3–5 yr horizon)</strong></td>
+      {% for item in comp_list %}
+        <td>
+          <strong style="color: #15803d;">{{ item.ticker }}: {{ item.action_stance or 'HOLD' }}.</strong>
+          {{ item.investment_difference or ('Defended by conservative leverage (' ~ (item.de or '0.1x D/E') ~ ') and resilient OPM (' ~ (item.opm or '20%+') ~ '). Panic selling at sentiment troughs is unwarranted.') }}
+        </td>
+      {% endfor %}
+      <td>
+        <strong style="color: #15803d;">Hold both positions.</strong> Core cash generation across both franchises remains healthy. If rebalancing, overweight {{ comp_list[0].ticker }} for defensive margin preservation.
+      </td>
     </tr>
     <tr>
-      <td><strong>This position exceeds &gt;15–20% of my total portfolio or I need cash soon</strong></td>
-      <td><strong style="color: #b45309;">Consider trimming/rebalancing.</strong> Prudent portfolio sizing dictates managing concentration limits rather than dumping all shares.</td>
+      <td><strong>Deploying new capital today</strong></td>
+      {% for item in comp_list %}
+        <td>
+          <strong style="color: #2563eb;">{{ item.ticker }}: Stagger in 2–3 installments.</strong>
+          Accumulate during valuation pullbacks into technical support. Avoid lump-sum entry at current cycle multiples.
+        </td>
+      {% endfor %}
+      <td>
+        <strong style="color: #2563eb;">Staggered Accumulation:</strong> Deploy 60% of new capital into {{ comp_list[0].ticker }} (superior margin defense &amp; lower churn) and 40% into {{ comp_list[1].ticker }} on confirmed margin turnaround.
+      </td>
     </tr>
     <tr>
-      <td><strong>I want to deploy new money today</strong></td>
-      <td><strong style="color: #2563eb;">Stagger purchases (Do not lump-sum).</strong> Accumulate in 2–3 installments during temporary pullbacks into support zones.</td>
+      <td><strong>Position exceeds &gt;15–20% or need cash soon</strong></td>
+      {% for item in comp_list %}
+        <td>
+          <strong style="color: #b45309;">{{ item.ticker }}: Trim to target weight.</strong>
+          Rebalance to preserve prudent single-stock risk caps (&lt;10–12%) without liquidating core compounding base.
+        </td>
+      {% endfor %}
+      <td>
+        <strong style="color: #b45309;">Rebalancing Protocol:</strong> Trim {{ comp_list[1].ticker }} first if its higher volatility conflicts with near-term liquidity requirements.
+      </td>
     </tr>
     <tr>
-      <td><strong>Operating margins compress persistently below baselines or clients leave</strong></td>
-      <td><strong style="color: #b91c1c;">Re-evaluate / Exit.</strong> Fundamental investment thesis breaks if pricing power dissolves or margins contract sequentially for 2+ quarters.</td>
+      <td><strong>Thesis Breakdown / Exit Trigger (When to Sell)</strong></td>
+      {% for item in comp_list %}
+        <td>
+          <strong style="color: #b91c1c;">{{ item.ticker }} Exit:</strong>
+          Re-evaluate/exit if operating margin slips persistently below baseline ({{ item.opm or '20%' }}) for 2+ quarters or client attrition accelerates.
+        </td>
+      {% endfor %}
+      <td>
+        <strong style="color: #b91c1c;">Exit Priority:</strong> Re-evaluate exposure if sequential organic volume growth contracts for two consecutive quarters across either franchise.
+      </td>
     </tr>
   </tbody>
 </table>
+{% else %}
+<table class="guidance-table">
+  <thead>
+    <tr>
+      <th style="width: 32%;">Your Situation / Investor Profile</th>
+      <th style="width: 68%;">Actionable Guidance &amp; Analytical Reasoning for {{ c.name or c.ticker or 'Evaluated Stock' }} ({{ c.ticker or 'TCS' }})</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>I already own {{ c.ticker or 'shares' }} and have a 3–5 year horizon</strong></td>
+      <td>
+        <strong style="color: #15803d;">Hold {{ c.ticker or '' }} is defensible.</strong>
+        Fundamental cash generation and balance sheet ({{ c.de or '<0.25x D/E' }}) remain solid; operating margins ({{ c.opm or '20%+' }}) defend against cyclical downswings. Panic selling at cyclical sentiment pullbacks is unwarranted.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>I want to deploy new money into {{ c.ticker or 'this stock' }} today</strong></td>
+      <td>
+        <strong style="color: #2563eb;">Stagger {{ c.ticker or '' }} purchases (Do not lump-sum).</strong>
+        Accumulate in 2–3 installments during temporary pullbacks into valuation support zones rather than chasing short-term market momentum.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>{{ c.ticker or 'Position' }} exceeds &gt;15–20% of my total portfolio or I need cash soon</strong></td>
+      <td>
+        <strong style="color: #b45309;">Consider trimming/rebalancing {{ c.ticker or '' }}.</strong>
+        Prudent portfolio sizing dictates managing concentration limits rather than dumping all shares at once.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Operating margins compress persistently below baselines or clients leave</strong></td>
+      <td>
+        <strong style="color: #b91c1c;">Re-evaluate / Exit {{ c.ticker or '' }}.</strong>
+        Fundamental investment thesis breaks if pricing power dissolves or margins contract sequentially for 2+ consecutive quarters.
+      </td>
+    </tr>
+  </tbody>
+</table>
+{% endif %}
 
 <!-- Section 07: Quarterly Monitoring Indicators -->
 <div class="sec-header">
@@ -1643,8 +1723,8 @@
 <!-- PAGE 4: SPECIALIST MULTI-AGENT GRID, CITATIONS & GOVERNANCE         -->
 <!-- =================================================================== -->
 <div class="running-header-strip">
-  <div class="running-header-left">ArthaLens AI Institutional Research | Specialist Multi-Agent Audit &amp; Primary Sources</div>
-  <div class="running-header-right">Page 4 · Autonomous Intelligence &amp; Fiduciary Governance</div>
+  <div class="running-header-left">Artha AI Research | Specialist Multi-Agent Audit &amp; Primary Sources</div>
+  <div class="running-header-right">Page 4 · Autonomous Intelligence &amp; Governance</div>
 </div>
 
 <!-- Section 09: 9 Specialist Agents Dense Audit Grid -->
@@ -1782,7 +1862,7 @@
 <div class="sec-header">
   <div class="sec-num-title">
     <span class="sec-num-badge">12</span>
-    <span class="sec-title-text">Institutional Research Governance &amp; Verification Protocol</span>
+    <span class="sec-title-text">Research Governance &amp; Verification Protocol</span>
   </div>
   <span class="sec-sub-tag">• Fiduciary Verification Standard</span>
 </div>
@@ -1815,7 +1895,7 @@
 </table>
 
 <div style="border-top: 1px solid #cbd5e1; padding-top: 3px; font-size: 5.8pt; color: #64748b; line-height: 1.22; text-align: justify;">
-  <strong>Fiduciary Governance Standard:</strong> This institutional research brief was synthesized deterministically by ArthaLens AI through 9 isolated specialist agents, grounded by evidence verification against primary exchange feeds and statutory audited filings. All ratios and calculations are evaluated deterministically in Python; zero model-generated price target hallucinations are permitted. This brief is strictly an evidence-first analytical decision-support aid. It does not constitute personalized financial, legal, or tax advice. Past operating performance does not guarantee future market returns. Consult a licensed SEBI/FINRA investment advisor before committing capital.
+  <strong>Fiduciary Governance Standard:</strong> This research dossier was synthesized deterministically by ArthaLens AI through 9 isolated specialist agents, grounded by evidence verification against primary exchange feeds and statutory audited filings. All ratios and calculations are evaluated deterministically in Python; zero model-generated price target hallucinations are permitted. This brief is strictly an evidence-first analytical decision-support aid. It does not constitute personalized financial, legal, or tax advice. Past operating performance does not guarantee future market returns. Consult a licensed SEBI/FINRA investment advisor before committing capital.
 </div>
 
 </body>
