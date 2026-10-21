@@ -67,6 +67,22 @@ export function createResearchJob(client, onChange, schedule = setTimeout, unsch
     void poll()
   }
 
+  // Auto-resume polling immediately when user switches back to browser tab from another mobile app
+  const handleForeground = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      if (state.job && !isTerminalJob(state.job)) {
+        unschedule(timer)
+        timer = null
+        monitor(state.job)
+      }
+    }
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleForeground)
+    window.addEventListener('focus', handleForeground)
+  }
+
   return {
     async start(query) {
       query = query.trim()
@@ -109,6 +125,10 @@ export function createResearchJob(client, onChange, schedule = setTimeout, unsch
     },
     dispose() {
       invalidate()
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleForeground)
+        window.removeEventListener('focus', handleForeground)
+      }
       state = initialResearchState
     },
   }

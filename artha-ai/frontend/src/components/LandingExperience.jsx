@@ -871,6 +871,7 @@ function Registry() {
 
 export default function LandingExperience({
   onRun,
+  job,
   running,
   submitting,
   query,
@@ -1371,6 +1372,59 @@ export default function LandingExperience({
           <div className="be-container">
             <div className="be-hero-grid">
               <div className="be-hero-copy">
+                {/* Active Research Notification Banner */}
+                {(running || submitting) && (
+                  <div
+                    onClick={onResume}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#122822] to-emerald-950/80 border border-emerald-500/50 p-4 shadow-[0_4px_24px_rgba(16,185,129,0.25)] backdrop-blur-xl cursor-pointer hover:border-emerald-400 transition animate-pulse mb-4 text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="relative flex h-3 w-3 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-white tracking-tight truncate">
+                          Artha AI is actively working!
+                        </p>
+                        <p className="text-[11.5px] text-emerald-300 truncate">
+                          Your multi-agent report is getting generated... Click to return to workspace
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0 rounded-lg bg-emerald-500/25 border border-emerald-500/40 px-3 py-1.5 text-[12px] font-bold text-emerald-300">
+                      <span>Return to Workspace</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Generated Report Ready Banner */}
+                {job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report) && (
+                  <div
+                    onClick={onResume}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-4 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl cursor-pointer hover:border-emerald-300 transition mb-4 text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                        <Sparkles size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-white tracking-tight truncate">
+                          Your Research Report is Ready!
+                        </p>
+                        <p className="text-[11.5px] text-emerald-300 truncate">
+                          Autonomous synthesis completed for {job.query || 'your inquiry'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0 rounded-lg bg-emerald-500 py-1.5 px-3.5 text-[12px] font-bold text-slate-950 shadow-md">
+                      <span>View Report in Workspace</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </div>
+                )}
+
                 <p className="be-hero-pill">
                   <span className="be-status-dot green live" />
                   Artha AI · Autonomous Multi-Agent Stock Research Platform

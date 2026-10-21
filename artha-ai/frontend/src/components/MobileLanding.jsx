@@ -126,6 +126,7 @@ function useTypewriter(phrases, { typingSpeed = 38, deletingSpeed = 20, pauseDel
 
 export default function MobileLanding({
   onRun,
+  job,
   running,
   submitting,
   query = '',
@@ -551,6 +552,59 @@ export default function MobileLanding({
 
       {/* ════ PAGE 1: MOBILE HERO & COMMAND CENTER ════ */}
       <section className="mobile-page-section hero-page" id="m-hero">
+        {/* Prominent Active Research Prompt Banner */}
+        {(running || submitting) && (
+          <div
+            onClick={onResume}
+            className="w-full flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-950/85 via-[#132822] to-emerald-950/85 border border-emerald-500/50 p-3.5 shadow-[0_4px_24px_rgba(16,185,129,0.3)] backdrop-blur-xl cursor-pointer active:scale-98 transition animate-pulse mb-3 text-left"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="relative flex h-3 w-3 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-bold text-white tracking-tight truncate">
+                  Artha AI is actively working!
+                </p>
+                <p className="text-[11px] text-emerald-300 truncate">
+                  Your report is getting generated... Tap to return to workspace
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0 rounded-lg bg-emerald-500/25 border border-emerald-500/40 px-2.5 py-1 text-[11px] font-bold text-emerald-300">
+              <span>Return</span>
+              <ArrowRight size={13} />
+            </div>
+          </div>
+        )}
+
+        {/* Prominent Generated Report Ready Banner */}
+        {job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report) && (
+          <div
+            onClick={onResume}
+            className="w-full flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-3.5 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl cursor-pointer active:scale-98 transition mb-3 text-left"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                <Sparkles size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-bold text-white tracking-tight truncate">
+                  Your Research Report is Ready!
+                </p>
+                <p className="text-[11px] text-emerald-300 truncate">
+                  Institutional synthesis completed for {job.query || 'your stock'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0 rounded-lg bg-emerald-500 py-1 px-2.5 text-[11px] font-bold text-slate-950 shadow-sm">
+              <span>View Report</span>
+              <ArrowRight size={13} />
+            </div>
+          </div>
+        )}
+
         <div className="mobile-hero-badge">
           <span className="live-pulse" />
           <span>AUTONOMOUS MULTI-AGENT PLATFORM</span>

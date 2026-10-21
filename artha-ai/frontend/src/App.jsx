@@ -1,21 +1,20 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import LandingExperience from './components/LandingExperience'
-import MobileLanding from './components/MobileLanding'
-import Login from './components/Login'
-import { useResearchJob } from './hooks/useResearchJob'
+import { api } from './api/client'
 import { isTerminalJob } from './hooks/researchJob'
 import { useAuth } from './hooks/useAuth'
 import { useIsMobile } from './hooks/useIsMobile'
-import { api } from './api/client'
+import { useResearchJob } from './hooks/useResearchJob'
+import LandingExperience from './components/LandingExperience'
+import MobileLanding from './components/MobileLanding'
+import Login from './components/Login'
 import {
-  loadSessions,
-  saveSession,
-  mergeSessions,
-  deleteSession,
-  loadUserSessions,
-  saveChatQuery,
   canGuestGenerateReport,
+  deleteSession,
+  loadSessions,
+  loadUserSessions,
+  mergeSessions,
   recordGuestReportUsage,
+  saveSession,
 } from './storage/chatSessions'
 import { detectQueryType } from './utils/queryRouter'
 
@@ -56,6 +55,69 @@ export default function App() {
     window.addEventListener('hashchange', changed)
     return () => window.removeEventListener('hashchange', changed)
   }, [])
+
+  // Persist active running job so mobile tab discard/reload or app switch never loses the session
+  useEffect(() => {
+    if (job && !isTerminalJob(job)) {
+      try {
+        localStorage.setItem(
+          'artha_active_job',
+          JSON.stringify({
+            job_id: job.job_id,
+            query: query || job.query || '',
+            savedAt: Date.now(),
+          })
+        )
+      } catch {}
+    } else if (job && isTerminalJob(job)) {
+      try {
+        localStorage.removeItem('artha_active_job')
+      } catch {}
+    }
+  }, [job, query])
+
+  // Restore running research on startup or mobile tab reload
+  useEffect(() => {
+    let cancelled = false
+    try {
+      const savedActive = localStorage.getItem('artha_active_job')
+      if (savedActive) {
+        const parsed = JSON.parse(savedActive)
+        if (parsed?.job_id && Date.now() - (parsed.savedAt || 0) < 2 * 60 * 60 * 1000) {
+          if (parsed.query) setQuery(parsed.query)
+          api
+            .getStatus(parsed.job_id)
+            .then((statusSnapshot) => {
+              if (cancelled) return
+              if (statusSnapshot && statusSnapshot.job_id) {
+                restore(statusSnapshot)
+                navigate('chat')
+              }
+            })
+            .catch(() => {
+              try {
+                localStorage.removeItem('artha_active_job')
+              } catch {}
+            })
+        }
+      }
+    } catch {}
+    return () => {
+      cancelled = true
+    }
+  }, [restore, navigate])
+
+  // Guard beforeunload during active generation
+  useEffect(() => {
+    if (!running) return
+    const handler = (e) => {
+      e.preventDefault()
+      e.returnValue = 'Artha AI is actively generating your report. Are you sure you want to leave?'
+      return e.returnValue
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [running])
 
   // When authenticated user changes, load remote Firestore conversations
   useEffect(() => {
@@ -149,6 +211,9 @@ export default function App() {
 
   const handleNewResearch = useCallback(() => {
     if (running) return
+    try {
+      localStorage.removeItem('artha_active_job')
+    } catch {}
     reset()
     setQuery('')
     navigate('landing')
@@ -231,6 +296,7 @@ export default function App() {
       {isMobile ? (
         <MobileLanding
           onRun={handleStartResearch}
+          job={job}
           running={running}
           submitting={submitting}
           query={query}
@@ -246,6 +312,7 @@ export default function App() {
       ) : (
         <LandingExperience
           onRun={handleStartResearch}
+          job={job}
           running={running}
           submitting={submitting}
           query={query}

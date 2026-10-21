@@ -1726,6 +1726,10 @@
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
+  .studio-split[data-running='true'] {
+    padding-bottom: 0 !important;
+  }
+
   .studio-left-pane,
   .studio-right-pane {
     padding-bottom: 0 !important;

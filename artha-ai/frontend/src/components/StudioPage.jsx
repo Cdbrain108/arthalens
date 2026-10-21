@@ -580,12 +580,33 @@ export default function StudioPage({
     }
   }
 
+  const [showLeaveWarning, setShowLeaveWarning] = useState(false)
+  const [pendingAction, setPendingAction] = useState(null)
+
+  const handleGuardedBack = () => {
+    if (running || submitting) {
+      setPendingAction('back')
+      setShowLeaveWarning(true)
+    } else {
+      onBackToStart?.()
+    }
+  }
+
+  const handleGuardedNewResearch = () => {
+    if (running || submitting) {
+      setPendingAction('new')
+      setShowLeaveWarning(true)
+    } else {
+      onNewResearch?.()
+    }
+  }
+
   // Sidebar nav targets. The landing page anchors live on the landing route, so
   // anything other than 'chat' has to leave the studio first.
   const handleNavSelect = (section) => {
     setSidebarOpen(false)
     if (section === 'chat') return
-    onBackToStart?.()
+    handleGuardedBack()
     if (section && section !== 'landing') {
       // Let the landing route mount before asking it to scroll.
       setTimeout(() => {
@@ -789,7 +810,7 @@ export default function StudioPage({
         onDeleteSession={onDeleteSession}
         onNewChat={() => {
           setSidebarOpen(false)
-          onNewResearch?.()
+          handleGuardedNewResearch()
         }}
         user={user}
         onLogout={onLogout}
@@ -806,8 +827,8 @@ export default function StudioPage({
         isStockQuery={isStockQuery}
         researchMode={researchMode}
         setResearchMode={setResearchMode}
-        onBackToStart={onBackToStart}
-        onNewResearch={onNewResearch}
+        onBackToStart={handleGuardedBack}
+        onNewResearch={handleGuardedNewResearch}
         running={running}
         pdfUrl={pdfUrl}
         user={user}
@@ -819,7 +840,10 @@ export default function StudioPage({
       />
 
       {/* 2-column split workspace (stacks into tabs on mobile) */}
-      <div className="studio-split flex flex-1 overflow-hidden">
+      <div
+        className="studio-split flex flex-1 overflow-hidden"
+        data-running={String(running || submitting)}
+      >
 
         {/* ══ LEFT COLUMN: Chat & Agent Stream ══ */}
         {/* Width, border and the mobile show/hide of `data-active` are owned by
@@ -1009,44 +1033,63 @@ export default function StudioPage({
             <div ref={chatScrollRef} />
           </div>
 
-          {/* Studio Chat Input Bar — docked at the bottom for standard chatbot UX */}
-          <div className="flex flex-col border-t border-white/10 bg-[#181a1f]/95 backdrop-blur-xl">
-            {isDone && (
-              <div className="flex items-center justify-between gap-2 px-3.5 py-2 border-b border-white/5 bg-[#14161b] text-[11.5px]">
-                <div className="flex items-center gap-2 text-emerald-400 min-w-0">
-                  <Sparkles size={13} className="shrink-0" />
-                  <span className="truncate text-slate-300 font-medium">
-                    Evidence dossier &amp; PDF attached · Ask anything about this report
-                  </span>
+          {/* Studio Chat Input Bar — visible when idle/done; replaced by slim status strip during running so reasoning cards have full screen height on mobile */}
+          {!running && !submitting ? (
+            <div className="flex flex-col border-t border-white/10 bg-[#181a1f]/95 backdrop-blur-xl">
+              {isDone && (
+                <div className="flex items-center justify-between gap-2 px-3.5 py-2 border-b border-white/5 bg-[#14161b] text-[11.5px]">
+                  <div className="flex items-center gap-2 text-emerald-400 min-w-0">
+                    <Sparkles size={13} className="shrink-0" />
+                    <span className="truncate text-slate-300 font-medium">
+                      Evidence dossier &amp; PDF attached · Ask anything about this report
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('copilot')
+                      setMobilePane('report')
+                    }}
+                    className="flex items-center gap-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition shrink-0 cursor-pointer"
+                  >
+                    <span>Open Deep Q&A</span>
+                    <ChevronRight size={12} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewMode('copilot')
-                    setMobilePane('report')
-                  }}
-                  className="flex items-center gap-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition shrink-0 cursor-pointer"
-                >
-                  <span>Open Deep Q&A</span>
-                  <ChevronRight size={12} />
-                </button>
+              )}
+              <StudioChatInputBar
+                value={followupText}
+                onValueChange={setFollowupText}
+                onSubmit={handleSubmit}
+                running={running || askingReport || isGenerating}
+                inputRef={inputRef}
+                placeholder={
+                  isDone
+                    ? 'Ask anything about this report, test assumptions, valuation...'
+                    : copilotMessages.length <= 1
+                    ? 'Ask anything: PE ratio, compare stocks, DCF...'
+                    : 'Ask follow-up, test assumptions, request DCF...'
+                }
+              />
+            </div>
+          ) : (
+            <div className="studio-running-status-bar flex items-center justify-between px-3.5 py-2 border-t border-white/10 bg-[#14161b]/95 text-xs text-slate-400 shrink-0">
+              <div className="flex items-center gap-2 text-emerald-400 font-medium truncate">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span className="truncate">Auditing... 11 specialists analyzing filings</span>
               </div>
-            )}
-            <StudioChatInputBar
-              value={followupText}
-              onValueChange={setFollowupText}
-              onSubmit={handleSubmit}
-              running={running || askingReport || isGenerating}
-              inputRef={inputRef}
-              placeholder={
-                isDone
-                  ? 'Ask anything about this report, test assumptions, valuation...'
-                  : copilotMessages.length <= 1
-                  ? 'Ask anything: PE ratio, compare stocks, DCF...'
-                  : 'Ask follow-up, test assumptions, request DCF...'
-              }
-            />
-          </div>
+              <button
+                type="button"
+                disabled
+                className="text-[11px] font-mono text-slate-500 shrink-0 cursor-not-allowed opacity-70"
+              >
+                Auditing...
+              </button>
+            </div>
+          )}
         </section>
 
         {/* ══ RIGHT COLUMN: Preview / Artha Copilot ══ */}
@@ -1316,51 +1359,40 @@ export default function StudioPage({
     </section>
   </div>
 
-  {/* Mobile-only pane switcher. Three explicit destinations, so a finished run
-      never strands the agent stream behind a Copilot button. */}
-  <div className="studio-mobile-tabs" role="group" aria-label="Workspace views">
-    <button
-      type="button"
-      aria-pressed={mobilePane === 'chat'}
-      onClick={() => setMobilePane('chat')}
-      className="flex items-center justify-center gap-1.5 font-medium transition-all"
-    >
-      <Bot size={15} className={mobilePane === 'chat' ? 'text-emerald-400' : 'text-slate-400'} />
-      <span>Copilot</span>
-    </button>
-    <button
-      type="button"
-      aria-pressed={mobilePane === 'report' && viewMode === 'report'}
-      onClick={() => {
-        setViewMode('report')
-        setMobilePane('report')
-      }}
-      className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
-        mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
-      }`}
-      title={isDone ? 'View completed research report' : 'View report preview & pipeline'}
-    >
-      <FileText size={15} className={mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400' : 'text-slate-400'} />
-      <span>{isDone ? 'Report' : (running || submitting) ? 'Auditing...' : 'Report'}</span>
-      {(running || submitting) && (
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-      )}
-    </button>
-    {isDone && (
+  {/* Mobile-only pane switcher: rendered ONLY after report is generated so running research has 100% viewport height */}
+  {isDone && (
+    <div className="studio-mobile-tabs" role="group" aria-label="Workspace views">
       <button
         type="button"
-        aria-pressed={mobilePane === 'report' && viewMode === 'copilot'}
+        aria-pressed={mobilePane === 'report' && viewMode === 'report'}
         onClick={() => {
-          setViewMode('copilot')
+          setViewMode('report')
           setMobilePane('report')
         }}
-        className="flex items-center justify-center gap-1.5 font-medium transition-all"
+        className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
+          mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
+        }`}
+        title="View completed research report"
       >
-        <Sparkles size={15} className={mobilePane === 'report' && viewMode === 'copilot' ? 'text-emerald-400' : 'text-slate-400'} />
-        <span>Deep Q&A</span>
+        <FileText size={15} className={mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400' : 'text-slate-400'} />
+        <span>Report Dossier</span>
       </button>
-    )}
-  </div>
+      <button
+        type="button"
+        aria-pressed={mobilePane === 'chat' || (mobilePane === 'report' && viewMode === 'copilot')}
+        onClick={() => {
+          setViewMode('copilot')
+          setMobilePane('chat')
+        }}
+        className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
+          mobilePane === 'chat' || (mobilePane === 'report' && viewMode === 'copilot') ? 'text-emerald-400 font-semibold' : 'text-slate-400'
+        }`}
+      >
+        <Sparkles size={15} className={mobilePane === 'chat' || (mobilePane === 'report' && viewMode === 'copilot') ? 'text-emerald-400' : 'text-slate-400'} />
+        <span>Ask Copilot / Q&A</span>
+      </button>
+    </div>
+  )}
 
       {toast && (
         <div className="studio-toast" role="status" aria-live="polite">
@@ -1374,6 +1406,57 @@ export default function StudioPage({
           pdfUrl={pdfUrl}
           onClose={() => setShowPdfModal(false)}
         />
+      )}
+
+      {/* Active Research Back Navigation Guard Warning */}
+      {showLeaveWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md rounded-2xl border border-emerald-500/40 bg-[#16181e] p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.7)] space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                <Sparkles size={22} className="animate-pulse" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-bold text-white tracking-tight">
+                  Artha AI is actively working!
+                </h3>
+                <p className="text-[11.5px] text-emerald-400 font-mono">
+                  Autonomous Multi-Agent Diligence
+                </p>
+              </div>
+            </div>
+
+            <p className="text-[13px] leading-relaxed text-slate-300">
+              Please stay with us — your institutional report is getting generated! 
+              Our 11 autonomous specialist agents are auditing regulatory filings, calculating deterministic valuation metrics, and stress-testing operational risks.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLeaveWarning(false)
+                  setPendingAction(null)
+                }}
+                className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2.5 px-4 text-center text-[13px] font-bold text-white shadow-lg shadow-emerald-500/25 hover:brightness-110 active:scale-95 transition cursor-pointer"
+              >
+                Stay in Workspace
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLeaveWarning(false)
+                  if (pendingAction === 'new') onNewResearch?.()
+                  else onBackToStart?.()
+                  setPendingAction(null)
+                }}
+                className="rounded-xl border border-white/10 bg-white/5 py-2.5 px-4 text-center text-[12.5px] font-medium text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                Go to Home anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
