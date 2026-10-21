@@ -111,7 +111,10 @@ export default function Login({ onLogin, onCancel }) {
     if (error) {
       setErr(error)
     } else if (user) {
-      onLogin?.(user)
+      setSuccessMsg(`Welcome, ${user.name || user.email || 'Researcher'}!`)
+      setTimeout(() => {
+        onLogin?.(user)
+      }, 200)
     }
   }
 

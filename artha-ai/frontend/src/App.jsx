@@ -167,9 +167,19 @@ export default function App() {
       <Login
         onLogin={() => {
           setAuthModalOpen(false)
-          navigate('landing')
+          if (query || job) {
+            navigate('chat')
+          } else {
+            navigate('landing')
+          }
         }}
-        onCancel={() => navigate('landing')}
+        onCancel={() => {
+          if (query || job) {
+            navigate('chat')
+          } else {
+            navigate('landing')
+          }
+        }}
       />
     )
   }

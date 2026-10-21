@@ -28,7 +28,14 @@ function extractDisplayName(firebaseUser) {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(GUEST_KEY) : null
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
   const [loading, setLoading] = useState(true)
 
   // Listen to remote Firebase Auth state changes
@@ -41,16 +48,28 @@ export function useAuth() {
       if (firebaseUser) {
         const u = {
           uid: firebaseUser.uid,
-          name: extractDisplayName(firebaseUser),
+          name: extractDisplayName(firebaseUser) || firebaseUser.displayName || '',
           email: firebaseUser.email || '',
           photoURL: firebaseUser.photoURL || null,
           guest: false,
           isFirebase: true,
           ts: Date.now(),
         }
+        try {
+          localStorage.setItem(GUEST_KEY, JSON.stringify(u))
+        } catch {}
         setUser(u)
       } else {
-        setUser(null)
+        // Only clear user if the active session was a Firebase session
+        setUser((prev) => {
+          if (prev?.isFirebase) {
+            try {
+              localStorage.removeItem(GUEST_KEY)
+            } catch {}
+            return null
+          }
+          return prev
+        })
       }
       setLoading(false)
     })
@@ -132,13 +151,16 @@ export function useAuth() {
     if (firebaseUser) {
       const u = {
         uid: firebaseUser.uid,
-        name: extractDisplayName(firebaseUser),
+        name: extractDisplayName(firebaseUser) || firebaseUser.displayName || 'Google Researcher',
         email: firebaseUser.email || '',
         photoURL: firebaseUser.photoURL || null,
         guest: false,
-        isFirebase: true,
+        isFirebase: Boolean(firebaseUser.getIdToken),
         ts: Date.now(),
       }
+      try {
+        localStorage.setItem(GUEST_KEY, JSON.stringify(u))
+      } catch {}
       setUser(u)
       return { user: u, error: null }
     }
