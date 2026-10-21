@@ -121,12 +121,35 @@ export default function ArthaReasoningBlock({
 }) {
   const activeQuery = query || job?.query || ''
 
+  const queryType = detectQueryType(activeQuery)
+  const isStockResearch = Boolean(
+    !isConversational && (
+      queryType === 'stock' ||
+      Boolean(job?.entities?.length) ||
+      (job && job.intent && job.intent !== 'conversational') ||
+      submitting ||
+      (job && job.status === 'running')
+    )
+  )
+
+  // Initial planning phase: user just launched research, Copilot is deconstructing & allocating specialists
+  const isPlanning = Boolean(
+    isStockResearch && (
+      submitting ||
+      (!job?.selected_agents || job.selected_agents.length === 0) ||
+      job?.current_node === 'analyze_query' ||
+      job?.current_node === 'create_plan' ||
+      job?.current_node === 'apply_routing_policy'
+    ) && !isDone
+  )
+
   // Determine if this is a conversational / educational query (0 specialist agents)
   const isConversationalMode = Boolean(
-    isConversational ||
-    job?.intent === 'conversational' ||
-    (job && Array.isArray(job.selected_agents) && job.selected_agents.length === 0) ||
-    (!job?.entities?.length && detectQueryType(activeQuery) === 'conversational')
+    !isStockResearch && !isPlanning && (
+      isConversational ||
+      job?.intent === 'conversational' ||
+      queryType === 'conversational'
+    )
   )
 
   // In conversational mode, keep collapsed by default to avoid cluttering mobile UI
@@ -165,24 +188,29 @@ export default function ArthaReasoningBlock({
 
   // Resolve active entity and specialists
   const entity = job?.entities?.[0]
-  const entityLabel = isConversationalMode
+  const entityLabel = isPlanning
+    ? 'Understanding Scope'
+    : isConversationalMode
     ? 'Concept Explainer'
     : entity?.ticker
     ? `${entity.ticker} (${entity.name || ''})`
     : entity?.name || activeQuery || 'Stock Query'
 
-  // Crucial: In conversational mode, zero agents are dispatched!
+  // Crucial: In conversational mode, zero agents are dispatched; in planning or running, show specialists!
   const selectedAgentKeys = isConversationalMode
     ? []
     : (job?.selected_agents && job.selected_agents.length > 0)
     ? job.selected_agents
-    : ['financial', 'valuation', 'risk', 'market', 'document']
+    : ['financial', 'valuation', 'risk', 'market', 'document', 'news']
 
   // Determine stage headline and progress percentage
   let stageTitle = 'Auditing valuation multiples, balance sheets & SEC filings...'
   let progressPct = 35
 
-  if (isConversationalMode) {
+  if (isPlanning) {
+    stageTitle = 'Understanding things · Copilot is thinking & assigning specialist agents...'
+    progressPct = 18
+  } else if (isConversationalMode) {
     if (isGenerating) {
       if (generationStep === 0) {
         stageTitle = 'Analyzing query intent & financial terminology...'
@@ -263,7 +291,9 @@ export default function ArthaReasoningBlock({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[12.5px] sm:text-[13px] font-bold text-white tracking-tight">
-                {isConversationalMode
+                {isPlanning
+                  ? 'Copilot is Thinking...'
+                  : isConversationalMode
                   ? 'Artha Copilot · Financial Intelligence'
                   : isDone
                   ? 'Artha AI Audit Verified'
@@ -274,11 +304,16 @@ export default function ArthaReasoningBlock({
                   {entityLabel}
                 </span>
               )}
-              {isConversationalMode && (
+              {isPlanning ? (
+                <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-semibold inline-flex items-center gap-1.5 animate-pulse">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping" />
+                  <span>Understanding Inquiry...</span>
+                </span>
+              ) : isConversationalMode ? (
                 <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
                   0 Agents Dispatched
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -345,7 +380,31 @@ export default function ArthaReasoningBlock({
       {/* ── Expandable Process Cockpit ── */}
       {expanded && (
         <div className="pt-2 border-t border-white/10 space-y-3 animate-fade-in text-[11.5px]">
-          {isConversationalMode ? (
+          {isPlanning ? (
+            /* Active Planning & Allocation Card (Copilot is Thinking) */
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 space-y-2 text-left animate-fade-in">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-amber-300 font-semibold text-[11.5px]">
+                  <Sparkles size={13} className="animate-spin text-amber-400" />
+                  <span>Copilot is Thinking · Understanding Things</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-semibold">
+                  Allocating Specialists
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Copilot is deconstructing the inquiry scope, validating regulatory filings (NSE/BSE/SEC), and dynamically assigning the required autonomous specialists.
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300">
+                  ⚡ Understanding Query Intent
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300">
+                  🛡️ Zero Hallucinations Policy
+                </span>
+              </div>
+            </div>
+          ) : isConversationalMode ? (
             /* Lightweight Conversational Concept Card (0 Agents Dispatched) */
             <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3 space-y-2 text-left">
               <div className="flex items-center justify-between gap-2">
@@ -397,7 +456,7 @@ export default function ArthaReasoningBlock({
                   const agentStatus = job?.agent_statuses?.[agentKey]
                   const isAgentCompleted = agentStatus === 'completed' || job?.completed_agents?.includes(agentKey) || isDone
                   const isAgentFailed = agentStatus === 'failed' || job?.failed_agents?.includes(agentKey)
-                  const isAgentActive = agentStatus === 'running' || (active && !isAgentCompleted && !isAgentFailed)
+                  const isAgentActive = !isPlanning && (agentStatus === 'running' || (active && !isAgentCompleted && !isAgentFailed))
 
                   return (
                     <div
@@ -423,7 +482,12 @@ export default function ArthaReasoningBlock({
                             {meta.short}
                           </span>
                           <span className="shrink-0 text-[9.5px] font-mono">
-                            {isAgentCompleted ? (
+                            {isPlanning ? (
+                              <span className="inline-flex items-center gap-1 text-amber-300 font-semibold animate-pulse">
+                                <Loader2 size={10} className="animate-spin text-amber-400" />
+                                Allocating
+                              </span>
+                            ) : isAgentCompleted ? (
                               <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
                                 <CheckCircle2 size={10} />
                                 Done
@@ -442,7 +506,11 @@ export default function ArthaReasoningBlock({
                         </div>
 
                         <p className="text-[10.5px] text-slate-300 leading-tight mt-0.5 truncate">
-                          {isAgentCompleted ? meta.done : meta.working}
+                          {isPlanning
+                            ? 'Copilot is allocating specialist and mapping filing data...'
+                            : isAgentCompleted
+                            ? meta.done
+                            : meta.working}
                         </p>
                       </div>
                     </div>

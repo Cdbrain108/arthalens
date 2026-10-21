@@ -69,9 +69,58 @@ def _qa_tokens(value: str) -> set[str]:
             if token not in _QA_STOPWORDS}
 
 
+NON_FINANCIAL_PATTERNS = [
+    r"\b(recipe|recipes|cook|cooking|bake|baking|pasta|cake|pizza|biryani|burger|food|dish|dessert|soup)\b",
+    r"\b(poem|poetry|rhyme|song|lyrics|story|fiction|novel|joke|jokes|comedy|riddle)\b",
+    r"\b(cricket|football|soccer|basketball|nba|world cup|ipl|fifa|tennis|badminton|olympics)\b",
+    r"\b(movie|cinema|actor|actress|film|hollywood|bollywood|trailer|anime|manga)\b",
+    r"\b(weather|temperature|forecast|rain|climate|humidity|cyclone)\b",
+    r"\b(dating|relationship|girlfriend|boyfriend|love|breakup)\b",
+    r"\b(quicksort|bubble sort|binary search tree|linked list|leetcode)\b",
+]
+
+FINANCIAL_PATTERNS = [
+    r"\b(stock|stocks|share|shares|equity|equities|market|markets|invest|investing|investment|investor)\b",
+    r"\b(portfolio|dividend|dividends|valuation|multiple|pe|p/e|roe|roce|ebitda|opm|npm)\b",
+    r"\b(revenue|profit|margin|margins|loss|earnings|balance sheet|cash flow|debt|leverage)\b",
+    r"\b(capex|cagr|moat|moats|bull|bear|hold|buy|sell|quarter|quarterly|fiscal|annual report)\b",
+    r"\b(10-k|10-q|sec|nse|bse|nifty|sensex|sp500|nasdaq|nyse|fed|rbi|yield|bond|etf)\b",
+    r"\b(dcf|price|target|growth|valuation|risk|moats|governance|promoter|pledge)\b",
+    r"\b(tcs|infosys|infy|reliance|ril|wipro|hdfc|icici|sbi|apple|aapl|microsoft|msft|nvda|nvidia|tesla|tsla|amd|intel|intc|meta|google|googl|amzn)\b",
+]
+
+def is_financial_or_stock_query(text: str) -> bool:
+    lower = (text or "").lower().strip()
+    if not lower:
+        return True
+    has_finance = any(re.search(pat, lower) for pat in FINANCIAL_PATTERNS)
+    is_irrelevant = any(re.search(pat, lower) for pat in NON_FINANCIAL_PATTERNS)
+    if is_irrelevant and not has_finance:
+        return False
+    return True
+
+
 def _extractive_report_answer(question: str, report: dict, context: dict | None) -> ReportAnswer:
     """Offline extraction across all synthesized report sections and findings."""
     context = context or {}
+
+    # Refuse out-of-scope non-financial queries
+    if not is_financial_or_stock_query(question):
+        return ReportAnswer(
+            answer=(
+                "### 🛡️ Out of Scope — Finance & Equity Research Only\n\n"
+                "I am **ArthaLens AI Copilot**, specialized exclusively in equity research, stock fundamental analysis, "
+                "financial valuation, and investment intelligence.\n\n"
+                "I cannot assist with queries outside the financial and investment domain "
+                "(such as general knowledge, creative writing, cooking, programming, sports, or entertainment).\n\n"
+                "Please ask a question related to this company's financial performance, valuation multiples, "
+                "balance sheet, or bull vs bear thesis."
+            ),
+            sources=[],
+            evidence_gaps=[],
+            follow_up_research_needed=False,
+        )
+
     query_tokens = _qa_tokens(question)
 
     is_decision_qa = bool(query_tokens & {"buy", "sell", "hold", "invest", "stance", "verdict", "action", "better", "compare", "winner", "horizon", "recommend", "allocation"})
@@ -93,6 +142,7 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
     # 0. Specialized Verdict Structs (Comparison, Action, Discovery)
     company_obj = (report or {}).get("company") or {}
     cv = company_obj.get("comparison_verdict")
+    ad = company_obj.get("action_decision")
     if isinstance(cv, dict):
         cv_text = f"WINNER: {cv.get('winner_name')} ({cv.get('winner_ticker')}) — {cv.get('winner_reason')}. VALUE PICK: {cv.get('value_name')} ({cv.get('value_ticker')}) — {cv.get('value_reason')}. HOLD vs SELL: {cv.get('hold_vs_sell_guidance')}."
         overlap = len(query_tokens & _qa_tokens(cv_text))
@@ -427,8 +477,14 @@ async def _run_job(job_id: str, query: str, document_ids: list[str]):
 async def start_research(req: ResearchRequest):
     if not req.query or not req.query.strip():
         raise HTTPException(400, "query is required")
-    job_id = jobs.create(req.query.strip())
-    task = asyncio.create_task(_run_job(job_id, req.query.strip(), req.document_ids))
+    q_clean = req.query.strip()
+    if not is_financial_or_stock_query(q_clean):
+        raise HTTPException(
+            400,
+            "Query is outside the scope of ArthaLens equity research. Please ask questions related to stocks, financial metrics, companies, or investment analysis."
+        )
+    job_id = jobs.create(q_clean)
+    task = asyncio.create_task(_run_job(job_id, q_clean, req.document_ids))
     _running_tasks.add(task)
     task.add_done_callback(_on_task_done)
     return {"job_id": job_id, "status": "queued"}

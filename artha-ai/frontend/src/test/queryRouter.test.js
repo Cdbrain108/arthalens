@@ -124,3 +124,30 @@ test('getCopilotResponse explains what work is currently being done', () => {
   assert.ok(response.includes('Filing Audit'))
   assert.ok(response.includes('Adversarial Dual-Thesis'))
 })
+
+test('detectQueryType classifies non-financial queries as out_of_scope and getCopilotResponse refuses them', () => {
+  const outOfScopeQueries = [
+    'how to make chocolate cake',
+    'write a poem about love',
+    'who won the cricket world cup',
+    'best restaurants in mumbai',
+    'tell me a funny joke',
+    'write a python script for sorting an array',
+    'what is the weather today',
+    'solve x^2 + 5x + 6 = 0',
+  ]
+
+  for (const q of outOfScopeQueries) {
+    const result = detectQueryType(q)
+    assert.strictEqual(
+      result,
+      'out_of_scope',
+      `Query "${q}" should be classified as 'out_of_scope' but got '${result}'`
+    )
+
+    const refusal = getCopilotResponse(q)
+    assert.ok(refusal.includes('Out of Scope — Equity Research & Finance Only'), `Refusal missing header for "${q}"`)
+    assert.ok(refusal.includes('designed exclusively for **equity research'), `Refusal missing boundary text for "${q}"`)
+  }
+})
+

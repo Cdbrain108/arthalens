@@ -75,14 +75,92 @@ export function extractStockEntities(text = '') {
   return [...new Set(found)]
 }
 
+export const EXPLICIT_NON_FINANCIAL_PATTERNS = [
+  /\b(recipe|recipes|cook|cooking|bake|baking|pasta|cake|pizza|biryani|burger|food|dish|dessert|soup)\b/i,
+  /\b(poem|poetry|rhyme|song|lyrics|story|fiction|novel|joke|jokes|comedy|riddle)\b/i,
+  /\b(cricket|football|soccer|basketball|nba|world cup|ipl|fifa|tennis|badminton|olympics)\b/i,
+  /\b(movie|cinema|actor|actress|film|hollywood|bollywood|trailer|anime|manga)\b/i,
+  /\b(weather|temperature|forecast|rain|climate|humidity|cyclone)\b/i,
+  /\b(dating|relationship|girlfriend|boyfriend|love|breakup)\b/i,
+  /\b(quicksort|bubble sort|binary search tree|linked list|leetcode|reverse (?:a |the )?string|write (?:a )?python (?:code|script)|write (?:a )?javascript (?:code|script))\b/i,
+  /\b(capital of|tallest mountain|distance to the moon|who was napoleon|history of egypt)\b/i,
+  /\b(solve|equation|equations|algebra|calculus|geometry|homework|integral|derivative|matrix|matrices|trigonometry)\b/i,
+  /[0-9a-z]\s*[\^=+\-*/]\s*[0-9a-z]/i,
+]
+
+export const FINANCIAL_KEYWORDS = [
+  'stock', 'stocks', 'share', 'shares', 'equity', 'equities', 'market', 'markets', 'invest',
+  'investing', 'investment', 'investor', 'portfolio', 'dividend', 'dividends', 'valuation',
+  'multiple', 'pe', 'p/e', 'roe', 'roce', 'ebitda', 'opm', 'npm', 'revenue', 'profit',
+  'margin', 'margins', 'loss', 'earnings', 'balance sheet', 'cash flow', 'filing', '10-k',
+  '10-q', 'annual report', 'sec', 'nse', 'bse', 'nifty', 'sensex', 'sp500', 'nasdaq',
+  'nyse', 'debt', 'leverage', 'liquidity', 'capex', 'cagr', 'moat', 'moats', 'bull',
+  'bear', 'hold', 'buy', 'sell', 'quarter', 'quarterly', 'fiscal', 'growth', 'inflation',
+  'interest rate', 'fed', 'rbi', 'yield', 'bond', 'mutual fund', 'etf', 'broker',
+  'promoter', 'pledge', 'ipo', 'dcf', 'risk', 'thesis', 'trading', 'trader', 'rupee',
+  'rupees', 'crore', 'dollar', 'capital', 'holding', 'overvalued', 'undervalued'
+]
+
+export function isOutOfScopeQuery(query = '') {
+  const s = (query || '').toLowerCase().trim()
+  if (!s) return false
+
+  // 1. Meta / greetings / platform identity questions are in-scope
+  const isMeta = [
+    'hi', 'hello', 'hey', 'greetings', 'help', 'who are you',
+    'what can you do', 'good morning', 'good afternoon', 'good evening',
+    'how are you', 'what is your name', 'tell me about yourself',
+    'what do you do', 'can you help', 'thanks', 'thank you', 'bye',
+    'goodbye', 'who r u', 'how r u', 'what work are we doing', 'what are we doing',
+    'different agents', 'what are the agents', 'who am i', 'my profile'
+  ].some(p => s === p || s.startsWith(p + ' ') || s.startsWith(p + '?') || s.startsWith(p + '!'))
+  if (isMeta) return false
+
+  if (/^(?:my name is|i am|i'm|im|call me)\s+[a-zA-Z]/i.test(s)) return false
+  if (/(creater|creator|created|who made|who built|who developed)/i.test(s)) return false
+  if (/(?:different agents|what are the agents|what each will do|each agent|all agents|11 agents|list agents|explain agents|specialist agents|about the agents|what do the agents do|how many agents|agent list|who are the agents)/i.test(s)) return false
+  if (/(?:what work are we doing|what are we doing|what are we working on|current work|what work is going on|what project is this|what is artha ai|what is arthalens|how does this work|basics of artha|everything basics|what do we do)/i.test(s)) return false
+  if (/(?:who am i|my profile|user profile|my account|my details)/i.test(s)) return false
+
+  // 2. Contains any stock entity or ticker
+  if (extractStockEntities(s).length > 0) return false
+
+  // 3. Contains any financial concept pattern
+  if (CONCEPTUAL_FINANCIAL_PATTERNS.some(pat => pat.test(s))) return false
+
+  // 4. Contains financial keywords
+  const hasFinanceKeyword = FINANCIAL_KEYWORDS.some(k => {
+    const rx = new RegExp(`(^|[^a-z0-9])${k}([^a-z0-9]|$)`, 'i')
+    return rx.test(s)
+  })
+  if (hasFinanceKeyword) return false
+
+  // 5. Matches explicit non-financial patterns
+  if (EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(s))) return true
+
+  // 6. Multi-word non-financial queries with zero financial context
+  const words = s.split(/[^a-zA-Z0-9]+/).filter(w => w.length > 2)
+  if (words.length >= 2) {
+    return true
+  }
+
+  return false
+}
+
 /**
  * Intelligent query classifier:
  * Returns 'stock' ONLY when there is an actionable stock entity/ticker to analyze.
- * Returns 'conversational' for educational, glossary, conceptual finance, or chit-chat queries.
+ * Returns 'out_of_scope' when the query is completely outside our financial/equity domain.
+ * Returns 'conversational' for educational, glossary, conceptual finance, or platform queries.
  */
 export function detectQueryType(query = '') {
   const s = query.toLowerCase().trim()
   if (!s) return 'conversational'
+
+  // Refuse queries outside the project's financial domain
+  if (isOutOfScopeQuery(s)) {
+    return 'out_of_scope'
+  }
 
   const matchedEntities = extractStockEntities(s)
 
@@ -131,7 +209,7 @@ export function detectQueryType(query = '') {
     return 'stock'
   }
 
-  // Any general question without an identifiable stock company stays in Copilot!
+  // Any general financial inquiry stays in Copilot!
   return 'conversational'
 }
 
@@ -140,6 +218,15 @@ export function detectQueryType(query = '') {
  */
 export function getFollowupSuggestions(query = '') {
   const qLower = (query || '').toLowerCase().trim()
+
+  if (detectQueryType(query) === 'out_of_scope' || isOutOfScopeQuery(query)) {
+    return [
+      { label: 'Analyze TCS fundamentals', type: 'stock' },
+      { label: 'Compare Infosys vs Wipro', type: 'stock' },
+      { label: 'Explain PE ratio simply', type: 'concept' },
+      { label: 'Should I hold Reliance for 5 years?', type: 'stock' },
+    ]
+  }
 
   if (qLower.includes('pe') || qLower.includes('price to earnings')) {
     return [
@@ -190,6 +277,11 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     const greeting = userName ? `Hello, **${userName}**!` : `Hello! Welcome to **ArthaLens AI**`
     const trialNote = !isLoggedIn ? `\n\n💡 *Guest Pass Active: 1 free institutional research report included.*` : ''
     return `${greeting}! I'm **ArthaLens AI Copilot**, your autonomous equity intelligence assistant.\n\nBehind every stock, there's more than one story. I orchestrate 11 specialized autonomous agents cross-examining balance sheets, earnings calls, news catalysts, and downside stress with 100% deterministic math.${trialNote}\n\nAsk about any company or financial question below to get started, or tap one of the suggested prompts! ✨`
+  }
+
+  // Refuse queries outside the equity research and financial domain
+  if (detectQueryType(q) === 'out_of_scope' || isOutOfScopeQuery(q)) {
+    return `### 🛡️ Out of Scope — Equity Research & Finance Only\n\nI am **ArthaLens AI Copilot**, designed exclusively for **equity research, stock fundamental analysis, financial valuation, and investment intelligence**.\n\nI cannot assist with queries outside the financial and investment domain (such as general knowledge, creative writing, cooking, programming, sports, or entertainment).\n\n---\n\n**💡 Here is how you can use ArthaLens:**\n* **Company Diligence:** *"Analyze TCS fundamentals"* or *"NVIDIA risk audit"*\n* **Action Directives:** *"Should I hold Reliance for 5 years?"* or *"Should I buy HDFC Bank?"*\n* **Competitor Head-to-Head:** *"Compare Infosys vs Wipro on margins & valuation"*\n* **Financial Concept Explainers:** *"Explain P/E ratio simply"* or *"What is EBITDA and Operating Margin?"*`
   }
 
   // Action decisions when report or company is active in context

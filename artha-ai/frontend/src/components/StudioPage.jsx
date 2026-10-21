@@ -643,61 +643,81 @@ export default function StudioPage({
 
     const uId = `u_${Date.now()}`
     setCopilotMessages((prev) => [...prev, { id: uId, role: 'user', text }])
-    setIsGenerating(true)
-    setGenerationStep(0)
     saveChatQuery(text, user?.uid)
     requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
 
     const type = detectQueryType(text)
     const effectiveUser = user || { uid: 'local_active', name: 'Researcher', guest: false }
 
-    setTimeout(() => setGenerationStep(1), 180)
-    setTimeout(() => setGenerationStep(2), 420)
-
-    setTimeout(() => {
+    // 1. Refuse Out-of-Scope non-financial queries immediately
+    if (type === 'out_of_scope') {
       setIsGenerating(false)
-      if (type === 'conversational') {
-        const aId = `a_${Date.now()}`
-        const reply = getCopilotResponse(text, effectiveUser, {
-          companyName: job?.entities?.[0]?.name || (job?.query || activeQuery),
-          ticker: job?.entities?.[0]?.ticker,
-          job,
-        })
-        const suggestions = getFollowupSuggestions(text)
-        setCopilotMessages((prev) => [
-          ...prev,
-          { id: aId, role: 'assistant', text: reply, suggestions },
-        ])
-      } else {
-        // Enforce 1-time free report limit for non-logged-in users
-        if (!canGuestGenerateReport(user)) {
-          const aId = `a_${Date.now()}`
-          setCopilotMessages((prev) => [
-            ...prev,
-            {
-              id: aId,
-              role: 'assistant',
-              text: `### 🔒 Sign In Required for Additional Research\n\nYou have completed your **1 free equity research report**! To research **${text}**, unlock deeper valuation models, and export institutional PDFs, please sign in.\n\n*Tap Sign In in the top navigation or use Google to continue.*`,
-            },
-          ])
-          onOpenAuth?.()
-          requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
-          return
-        }
+      const aId = `a_${Date.now()}`
+      const reply = getCopilotResponse(text, effectiveUser)
+      const suggestions = getFollowupSuggestions(text)
+      setCopilotMessages((prev) => [
+        ...prev,
+        { id: aId, role: 'assistant', text: reply, suggestions },
+      ])
+      requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+      return
+    }
 
+    // 2. Dispatch stock research immediately without delay
+    if (type === 'stock') {
+      // Enforce 1-time free report limit for non-logged-in users
+      if (!canGuestGenerateReport(user)) {
+        setIsGenerating(false)
         const aId = `a_${Date.now()}`
         setCopilotMessages((prev) => [
           ...prev,
           {
             id: aId,
             role: 'assistant',
-            text: `### 🚀 Dispatching Autonomous Multi-Agent Research: **${text}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining balance sheets, valuation multiples, news catalysts, and adversarial Bull vs Bear risk audit in real-time.\n\n*Review live progress in the execution stream below.*`,
+            text: `### 🔒 Sign In Required for Additional Research\n\nYou have completed your **1 free equity research report**! To research **${text}**, unlock deeper valuation models, and export institutional PDFs, please sign in.\n\n*Tap Sign In in the top navigation or use Google to continue.*`,
           },
         ])
-        onStartResearch(text)
+        onOpenAuth?.()
+        requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+        return
       }
+
+      setIsGenerating(false)
+      const aId = `a_${Date.now()}`
+      setCopilotMessages((prev) => [
+        ...prev,
+        {
+          id: aId,
+          role: 'assistant',
+          text: `### 🚀 Dispatching Autonomous Multi-Agent Research: **${text}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining balance sheets, valuation multiples, news catalysts, and adversarial Bull vs Bear risk audit in real-time.\n\n*Review live progress in the execution stream below.*`,
+        },
+      ])
+      onStartResearch(text)
       requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
-    }, 1500)
+      return
+    }
+
+    // 3. Educational / Conceptual Finance queries
+    setIsGenerating(true)
+    setGenerationStep(0)
+    setTimeout(() => setGenerationStep(1), 180)
+    setTimeout(() => setGenerationStep(2), 420)
+
+    setTimeout(() => {
+      setIsGenerating(false)
+      const aId = `a_${Date.now()}`
+      const reply = getCopilotResponse(text, effectiveUser, {
+        companyName: job?.entities?.[0]?.name || (job?.query || activeQuery),
+        ticker: job?.entities?.[0]?.ticker,
+        job,
+      })
+      const suggestions = getFollowupSuggestions(text)
+      setCopilotMessages((prev) => [
+        ...prev,
+        { id: aId, role: 'assistant', text: reply, suggestions },
+      ])
+      requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+    }, 600)
   }
 
   const handleSubmit = async (e) => {
