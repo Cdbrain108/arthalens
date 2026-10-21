@@ -325,6 +325,23 @@ export default function ArthaReasoningBlock({
         />
       </div>
 
+      {/* ── Persistent Done Action Banner (Visible whether collapsed or expanded) ── */}
+      {isDone && typeof onViewReport === 'function' && (
+        <div className="pt-1.5 flex items-center justify-between gap-2 animate-fade-in">
+          <span className="text-[11.5px] text-emerald-400 font-semibold truncate">
+            ✨ All 11 specialists completed · Zero hallucinations
+          </span>
+          <button
+            type="button"
+            onClick={onViewReport}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1.5 text-[11.5px] font-bold shadow-md hover:shadow-emerald-500/25 transition cursor-pointer shrink-0"
+          >
+            <span>View Full Report</span>
+            <ArrowRight size={12} />
+          </button>
+        </div>
+      )}
+
       {/* ── Expandable Process Cockpit ── */}
       {expanded && (
         <div className="pt-2 border-t border-white/10 space-y-3 animate-fade-in text-[11.5px]">

@@ -1300,17 +1300,15 @@ export default function StudioPage({
     </button>
     <button
       type="button"
-      disabled={!isDone}
       aria-pressed={mobilePane === 'report' && viewMode === 'report'}
       onClick={() => {
-        if (!isDone) return
         setViewMode('report')
         setMobilePane('report')
       }}
-      className={`flex items-center justify-center gap-1.5 font-medium transition-all ${
-        !isDone ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+      className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
+        mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
       }`}
-      title={isDone ? 'View completed research report' : 'Report is generating...'}
+      title={isDone ? 'View completed research report' : 'View report preview & pipeline'}
     >
       <FileText size={15} className={mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400' : 'text-slate-400'} />
       <span>{isDone ? 'Report' : (running || submitting) ? 'Auditing...' : 'Report'}</span>

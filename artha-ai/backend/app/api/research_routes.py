@@ -101,14 +101,73 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
         if overlap:
             candidates.append((overlap + 5, "Peer Comparison Verdict", cv_text, None))
 
-    ad = company_obj.get("action_decision")
-    if isinstance(ad, dict):
-        ad_text = f"ACTION DIRECTIVE: {ad.get('headline')}. Existing Shareholders: {ad.get('existing_holders')}. New Capital: {ad.get('fresh_buyers')}. Investment Horizon: {ad.get('long_term_directive')} | {ad.get('short_term_directive')}. Exit Trigger: {ad.get('sell_triggers')}."
-        overlap = len(query_tokens & _qa_tokens(ad_text))
-        if any(w in query_tokens for w in ("buy", "sell", "hold", "action", "decision", "dip")):
-            overlap += 8
-        if overlap:
-            candidates.append((overlap + 5, "Investment Action Directive", ad_text, None))
+    # Check if the user is asking an actionable decision question (should I hold, what to do, should I buy/invest)
+    is_action_query = any(w in query_tokens for w in ("hold", "buy", "sell", "invest", "action", "decision", "do")) and \
+                      any(w in query_tokens for w in ("should", "can", "what", "whether", "how", "did", "i", "we", "now"))
+
+    if is_action_query and isinstance(ad, dict):
+        headline = ad.get("headline", "Hold & Selectively Accumulate")
+        holders = ad.get("existing_holders", "Maintain existing position.")
+        buyers = ad.get("fresh_buyers", "Accumulate gradually on dips.")
+        lt = ad.get("long_term_directive", "Suitable for long-term compounding.")
+        st = ad.get("short_term_directive", "Expect range-bound price action in near term.")
+        exits = ad.get("sell_triggers", "Exit if operating margins deteriorate or moats breach.")
+
+        metrics = (report or {}).get("metrics") or {}
+        pe = metrics.get("pe_ratio")
+        opm = metrics.get("opm_pct")
+        de = metrics.get("debt_equity")
+        roe = metrics.get("roe_pct")
+
+        m_lines = []
+        if pe: m_lines.append(f"* **Valuation Multiple (P/E):** `{pe}`")
+        if opm: m_lines.append(f"* **Operating Profit Margin:** `{opm}`")
+        if de: m_lines.append(f"* **Balance Sheet Debt/Equity:** `{de}`")
+        if roe: m_lines.append(f"* **Return on Equity (ROE):** `{roe}`")
+        m_block = ("\n\n**📊 Key Financial Metrics Validating This Stance:**\n" + "\n".join(m_lines)) if m_lines else ""
+
+        ans = (
+            f"### 🎯 Action Recommendation: {headline}\n\n"
+            f"Here is a clear, professional breakdown of what you should do based on our audited report:\n\n"
+            f"* **If You Currently Own Shares:** {holders}\n"
+            f"* **If You Are Deploying Fresh Capital:** {buyers}\n\n"
+            f"**⏳ Time Horizon Strategy:**\n"
+            f"* **Long-Term (3–5 Years):** {lt}\n"
+            f"* **Short-Term (1–6 Months):** {st}"
+            f"{m_block}\n\n"
+            f"**🚨 Downside Risk Triggers (When to Sell):**\n"
+            f"* {exits}"
+        )
+        return ReportAnswer(
+            answer=ans,
+            sources=[],
+            evidence_gaps=list((report or {}).get("evidence_gaps") or [])[:5],
+            follow_up_research_needed=False,
+        )
+
+    if is_action_query and isinstance(cv, dict):
+        winner_name = cv.get('winner_name')
+        winner_ticker = cv.get('winner_ticker')
+        winner_reason = cv.get('winner_reason')
+        value_name = cv.get('value_name')
+        value_ticker = cv.get('value_ticker')
+        value_reason = cv.get('value_reason')
+        guidance = cv.get('hold_vs_sell_guidance')
+
+        ans = (
+            f"### 🏆 Peer Comparison Action Guidance\n\n"
+            f"In simple, natural terms, here is how you should position between these companies:\n\n"
+            f"* **👑 Core Long-Term Outperformer:** **{winner_name} ({winner_ticker})** — {winner_reason}. Accumulate on dips for multi-year compounding.\n"
+            f"* **💎 Tactical Value & Dividend Pick:** **{value_name} ({value_ticker})** — {value_reason}. Hold or buy for multiple expansion and yield.\n\n"
+            f"**🎯 Action Directives (Hold vs Sell):**\n"
+            f"* {guidance}"
+        )
+        return ReportAnswer(
+            answer=ans,
+            sources=[],
+            evidence_gaps=list((report or {}).get("evidence_gaps") or [])[:5],
+            follow_up_research_needed=False,
+        )
 
     dp = company_obj.get("discovery_portfolio")
     if isinstance(dp, dict):

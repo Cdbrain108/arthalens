@@ -192,10 +192,39 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     return `${greeting}! I'm **ArthaLens AI Copilot**, your autonomous equity intelligence assistant.\n\nBehind every stock, there's more than one story. I orchestrate 11 specialized autonomous agents cross-examining balance sheets, earnings calls, news catalysts, and downside stress with 100% deterministic math.${trialNote}\n\nAsk about any company or financial question below to get started, or tap one of the suggested prompts! ✨`
   }
 
-  // Stock research dispatch response when user triggers a stock query
-  const queryType = detectQueryType(q)
-  if (queryType === 'stock' && !context.job && !context.companyName) {
-    return `### 🚀 Dispatching Autonomous Multi-Agent Research: **${q}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining balance sheets, valuation multiples, news catalysts, and adversarial Bull vs Bear risk audit in real-time.\n\n*Review live progress in the execution stream below.*`
+  // Action decisions when report or company is active in context
+  if (
+    /should i (buy|sell|hold)|can i hold|hold or sell|buy or sell|sell whatever|hold it or sell|i hold or not|what (should|do) i do|what exactly i do|did i invest|whether should i hold|invest or not|can i invest/i.test(qLower)
+  ) {
+    const reportData = context.job?.report || context.report || {}
+    const company = context.companyName || context.job?.entities?.[0]?.name || (context.ticker ? context.ticker.toUpperCase() : 'the company')
+    const ad = reportData?.company?.action_decision
+    const cv = reportData?.company?.comparison_verdict
+    const metrics = reportData?.metrics || {}
+    const verdict = reportData?.verdict || reportData?.overall_assessment || {}
+
+    const pe = metrics.pe_ratio || null
+    const opm = metrics.opm_pct || null
+    const de = metrics.debt_equity || null
+    const roe = metrics.roe_pct || null
+
+    const metricsSummary = []
+    if (pe) metricsSummary.push(`* **Valuation Multiple (P/E):** \`${pe}\``)
+    if (opm) metricsSummary.push(`* **Operating Profit Margin:** \`${opm}\``)
+    if (de) metricsSummary.push(`* **Debt-to-Equity (Leverage):** \`${de}\``)
+    if (roe) metricsSummary.push(`* **Return on Equity (ROE):** \`${roe}\``)
+
+    const metricsBlock = metricsSummary.length > 0
+      ? `\n\n**📊 Audited Key Financial Metrics:**\n${metricsSummary.join('\n')}`
+      : ''
+
+    if (ad) {
+      return `### 🎯 Action Recommendation for ${company}: ${ad.headline}\n\nHere is a simple, professional guide on what to do based on our audited report:\n\n* **If You Currently Hold Shares:** ${ad.existing_holders}\n* **If You Are Deploying Fresh Capital:** ${ad.fresh_buyers}\n\n**⏳ Time Horizon Strategy:**\n* **Long-Term (3–5 Years):** ${ad.long_term_directive}\n* **Short-Term (1–6 Months):** ${ad.short_term_directive}${metricsBlock}\n\n**🚨 Downside Risk Triggers (When to Sell):**\n* ${ad.sell_triggers}`
+    } else if (cv) {
+      return `### 🏆 Head-to-Head Action Recommendation\n\n* **👑 Core Long-Term Compounder:** **${cv.winner_name} (${cv.winner_ticker})** — ${cv.winner_reason}. Accumulate on pullbacks for long-term holding.\n* **💎 Tactical Value & Dividend Pick:** **${cv.value_name} (${cv.value_ticker})** — ${cv.value_reason}. Hold or buy for multiple expansion.${metricsBlock}\n\n**🎯 Hold vs Sell Directives:**\n* ${cv.hold_vs_sell_guidance}`
+    } else if (verdict && (verdict.headline || verdict.classification)) {
+      return `### 🎯 Action Guidance for ${company}: ${verdict.headline || verdict.classification}\n\nBased on our audited research on **${company}**:\n\n* **Overall Stance:** **${verdict.classification || 'Neutral / Hold'}**\n* **Core Rationale:** ${verdict.rationale || 'Audited fundamentals show steady operating performance.'}${metricsBlock}`
+    }
   }
 
   // 1. EDUCATIONAL: Price-to-Earnings (P/E) Ratio

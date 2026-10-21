@@ -1786,7 +1786,7 @@
     padding: 0 !important;
   }
 
-  .studio-right-pane > div {
+  .studio-right-pane > .flex-1 {
     padding: 10px 8px 80px !important;
   }
 

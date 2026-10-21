@@ -4,17 +4,10 @@ import * as pdfjsLib from 'pdfjs-dist'
 import { api } from '../api/client'
 import Logo from './Logo'
 
-// Configure PDF.js worker using Vite-compatible asset URL with CDN fallback
+// Configure PDF.js worker using official CDN matching pdfjs-dist version 3.11.174
 if (typeof window !== 'undefined') {
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.min.js',
-      import.meta.url
-    ).toString()
-  } catch {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
-  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 }
 
 function PdfPageItem({ pdfDoc, pageNum, scale = 1.0 }) {

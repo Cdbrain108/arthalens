@@ -100,23 +100,51 @@ function synthesizeReportAnswer(q, reportData, companyName, ticker, user) {
     }
   }
 
-  // 0B. Should I buy, sell, or hold / Can I hold or not
-  if (/should i (buy|sell|hold)|can i hold|hold or sell|buy or sell|sell whatever|hold it or sell|i hold or not/.test(qLower)) {
+  // 0B. Should I buy, sell, or hold / Can I hold or not / What should I do / Did I invest
+  if (/should i (buy|sell|hold)|can i hold|hold or sell|buy or sell|sell whatever|hold it or sell|i hold or not|what (should|do) i do|what exactly i do|did i invest|whether should i hold|invest or not|can i invest/.test(qLower)) {
+    const pe = metrics.pe_ratio || null
+    const opm = metrics.opm_pct || null
+    const de = metrics.debt_equity || null
+    const roe = metrics.roe_pct || null
+
+    const metricsSummary = []
+    if (pe) metricsSummary.push(`* **Valuation Multiple (P/E):** \`${pe}\``)
+    if (opm) metricsSummary.push(`* **Operating Profit Margin:** \`${opm}\``)
+    if (de) metricsSummary.push(`* **Debt-to-Equity (Leverage):** \`${de}\``)
+    if (roe) metricsSummary.push(`* **Return on Equity (ROE):** \`${roe}\``)
+
+    const metricsBlock = metricsSummary.length > 0
+      ? `\n\n**📊 Key Financial Metrics Validating This Stance:**\n${metricsSummary.join('\n')}`
+      : ''
+
     if (ad) {
-      let resp = `### 🎯 Action Directive: ${ad.headline}\n\n`
-      resp += `* **Existing Shareholders:** ${ad.existing_holders}\n`
-      resp += `* **New Capital Deployment:** ${ad.fresh_buyers}\n\n`
-      resp += `**⏳ Investment Horizon Directive:**\n`
+      let resp = `### 🎯 Action Recommendation: ${ad.headline}\n\n`
+      resp += `Here is a plain-English, professional breakdown of what you should do with **${targetName}** based on our audited report:\n\n`
+      resp += `* **If You Currently Hold Shares:** ${ad.existing_holders}\n`
+      resp += `* **If You Are Deploying Fresh Capital:** ${ad.fresh_buyers}\n\n`
+      resp += `**⏳ Investment Time Horizons:**\n`
       resp += `* **Long-Term (3–5 Years):** ${ad.long_term_directive}\n`
-      resp += `* **Short-Term (1–6 Months):** ${ad.short_term_directive}\n\n`
-      resp += `**🚨 When to Sell / Exit Triggers:**\n`
-      resp += `* ${ad.sell_triggers}\n`
+      resp += `* **Short-Term (1–6 Months):** ${ad.short_term_directive}`
+      resp += metricsBlock
+      resp += `\n\n**🚨 Downside Triggers to Monitor (When to Exit/Trim):**\n* ${ad.sell_triggers}\n`
       return resp
     } else if (cv) {
-      let resp = `### 🎯 Action Directive for Peer Comparison\n\n`
-      resp += `* **Actionable Guidance:** ${cv.hold_vs_sell_guidance}\n\n`
-      resp += `* **Long-Term Compounder (3–5+ Yrs):** Accumulate **${cv.winner_name} (${cv.winner_ticker})** on dips.\n`
-      resp += `* **Tactical Value & Dividend Yield (6–18 Mos):** Hold or buy **${cv.value_name} (${cv.value_ticker})** for multiple re-rating.\n`
+      let resp = `### 🏆 Head-to-Head Action Guidance\n\n`
+      resp += `* **👑 Core Long-Term Outperformer:** **${cv.winner_name} (${cv.winner_ticker})** — ${cv.winner_reason}. Accumulate on dips for multi-year compounding.\n`
+      resp += `* **💎 Tactical Value & Dividend Pick:** **${cv.value_name} (${cv.value_ticker})** — ${cv.value_reason}. Hold or buy for multiple re-rating and yield.\n\n`
+      resp += `**🎯 Action Directives:**\n* ${cv.hold_vs_sell_guidance}`
+      resp += metricsBlock
+      return resp
+    } else if (verdict && (verdict.headline || verdict.classification)) {
+      let resp = `### 🎯 Action Recommendation: ${verdict.headline || verdict.classification}\n\n`
+      resp += `Based on our audited research on **${targetName}**:\n\n`
+      resp += `* **Overall Stance:** **${verdict.classification || 'Neutral / Hold'}**\n`
+      if (verdict.rationale) resp += `* **Rationale:** ${verdict.rationale}\n`
+      resp += metricsBlock
+      if (bearCase.length > 0) {
+        const topBear = typeof bearCase[0] === 'object' ? bearCase[0].claim || bearCase[0].point : bearCase[0]
+        resp += `\n\n**🚨 Key Risk to Monitor:** ${topBear}\n`
+      }
       return resp
     }
   }
