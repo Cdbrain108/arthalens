@@ -245,6 +245,10 @@ function StudioTopHeader({
     ? `${resolved.join(' vs ')}`
     : 'Artha AI Workspace'
 
+  const [profileOpen, setProfileOpen] = useState(false)
+  const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
+  const userInitials = (user?.displayName || user?.name || user?.email || 'A').trim().charAt(0).toUpperCase()
+
   return (
     <header className="studio-top-header flex shrink-0 items-center justify-between border-b border-white/10 bg-[#16181e] px-2 sm:px-6 z-20">
       {/* Left: Clean Home button (compact on mobile) */}
@@ -318,14 +322,59 @@ function StudioTopHeader({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={user?.guest ? onOpenAuth : onLogout}
-          title={user?.guest ? "Sign in to persist research history" : `Signed in as ${user?.name || user?.email || 'User'} · Click to sign out`}
-          className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
-        >
-          {(user?.name || user?.email || 'U').trim().charAt(0).toUpperCase()}
-        </button>
+        {!isLoggedIn ? (
+          <button
+            type="button"
+            onClick={onOpenAuth}
+            className="flex h-8 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer active:scale-95 shadow-sm"
+            title="Sign in to your account"
+          >
+            <LogIn size={13} />
+            <span className="inline text-xs">Sign In</span>
+          </button>
+        ) : (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setProfileOpen((prev) => !prev)}
+              title={`Signed in as ${user?.displayName || user?.name || user?.email || 'Researcher'}`}
+              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
+            >
+              {userInitials}
+            </button>
+            {profileOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setProfileOpen(false)}
+                />
+                <div className="absolute right-0 top-10 z-50 w-56 rounded-2xl border border-white/10 bg-[#14171d]/95 p-3.5 shadow-2xl backdrop-blur-xl">
+                  <div className="mb-2.5 border-b border-white/10 pb-2">
+                    <div className="text-xs font-semibold text-white truncate">
+                      {user?.displayName || user?.name || 'Researcher'}
+                    </div>
+                    <div className="text-[11px] text-slate-400 truncate">
+                      {user?.email || 'researcher@gmail.com'}
+                    </div>
+                    <div className="mt-1 inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-mono font-medium text-emerald-400">
+                      Verified Researcher
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false)
+                      onLogout?.()
+                    }}
+                    className="w-full rounded-lg bg-rose-500/15 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/25 transition active:scale-95 cursor-pointer text-center"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </header>
   )
