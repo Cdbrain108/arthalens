@@ -1386,7 +1386,7 @@ export default function LandingExperience({
               <div className="be-hero-copy">
                 <p className="be-hero-pill">
                   <span className="be-status-dot green live" />
-                  Artha AI · Autonomous Multi-Agent Stock Research Platform
+                  Artha AI · 11 Autonomous AI Agents for Stock Research
                 </p>
 
                 <h1 id="hero-heading">

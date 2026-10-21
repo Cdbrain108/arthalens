@@ -294,7 +294,7 @@ export default function MobileLanding({
           <Logo size={22} />
           <div className="arg-nav-brand-text">
             <span className="arg-nav-word">Artha AI</span>
-            <span className="arg-nav-tagline">Multi-Agent Stock Research</span>
+            <span className="arg-nav-tagline">11 Autonomous AI Agents</span>
           </div>
         </a>
 
@@ -449,22 +449,25 @@ export default function MobileLanding({
       {/* ════ PAGE 1: MOBILE HERO & COMMAND CENTER ════ */}
       <section className="mobile-page-section hero-page" id="m-hero">
         <div className="mobile-hero-badge">
+          <Bot size={12} className="text-emerald-400" />
           <span className="live-pulse" />
-          <span>AUTONOMOUS MULTI-AGENT PLATFORM</span>
+          <span>11 AUTONOMOUS AI AGENTS</span>
+          <span className="opacity-40">·</span>
+          <span className="text-emerald-300 font-extrabold">REAL-TIME RESEARCH</span>
         </div>
 
         <h1 className="mobile-hero-title">
-          Artha AI — Powerful <span className="highlight-text">Multi-Agent</span> Stock Research Platform
+          Artha AI — Stock Research by <span className="highlight-text">11 Autonomous AI Agents</span>
         </h1>
 
         <p className="mobile-hero-subtitle">
-          11 autonomous AI agents audit regulatory filings, calculate valuation models, stress-test balance sheets, and synthesize institutional stock research in 60s.
+          Behind every stock, 11 specialized AI agents audit SEC &amp; NSE filings, calculate valuation models, and cross-examine downside risks in 60s.
         </p>
 
         {/* 3-Pill Institutional Metric Bar */}
         <div className="mobile-hero-stats">
           <div className="mobile-hero-stat-pill">
-            <span className="mobile-hero-stat-val">11 Agents</span>
+            <span className="mobile-hero-stat-val">11 AI Agents</span>
             <span className="mobile-hero-stat-lbl">Autonomous Specialists</span>
           </div>
           <div className="mobile-hero-stat-pill">
@@ -511,7 +514,16 @@ export default function MobileLanding({
               </button>
             </div>
           ) : (
-            <div className="w-full space-y-2.5 animate-fade-in text-left">
+            <div className="w-full space-y-2 animate-fade-in text-left">
+              {/* Tagline Ribbon */}
+              <div className="flex items-center justify-between px-0.5 text-[10.5px] font-mono text-emerald-400">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <Bot size={12} className="text-emerald-400" />
+                  <span>11 Autonomous AI Agents</span>
+                </div>
+                <span className="text-[9.5px] text-slate-400 font-sans font-medium">Deterministic Audit</span>
+              </div>
+
               {/* Sleek Ergonomic Start Research CTA Button */}
               <button
                 type="button"
@@ -530,7 +542,7 @@ export default function MobileLanding({
                     Start Stock Research
                   </span>
                   <span className="rounded-full bg-white/20 border border-white/25 px-1.5 py-0.5 text-[9px] font-mono font-bold text-white uppercase tracking-wider">
-                    Studio
+                    11 Agents
                   </span>
                 </div>
                 <div className="mobile-cta-arrow group-hover:translate-x-0.5 transition-transform z-10">
