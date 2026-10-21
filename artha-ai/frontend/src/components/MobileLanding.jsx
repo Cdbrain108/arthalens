@@ -533,6 +533,7 @@ export default function MobileLanding({
         </h1>
 
         <p className="mobile-hero-subtitle" aria-live="polite">
+          <span className="mobile-typed-icon" aria-hidden="true">✦</span>
           <span className="mobile-typed-text">{typedTagline}</span>
           <span className="mobile-typed-caret" aria-hidden="true" />
         </p>

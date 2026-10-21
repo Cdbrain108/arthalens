@@ -24,7 +24,9 @@ export default {
         googleGreen: '#34a853',
       },
       fontFamily: {
-        sans: ['Inter', 'Google Sans', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'Google Sans', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Outfit', 'Plus Jakarta Sans', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       borderRadius: { xl2: '1.75rem' },
       boxShadow: {

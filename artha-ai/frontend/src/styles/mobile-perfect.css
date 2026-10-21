@@ -512,10 +512,11 @@
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.35);
   color: #34d399;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.4px;
-  padding: 3px 10px;
+  letter-spacing: 0.5px;
+  padding: 3.5px 11px;
   border-radius: 999px;
   margin-bottom: 0;
   width: fit-content;
@@ -534,47 +535,76 @@
 }
 
 .mobile-hero-title {
-  font-size: clamp(19px, 5vw, 23px);
-  line-height: 1.18;
+  font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-size: clamp(21px, 5.8vw, 25px);
+  line-height: 1.22;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.025em;
   color: #ffffff;
   margin: 0;
   position: relative;
   z-index: 1;
+  text-wrap: balance;
 }
 
 .highlight-text {
-  background: linear-gradient(135deg, #10b981 0%, #38bdf8 100%);
+  background: linear-gradient(135deg, #34d399 0%, #38bdf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  font-weight: 800;
 }
 
 .mobile-hero-subtitle {
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: #94a3b8;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(12.5px, 3.6vw, 13.5px);
+  line-height: 1.48;
+  color: #e2e8f0;
   margin: 0;
   position: relative;
   z-index: 1;
-  min-height: 33px;
+  min-height: 42px;
   display: block;
+  padding: 7px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+
+.mobile-typed-icon {
+  color: #34d399;
+  font-size: 11px;
+  line-height: 1;
+  margin-right: 6px;
+  display: inline-block;
+  vertical-align: 0px;
+  animation: pulse-dot 2s infinite;
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.6));
 }
 
 .mobile-typed-text {
-  color: #cbd5e1;
-  font-weight: 500;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(12.5px, 3.6vw, 13.5px);
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+  display: inline;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .mobile-typed-caret {
   display: inline-block;
-  width: 2px;
-  height: 12px;
-  background-color: #10b981;
-  margin-left: 2px;
-  vertical-align: -1px;
-  border-radius: 1px;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.85);
+  width: 2.5px;
+  height: 15px;
+  background: linear-gradient(180deg, #38bdf8 0%, #10b981 100%);
+  margin-left: 3px;
+  vertical-align: -2px;
+  border-radius: 1.5px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.9), 0 0 4px #10b981;
   animation: mobile-caret-pulse 0.8s infinite;
 }
 
@@ -594,31 +624,33 @@
 }
 
 .mobile-hero-stat-pill {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 5px 4px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 11px;
+  padding: 6px 4px;
   text-align: center;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4);
 }
 
 .mobile-hero-stat-val {
   display: block;
-  font-size: 11.5px;
-  font-weight: 800;
+  font-size: 12.5px;
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.3px;
-  font-family: ui-monospace, monospace;
+  letter-spacing: -0.02em;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
 }
 
 .mobile-hero-stat-lbl {
   display: block;
-  font-size: 8.5px;
+  font-size: 9px;
   color: #94a3b8;
-  font-weight: 500;
-  margin-top: 1px;
+  font-weight: 600;
+  margin-top: 1.5px;
   white-space: nowrap;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* ── Command Card & Primary Action ──────────────────────────────────────── */
@@ -884,13 +916,16 @@
 }
 
 .ticker-name {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11.5px !important;
   font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
   color: #ffffff !important;
 }
 
 .ticker-tag {
   font-size: 9.5px !important;
-  font-family: ui-monospace, monospace !important;
+  font-family: 'JetBrains Mono', monospace !important;
   font-weight: 700 !important;
   padding: 1px 5px !important;
   border-radius: 6px !important;
@@ -967,16 +1002,18 @@
   font-size: 10px !important;
   font-weight: 700 !important;
   color: #34d399 !important;
-  font-family: ui-monospace, monospace !important;
+  font-family: 'JetBrains Mono', monospace !important;
   text-transform: uppercase !important;
   letter-spacing: 0.5px !important;
   flex-shrink: 0 !important;
 }
 
 .sample-prompt-text {
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  color: #f1f5f9 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #f8fafc !important;
+  letter-spacing: -0.01em !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -1176,9 +1213,10 @@
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.28);
   color: #34d399;
-  font-size: 10.5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   margin-bottom: 8px;
 }
@@ -1196,15 +1234,17 @@
 }
 
 .section-title {
-  font-size: 22px;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(21px, 5.5vw, 24px);
   font-weight: 800;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.025em;
   color: #ffffff;
   margin: 0 0 6px 0;
 }
 
 .section-sub {
-  font-size: 12.5px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
   line-height: 1.5;
   color: #94a3b8;
   margin: 0;

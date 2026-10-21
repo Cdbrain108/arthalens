@@ -4,7 +4,19 @@
 
 :root { color-scheme: dark; font-synthesis: none; }
 html { -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
-body { @apply bg-[#131518] text-[#f1f3f4] antialiased; margin: 0; font-feature-settings: 'cv11', 'ss01'; text-rendering: optimizeLegibility; }
+body {
+  @apply bg-[#131518] text-[#f1f3f4] antialiased;
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
 button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 button, a { touch-action: manipulation; }
 button:disabled { cursor: not-allowed; opacity: .45; }
