@@ -46,6 +46,8 @@ test('detectQueryType correctly classifies actionable company and ticker queries
     'Apple 10-K',
     'NVDA growth analysis',
     'HDFC Bank valuation',
+    'Which Indian company stock should be best to buy now for a long term goal?',
+    'Best stocks to buy right now',
   ]
 
   for (const q of stockQueries) {

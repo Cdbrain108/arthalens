@@ -209,7 +209,20 @@ export function detectQueryType(query = '') {
     return 'stock'
   }
 
-  // Any general financial inquiry stays in Copilot!
+  // Open-ended stock recommendation / screening / selection queries:
+  // Dispatch to the autonomous multi-agent pipeline so it dynamically screens, fetches live news,
+  // and audits the top candidate organizations!
+  const isOpenEndedStockDiscovery = (
+    /(?:which|what|any|recommend|suggest|best|top|good|ideal).*(?:indian|us|global|company|companies|stock|stocks|share|shares|equity|equities).*(?:buy|invest|long term|long-term|goal|growth|holding|compound|portfolio)/i.test(s) ||
+    /(?:best|top|which).*(?:stock|stocks|company|companies|share|shares).*(?:for long term|for 5 years|for 10 years|to buy now|to invest|to hold|right now)/i.test(s) ||
+    /(?:stocks? to buy|where should i invest|what stock should i buy|best share to buy|top stocks in india|top compounding stocks)/i.test(s)
+  )
+
+  if (isOpenEndedStockDiscovery) {
+    return 'stock'
+  }
+
+  // Any general conceptual financial inquiry (e.g. "what is PE ratio", "explain DCF") stays in Copilot!
   return 'conversational'
 }
 

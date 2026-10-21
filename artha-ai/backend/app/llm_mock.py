@@ -128,6 +128,12 @@ def mock_analyze(query: str) -> dict:
                 {"name": "Reliance Industries", "ticker": "RELIANCE", "exchange": "NSE", "confidence": "high"}
             ]
             intent = "general"
+        elif any(k in lower for k in ["which indian company", "best indian", "best stock", "stocks to buy", "stock to buy", "where to invest", "long term goal", "best company stock"]):
+            entities = [
+                {"name": "Tata Consultancy Services", "ticker": "TCS", "exchange": "NSE", "confidence": "high"},
+                {"name": "Reliance Industries", "ticker": "RELIANCE", "exchange": "NSE", "confidence": "high"}
+            ]
+            intent = "compare"
         elif any(k in lower for k in ["rbi", "rate cut", "interest rate", "repo rate"]):
             entities = [
                 {"name": "ICICI Bank", "ticker": "ICICIBANK", "exchange": "NSE", "confidence": "high"},
