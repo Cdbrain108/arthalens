@@ -785,10 +785,19 @@ export default function ArthaCopilot({
           <button
             type="submit"
             disabled={!question.trim() || asking}
-            className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3.5 py-1.5 text-[12px] font-bold text-black shadow-md transition hover:brightness-110 disabled:opacity-30 cursor-pointer"
+            title={asking ? 'Asking Copilot…' : 'Send message to Copilot'}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12.5px] font-bold transition-all duration-200 shadow-md ${
+              question.trim() && !asking
+                ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_18px_rgba(52,211,153,0.55)] hover:brightness-115 hover:scale-105 active:scale-95 cursor-pointer border border-emerald-300'
+                : 'bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-semibold cursor-not-allowed opacity-90'
+            }`}
           >
-            {asking ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-            <span className="hidden sm:inline">Ask</span>
+            {asking ? (
+              <Loader2 size={15} className="animate-spin text-emerald-300" />
+            ) : (
+              <Send size={15} className={question.trim() ? 'text-slate-950 font-bold' : 'text-emerald-300'} />
+            )}
+            <span className="font-bold">Send</span>
           </button>
         </form>
       </div>

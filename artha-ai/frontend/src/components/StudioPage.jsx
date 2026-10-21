@@ -389,14 +389,18 @@ function StudioChatInputBar({
           <button
             type="submit"
             disabled={!hasText || running}
-            title={running ? 'Researching…' : 'Send'}
+            title={running ? 'Researching…' : 'Start research'}
             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] transition-all duration-200 ${
               hasText && !running
-                ? 'bg-gradient-to-tr from-emerald-500 to-emerald-600 text-black font-bold shadow-[0_4px_16px_-2px_rgba(16,185,129,0.5)] hover:brightness-110 hover:scale-105 active:scale-95 cursor-pointer'
-                : 'bg-white/5 text-[#5f6368] cursor-not-allowed'
+                ? 'bg-gradient-to-tr from-emerald-400 to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_18px_rgba(52,211,153,0.55)] hover:brightness-115 hover:scale-105 active:scale-95 cursor-pointer border border-emerald-300'
+                : 'bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 cursor-not-allowed opacity-90'
             }`}
           >
-            {running ? <Square size={12} className="animate-pulse text-emerald-400" /> : <ArrowUp size={16} strokeWidth={2.5} />}
+            {running ? (
+              <Square size={12} className="animate-pulse text-emerald-300" />
+            ) : (
+              <ArrowUp size={16} strokeWidth={2.8} className={hasText ? 'text-slate-950' : 'text-emerald-300'} />
+            )}
           </button>
         </form>
       </div>

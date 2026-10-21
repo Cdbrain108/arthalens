@@ -211,10 +211,14 @@ export default function ChatWindow({
               <button
                 type="submit"
                 disabled={!followupQuery.trim() || running}
-                className="group relative flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#06b6d4] px-4 py-2 text-[13px] font-semibold text-white shadow-lg shadow-[#4f46e5]/30 transition-all duration-200 hover:brightness-110 hover:shadow-[#4f46e5]/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`group relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-bold transition-all duration-200 shadow-md ${
+                  followupQuery.trim() && !running
+                    ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_16px_rgba(52,211,153,0.5)] hover:brightness-115 hover:scale-105 active:scale-95 cursor-pointer border border-emerald-300'
+                    : 'bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 cursor-not-allowed opacity-90'
+                }`}
               >
                 {running ? (
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin text-emerald-300" />
                 ) : (
                   <>
                     <span>Send</span>

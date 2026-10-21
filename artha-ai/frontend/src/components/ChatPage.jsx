@@ -403,14 +403,18 @@ export default function ChatPage({
                 <button
                   type="submit"
                   disabled={!followupQuery.trim() || running}
-                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#4285f4] to-[#1a73e8] px-4 py-2 text-[12.5px] font-semibold text-white shadow-md transition hover:brightness-110 disabled:opacity-40"
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12.5px] font-bold transition-all duration-200 shadow-md ${
+                    followupQuery.trim() && !running
+                      ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_16px_rgba(52,211,153,0.5)] hover:brightness-115 hover:scale-105 active:scale-95 cursor-pointer border border-emerald-300'
+                      : 'bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 cursor-not-allowed opacity-90'
+                  }`}
                 >
                   {running ? (
-                    <Loader2 size={14} className="animate-spin text-white" />
+                    <Loader2 size={14} className="animate-spin text-emerald-300" />
                   ) : (
                     <>
                       <span>Send</span>
-                      <ArrowUpRight size={14} />
+                      <ArrowUpRight size={14} className="transition-transform" />
                     </>
                   )}
                 </button>

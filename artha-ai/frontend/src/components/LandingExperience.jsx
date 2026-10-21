@@ -458,25 +458,21 @@ const CATEGORIES = {
 /* ── Hooks ────────────────────────────────────────────────────────────────── */
 
 function useTheme() {
-  const [theme, setTheme] = useState(() => {
-    try {
-      return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'
-    } catch {
-      return 'dark'
-    }
-  })
+  const [theme] = useState('dark')
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.documentElement.classList.toggle('dark', theme !== 'light')
+    document.documentElement.dataset.theme = 'dark'
+    document.documentElement.classList.add('dark')
+    document.documentElement.classList.remove('light')
     try {
-      localStorage.setItem(THEME_KEY, theme)
+      localStorage.removeItem(THEME_KEY)
+      localStorage.setItem(THEME_KEY, 'dark')
     } catch {
       /* private browsing */
     }
-  }, [theme])
+  }, [])
 
-  const toggle = useCallback(() => setTheme((t) => (t === 'light' ? 'dark' : 'light')), [])
+  const toggle = useCallback(() => {}, [])
   return [theme, toggle]
 }
 
@@ -1225,15 +1221,6 @@ export default function LandingExperience({
             </div>
 
             <div className="be-nav-actions">
-              <button
-                type="button"
-                className="be-icon-button"
-                onClick={toggleTheme}
-                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-              >
-                {theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
-              </button>
-
               {signedIn ? (
                 <div className="be-nav-user-cluster">
                   <div
