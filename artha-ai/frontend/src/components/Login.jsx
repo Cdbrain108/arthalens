@@ -106,15 +106,20 @@ export default function Login({ onLogin, onCancel }) {
   const handleGoogleSignIn = async () => {
     clearFeedback()
     setGoogleLoading(true)
-    const { user, error } = await loginWithGoogle()
-    setGoogleLoading(false)
-    if (error) {
-      setErr(error)
-    } else if (user) {
-      setSuccessMsg(`Welcome, ${user.name || user.email || 'Researcher'}!`)
-      setTimeout(() => {
-        onLogin?.(user)
-      }, 200)
+    try {
+      const { user, error } = await loginWithGoogle()
+      setGoogleLoading(false)
+      if (error) {
+        setErr(error)
+      } else if (user) {
+        setSuccessMsg(`Welcome, ${user.name || user.email || 'Researcher'}!`)
+        setTimeout(() => {
+          onLogin?.(user)
+        }, 150)
+      }
+    } catch (e) {
+      setGoogleLoading(false)
+      setErr(e?.message || 'Google sign-in encountered an issue.')
     }
   }
 
