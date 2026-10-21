@@ -85,3 +85,36 @@ test('getFollowupSuggestions provides pure research actions initially, reserving
   // Does not have 'Explain PE ratio simply' as initial welcome suggestions
   assert.ok(!defaultSuggestions.some((s) => s.label === 'Explain PE ratio simply'))
 })
+
+test('getCopilotResponse recognizes user profile inquiry and reflects user identity', () => {
+  const mockUser = { uid: 'user_123', name: 'Anuj Kesharwani', email: 'anuj@example.com', guest: false }
+  const response = getCopilotResponse('Who am I?', mockUser, { companyName: 'TCS', ticker: 'TCS.NS' })
+
+  assert.ok(response.includes('Your Investor Profile & Session'))
+  assert.ok(response.includes('Anuj Kesharwani'))
+  assert.ok(response.includes('anuj@example.com'))
+  assert.ok(response.includes('TCS'))
+})
+
+test('getCopilotResponse explains the 11 autonomous agents and their roles', () => {
+  const mockUser = { uid: 'user_123', name: 'Anuj Kesharwani', guest: false }
+  const response = getCopilotResponse('What are the different agents and what each will do?', mockUser)
+
+  assert.ok(response.includes('The 11 Autonomous Specialists of ArthaLens & What Each Does'))
+  assert.ok(response.includes('Financial Health Specialist'))
+  assert.ok(response.includes('Valuation Multiples Specialist'))
+  assert.ok(response.includes('Risk Diligence Specialist'))
+  assert.ok(response.includes('Filings & Doc RAG Specialist'))
+  assert.ok(response.includes('deterministic Python math'))
+})
+
+test('getCopilotResponse explains what work is currently being done', () => {
+  const mockUser = { uid: 'user_123', name: 'Anuj Kesharwani', guest: false }
+  const response = getCopilotResponse('What work are we doing?', mockUser, { companyName: 'Reliance Industries', ticker: 'RELIANCE.NS' })
+
+  assert.ok(response.includes('What Work We Are Doing at ArthaLens'))
+  assert.ok(response.includes('Reliance Industries'))
+  assert.ok(response.includes('RELIANCE.NS'))
+  assert.ok(response.includes('Filing Audit'))
+  assert.ok(response.includes('Adversarial Dual-Thesis'))
+})

@@ -283,7 +283,7 @@ function synthesizeReportAnswer(q, reportData, companyName, ticker, user) {
   }
 
   // Fallback to generic router or dossier reference
-  return getCopilotResponse(q, user)
+  return getCopilotResponse(q, user, { companyName, ticker, reportData, job })
 }
 
 export default function ArthaCopilot({

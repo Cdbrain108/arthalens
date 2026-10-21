@@ -173,7 +173,7 @@ export function getFollowupSuggestions(query = '') {
  * Answers educational, conceptual, and interactive queries directly in-window.
  * Summarized in simple, plain words without raw LaTeX markup.
  */
-export function getCopilotResponse(rawQuery = '', user) {
+export function getCopilotResponse(rawQuery = '', user, context = {}) {
   const q = (rawQuery || '').trim()
   const qLower = q.toLowerCase().trim()
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
@@ -367,6 +367,108 @@ Instead of giving one-sided speculation, ArthaLens cross-examines evidence from 
 ---
 
 💡 **ArthaLens Philosophy:** Rather than taking sides blindly, ArthaLens runs an **Adversarial Bull vs Bear Thesis Confrontation** on every stock to stress-test claims against audited evidence.`
+  }
+
+  // 7A. User Identity & Session Context
+  if (
+    /(who am i|who i am|do you know me|know about me|about me|my name|my profile|my account|who is logged in|tell me about me|what do you know about me|do you remember me)/i.test(qLower)
+  ) {
+    const targetComp = context.companyName || (context.job?.entities?.[0]?.name) || ''
+    const targetTicker = context.ticker || (context.job?.entities?.[0]?.ticker) || ''
+    let resp = `### 👤 Your Investor Profile & Session\n\n`
+    resp += `* **Investor Name:** **${userName || 'Valued Researcher'}**\n`
+    if (user?.email) resp += `* **Email / Account:** \`${user.email}\`\n`
+    resp += `* **Access Status:** **Verified Institutional Member** (Full Access to 11 Specialists)\n`
+    if (targetComp) {
+      resp += `* **Active Workspace Investigation:** **${targetComp}** ${targetTicker ? `(\`${targetTicker}\`)` : ''}\n`
+    }
+    resp += `\n---\n\n`
+    resp += `**🛡️ How I Track Your Work:**\n`
+    resp += `• I maintain your live research dossier, interactive Bull/Bear stress tests, and financial valuation scenarios across this session.\n`
+    resp += `• You can ask me to break down any financial ratio (like P/E, ROE, EBITDA), compare two companies, or stress-test downside risks for your portfolio.`
+    return resp
+  }
+
+  // 7B. The 11 Autonomous Specialists & What Each Does
+  if (
+    /(different agents|what are the agents|what each will do|each agent|all agents|11 agents|list agents|explain agents|specialist agents|about the agents|what do the agents do|how many agents|agent list|tell me about.*agent|who are the agents)/i.test(qLower)
+  ) {
+    return `### 🤖 The 11 Autonomous Specialists of ArthaLens & What Each Does
+
+ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-specific autonomous specialists** that investigate equities simultaneously using verifiable SEC, BSE, and NSE regulatory filings:
+
+---
+
+1. 📊 **Financial Health Specialist (\`financial\`)**
+   * **Role:** Audits balance sheets, debt maturity schedules, liquidity ratios, and cash flow health.
+   * **Key Output:** Working capital cycle, solvency grading, and operating cash flow purity.
+
+2. 🧮 **Valuation Multiples Specialist (\`valuation\`)**
+   * **Role:** Calculates trailing & forward P/E, EV/EBITDA, P/B, and Discounted Cash Flow (DCF).
+   * **Key Constraint:** 100% deterministic Python math — zero LLM hallucination or mathematical guesswork.
+
+3. 📈 **Market Momentum Specialist (\`market\`)**
+   * **Role:** Evaluates 52-week high/low ranges, relative strength (RSI), moving average trends, and volume accumulation.
+   * **Key Output:** Technical risk assessment and entry timing context.
+
+4. 📰 **News & Catalysts Specialist (\`news\`)**
+   * **Role:** Scans verified regulatory announcements, quarterly board decisions, and exchange press releases.
+   * **Key Output:** High-impact corporate catalysts separated from social media noise.
+
+5. 🚀 **Growth Engine Specialist (\`growth\`)**
+   * **Role:** Audits multi-year revenue CAGR, segment performance, capacity expansion, and capex execution.
+   * **Key Output:** Future reinvestment runway and operational scaling durability.
+
+6. ⚠️ **Risk Diligence Specialist (\`risk\`)**
+   * **Role:** Stress-tests client concentration (e.g. >25% revenue from top 3 clients), pending litigation, debt maturities, and margin squeeze.
+   * **Key Output:** Specific downside trigger thresholds and worst-case scenarios.
+
+7. 📑 **Filings & Doc RAG Specialist (\`document\`)**
+   * **Role:** Performs deep retrieval-augmented generation across 100+ page annual reports (10-K, 10-Q).
+   * **Key Output:** Word-for-word statutory disclosures with page-level citations.
+
+8. 💬 **Public Sentiment Specialist (\`social\`)**
+   * **Role:** Audits institutional reviews, brand reception, and customer sentiment trends.
+   * **Key Output:** Qualitative sentiment signals filtered against promotional spam.
+
+9. 👥 **Workforce & Talent Specialist (\`workforce\`)**
+   * **Role:** Analyzes hiring velocity, engineering attrition, employee satisfaction, and executive stability.
+   * **Key Output:** Human capital durability and leadership turnover signals.
+
+10. 🌐 **Industry & Moats Specialist (\`industry\`)**
+    * **Role:** Maps competitive moats (network effects, switching costs, cost advantages) and sector headwinds.
+    * **Key Output:** Porter's 5 Forces evaluation and long-term pricing power durability.
+
+11. 🛡️ **Management & Governance Specialist (\`management\`)**
+    * **Role:** Checks promoter share pledging, board independence, auditor notes, and capital allocation history.
+    * **Key Output:** Corporate governance scorecard and shareholder alignment audit.`
+  }
+
+  // 7C. What Work We Are Doing & Platform Basics
+  if (
+    /(what work are we doing|what are we doing|what are we working on|current work|what work is going on|what project is this|what is artha ai|what is arthalens|how does this work|basics of artha|everything basics|what do we do)/i.test(qLower)
+  ) {
+    const targetComp = context.companyName || (context.job?.entities?.[0]?.name) || ''
+    const targetTicker = context.ticker || (context.job?.entities?.[0]?.ticker) || ''
+    let resp = `### 🔬 What Work We Are Doing at ArthaLens\n\n`
+    if (targetComp) {
+      resp += `We are currently conducting an **autonomous institutional equity audit** on **${targetComp}** ${targetTicker ? `(\`${targetTicker}\`)` : ''}.\n\n`
+      resp += `**Current Work in Progress:**\n`
+      resp += `1. **Filing Audit:** Extracting audited metrics directly from statutory 10-K/10-Q & BSE/NSE filings.\n`
+      resp += `2. **Deterministic Valuation Math:** Running Python calculation models for P/E, EV/EBITDA, and DCF without hallucination.\n`
+      resp += `3. **Adversarial Dual-Thesis:** Pitching a ruthless **Bull Thesis** against an opposing **Bear Thesis** to uncover hidden risks.\n`
+      resp += `4. **Audit Dossier Generation:** Compiling evidence into your interactive dashboard and certified institutional PDF report.\n\n`
+      resp += `---\n\n`
+    } else {
+      resp += `**ArthaLens is an evidence-first, autonomous multi-agent equity intelligence platform.**\n\n`
+      resp += `Our mission is to eliminate human bias, generic LLM hallucinations, and promotional broker hype from stock research.\n\n`
+    }
+    resp += `**📚 The 4 Basics of How the Platform Works:**\n`
+    resp += `• **Step 1 — Query Decomposition:** You type any stock or financial inquiry (e.g., *"Should I buy TCS now?"* or *"Explain PE ratio"*).\n`
+    resp += `• **Step 2 — Dynamic Specialist Dispatch:** The Lead Planner routes the question to only the relevant specialists among our 11 agents.\n`
+    resp += `• **Step 3 — Evidence Verification:** Every numeric claim is cross-checked against audited financial releases.\n`
+    resp += `• **Step 4 — Adversarial Confrontation:** We audit both the upside catalysts and downside risks so you make decisions with 100% clarity.`
+    return resp
   }
 
   // 8. Name introduction — "my name is ak", "i am ak", "i'm ak", "call me ak"

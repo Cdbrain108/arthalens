@@ -582,7 +582,11 @@ export default function StudioPage({
       setIsGenerating(false)
       if (type === 'conversational') {
         const aId = `a_${Date.now()}`
-        const reply = getCopilotResponse(text, effectiveUser)
+        const reply = getCopilotResponse(text, effectiveUser, {
+          companyName: job?.entities?.[0]?.name || (job?.query || activeQuery),
+          ticker: job?.entities?.[0]?.ticker,
+          job,
+        })
         const suggestions = getFollowupSuggestions(text)
         setCopilotMessages((prev) => [
           ...prev,
