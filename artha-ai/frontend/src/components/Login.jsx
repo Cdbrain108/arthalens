@@ -2,23 +2,19 @@ import { useState } from 'react'
 import {
   ArrowRight,
   ArrowUpRight,
-  Check,
   CheckCircle2,
   Eye,
   EyeOff,
   Fingerprint,
-  Layers3,
   Loader2,
   Lock,
   Mail,
-  RotateCcw,
   ShieldCheck,
   Sparkles,
   User as UserIcon,
   X,
 } from 'lucide-react'
 import Logo from './Logo'
-import MarketVisual from './MarketVisual'
 import { useAuth } from '../hooks/useAuth'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -132,7 +128,7 @@ export default function Login({ onLogin, onCancel }) {
   ].join(' ')
 
   return (
-    <div className="welcome-page relative min-h-screen min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#0d1014] text-[#f1f3f4]">
+    <div className="welcome-page relative min-h-screen min-h-[100dvh] w-full flex flex-col justify-between overflow-y-auto overflow-x-hidden bg-[#0d1014] text-[#f1f3f4]">
       {/* Background Aurora Lighting */}
       <div className="welcome-aurora pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <span className="absolute -left-24 -top-40 h-96 w-96 rounded-full bg-[#22c55e]/10 blur-3xl" />
@@ -154,48 +150,16 @@ export default function Login({ onLogin, onCancel }) {
         {onCancel && (
           <button
             onClick={onCancel}
-            className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+            className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white transition cursor-pointer"
           >
             <X size={15} /> Close
           </button>
         )}
       </header>
 
-      {/* Main Container */}
-      <main className="welcome-main relative z-10 mx-auto grid w-full max-w-7xl gap-8 px-4 pb-24 pt-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(380px,460px)] lg:gap-16 lg:px-12 lg:pt-12">
-        {/* Left Column: Visual Story (Shows on desktop or below card on mobile) */}
-        <section className="welcome-story animate-fade-up order-2 lg:order-1">
-          <div className="welcome-eyebrow flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-[#22c55e]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_rgba(34,197,94,0.9)]" />
-            EVIDENCE-FIRST FINANCIAL INTELLIGENCE
-          </div>
-          <h1 className="mt-4 max-w-2xl text-2xl font-normal leading-[1.12] tracking-[-0.03em] text-white sm:text-4xl lg:text-5xl">
-            See the upside.<br />
-            <span className="text-[#22c55e]">Audit the downside.</span>
-          </h1>
-          <p className="welcome-description mt-3 max-w-xl text-xs sm:text-sm leading-relaxed text-[#a8afb8]">
-            Autonomous multi-agent stock research that cross-examines financial filings, earnings calls, news, and valuation with verified provenance.
-          </p>
-
-          <div className="welcome-tags mt-4 flex flex-wrap gap-2 text-[11px] text-[#c8ced5]">
-            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">
-              <Check size={13} className="text-[#22c55e]" /> Deterministic Math
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">
-              <Check size={13} className="text-[#22c55e]" /> Primary Filings & Sources
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">
-              <Check size={13} className="text-[#22c55e]" /> Institutional PDF Dossiers
-            </span>
-          </div>
-
-          <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3 shadow-2xl sm:p-5">
-            <MarketVisual />
-          </div>
-        </section>
-
-        {/* Right Column: Authentication Card (Appears FIRST on mobile) */}
-        <section className="welcome-access animate-fade-up order-1 lg:order-2">
+      {/* Main Container: Centered Clean Authentication Card */}
+      <main className="welcome-main relative z-10 mx-auto flex flex-1 w-full max-w-md items-center justify-center px-4 py-8 sm:py-12">
+        <section className="welcome-access w-full animate-fade-up">
           <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#161a20]/95 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
             <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-3.5">
               <div className="flex items-center gap-2">
@@ -218,7 +182,7 @@ export default function Login({ onLogin, onCancel }) {
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={googleLoading || loading}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-3 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.09] disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-3 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.09] disabled:opacity-50 cursor-pointer"
                 >
                   {googleLoading ? (
                     <Loader2 size={17} className="animate-spin text-white" />
@@ -299,7 +263,7 @@ export default function Login({ onLogin, onCancel }) {
                       <button
                         type="button"
                         onClick={() => switchMode('forgot')}
-                        className="text-[11px] text-[#22c55e] hover:underline"
+                        className="text-[11px] text-[#22c55e] hover:underline cursor-pointer"
                       >
                         Forgot password?
                       </button>
@@ -319,9 +283,9 @@ export default function Login({ onLogin, onCancel }) {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white"
-                      tabIndex={-1}
+                      onClick={() => setShowPassword((p) => !p)}
+                      className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white cursor-pointer"
+                      title={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -329,16 +293,17 @@ export default function Login({ onLogin, onCancel }) {
                 </div>
               )}
 
-              {/* Feedback messages */}
+              {/* Error & Success Alerts */}
               {err && (
-                <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300 animate-fade-in">
                   {err}
                 </div>
               )}
 
               {successMsg && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-                  {successMsg}
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 animate-fade-in">
+                  <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+                  <span>{successMsg}</span>
                 </div>
               )}
 
@@ -346,37 +311,36 @@ export default function Login({ onLogin, onCancel }) {
               <button
                 type="submit"
                 disabled={loading || googleLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#22c55e] px-4 py-3.5 text-sm font-semibold text-[#091a0f] shadow-lg shadow-emerald-500/20 transition hover:bg-[#4ade80] hover:shadow-emerald-500/30 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-50"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.45)',
+                  border: '1px solid #6ee7b7',
+                }}
               >
                 {loading ? (
-                  <Loader2 size={18} className="animate-spin text-black" />
-                ) : mode === 'signin' ? (
-                  <>
-                    <span>Enter Research Workspace</span>
-                    <ArrowRight size={17} />
-                  </>
-                ) : mode === 'signup' ? (
-                  <>
-                    <span>Create Research Account</span>
-                    <ArrowRight size={17} />
-                  </>
+                  <Loader2 size={18} className="animate-spin text-white" />
                 ) : (
                   <>
-                    <span>Send Reset Link</span>
-                    <RotateCcw size={16} />
+                    <span>
+                      {mode === 'signin' && 'Sign In to Workspace'}
+                      {mode === 'signup' && 'Create Account'}
+                      {mode === 'forgot' && 'Send Reset Link'}
+                    </span>
+                    <ArrowRight size={16} />
                   </>
                 )}
               </button>
 
-              {/* Mode switch links */}
-              <div className="pt-2 text-center text-xs text-slate-400">
+              {/* Mode Switcher */}
+              <div className="pt-2 text-center text-xs text-[#8b949e]">
                 {mode === 'signin' && (
                   <p>
-                    Don’t have an account?{' '}
+                    Don't have an account?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('signup')}
-                      className="font-medium text-[#22c55e] hover:underline"
+                      className="font-medium text-[#22c55e] hover:underline cursor-pointer"
                     >
                       Create one here
                     </button>
@@ -389,7 +353,7 @@ export default function Login({ onLogin, onCancel }) {
                     <button
                       type="button"
                       onClick={() => switchMode('signin')}
-                      className="font-medium text-[#22c55e] hover:underline"
+                      className="font-medium text-[#22c55e] hover:underline cursor-pointer"
                     >
                       Sign in instead
                     </button>
@@ -400,7 +364,7 @@ export default function Login({ onLogin, onCancel }) {
                   <button
                     type="button"
                     onClick={() => switchMode('signin')}
-                    className="font-medium text-[#22c55e] hover:underline"
+                    className="font-medium text-[#22c55e] hover:underline cursor-pointer"
                   >
                     Back to Sign In
                   </button>
@@ -412,7 +376,7 @@ export default function Login({ onLogin, onCancel }) {
                 <button
                   type="button"
                   onClick={handleGuestEnter}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2.5 text-xs font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2.5 text-xs font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white cursor-pointer"
                 >
                   <span>Explore as Guest (No Login Required)</span>
                   <ArrowUpRight size={14} />
@@ -428,8 +392,8 @@ export default function Login({ onLogin, onCancel }) {
         </section>
       </main>
 
-      <footer className="welcome-footer relative z-10 flex flex-col gap-2 border-t border-white/[0.08] px-6 py-5 text-[10px] tracking-wider text-[#66707c] sm:flex-row sm:items-center sm:justify-between lg:px-12">
-        <span>STOCK RESEARCH · INDEPENDENT MINDS. INFORMED MOVES.</span>
+      <footer className="welcome-footer relative z-10 flex flex-col gap-2 border-t border-white/[0.08] px-6 py-4 text-[10px] tracking-wider text-[#66707c] sm:flex-row sm:items-center sm:justify-between lg:px-12">
+        <span>ARTHALENS AI · AUTONOMOUS STOCK RESEARCH</span>
         <p className="tracking-normal">Evidence-based research platform. Not financial investment advice.</p>
         <span>Stock Research © {new Date().getFullYear()}</span>
       </footer>
