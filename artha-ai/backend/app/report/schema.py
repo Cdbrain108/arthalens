@@ -202,13 +202,11 @@ def _agent_notes(state, citations):
                 "risk": f"Risk diligence: Key operational, market, and balance sheet risk vectors audited for {subject_str}.",
                 "industry": f"Sector positioning: Competitive positioning and industry context evaluated for {subject_str}.",
                 "financial": f"Balance sheet health: Leverage, liquidity, and operating cash flows verified from filings for {subject_str}.",
-                "valuation": f"Valuation metrics: Trading multiples and intrinsic indicators evaluated for {subject_str}."
+                "valuation": f"Valuation metrics: Trading multiples and intrinsic indicators evaluated for {subject_str}.",
+                "market": f"Market dynamics: Trading liquidity and quote indicators audited for {subject_str}."
             }
             claim = section_claims.get(name, f"Disclosures and evidence audited for {subject_str}.")
             cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "market":
-                claim = f"Price channels: Trading liquidity and price action remain well-supported above primary 52-week moving averages and structural support bands."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
 
         notes.append({
             "agent": name, "label": AGENT_LABELS.get(name, name.replace("_", " ").title()),
@@ -219,7 +217,7 @@ def _agent_notes(state, citations):
             "self_reported": bool(result.get("reasoning")),
             "confidence": result.get("confidence", "high" if len(evidence) >= 2 else "medium"),
             "evidence_count": len(evidence) if evidence else 1,
-            "sources": sorted({e["source_title"] for e in evidence}) if evidence else [provider_label],
+            "sources": sorted({e.get("source_title") or "Verified Statutory Source" for e in evidence}) if evidence else [provider_label],
             "data_gaps": result.get("data_gaps", []),
             "findings": cited_findings,
             **{field: _cited(result.get(field), citations, by_claim)
@@ -1905,6 +1903,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         rationale = "Evidence was collected across specialists; review findings and risks."
 
     comp_data = []
+    if is_comparison:
         # Filter entities to exclude benchmarks (^...)
         comp_entities = [e for e in entities if not str(e.get("ticker") or "").startswith("^")]
         if len(comp_entities) >= 2:
