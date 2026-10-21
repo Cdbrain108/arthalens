@@ -26,6 +26,7 @@ import {
   Layers,
 } from 'lucide-react'
 import LiveAgentStream from './LiveAgentStream'
+import ArthaReasoningBlock from './ArthaReasoningBlock'
 import ResearchProcessGraph from './ResearchProcessGraph'
 import ReportPreview from './ReportPreview'
 import Sidebar from './Sidebar'
@@ -440,7 +441,7 @@ export default function StudioPage({
   const [followupText, setFollowupText] = useState('')
   const [researchMode, setResearchMode] = useState('beginner')
   const [rightTab, setRightTab] = useState('preview')
-  const [mobilePane, setMobilePane] = useState(() => (job?.report || job?.status === 'succeeded' ? 'report' : 'chat'))
+  const [mobilePane, setMobilePane] = useState(() => (job?.status === 'succeeded' && job?.report ? 'report' : 'chat'))
   const [viewMode, setViewMode] = useState('report') // 'report' | 'copilot'
   const [qaMessages, setQaMessages] = useState([])
   const [askingReport, setAskingReport] = useState(false)
@@ -451,19 +452,21 @@ export default function StudioPage({
   const chatScrollRef = useRef(null)
   const inputRef = useRef(null)
 
-  const isDone = job?.status === 'succeeded'
+  const isDone = job?.status === 'succeeded' && Boolean(job?.report)
   const activeQuery = job?.query || query || ''
   const canAskReport = isDone && Boolean(job?.job_id) && typeof onAskReport === 'function'
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
   const currentJobId = job?.job_id || sessions?.find((s) => s.job_id && !s.job_id.startsWith('chat_'))?.job_id || null
   const pdfUrl = currentJobId ? api.pdfUrl(currentJobId) : null
 
-  // Reset viewMode and Q&A messages on new job, switch to report pane on mobile when report is ready
+  // Reset viewMode and Q&A messages on new job, switch to report pane on mobile ONLY when report is ready
   useEffect(() => {
     setQaMessages([])
     setViewMode('report')
-    if (job?.report || job?.status === 'succeeded') {
+    if (job?.status === 'succeeded' && job?.report) {
       setMobilePane('report')
+    } else {
+      setMobilePane('chat')
     }
   }, [job?.job_id, job?.report, job?.status])
 
@@ -575,8 +578,8 @@ export default function StudioPage({
     const type = detectQueryType(text)
     const effectiveUser = user || { uid: 'local_active', name: 'Researcher', guest: false }
 
-    setTimeout(() => setGenerationStep(1), 450)
-    setTimeout(() => setGenerationStep(2), 950)
+    setTimeout(() => setGenerationStep(1), 180)
+    setTimeout(() => setGenerationStep(2), 420)
 
     setTimeout(() => {
       setIsGenerating(false)
@@ -803,42 +806,13 @@ export default function StudioPage({
                   />
                 )}
 
-                {/* Active Generation Thinking Card in Thread */}
+                {/* Active Generation Reasoning Block */}
                 {isGenerating && (
-                  <div className="studio-generating-card rounded-2xl border border-emerald-500/40 bg-gradient-to-tr from-[#161f1a] to-[#121722] p-4 shadow-xl space-y-3 text-left">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="relative flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-500 shadow-md">
-                          <Sparkles size={14} className="text-black animate-spin" />
-                        </div>
-                        <span className="text-[12px] font-bold text-white">Artha AI Copilot</span>
-                      </div>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10.5px] font-mono text-emerald-400 font-semibold shadow-sm">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                        Reasoning
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[12px] text-slate-300">
-                      <span className="flex gap-1 shrink-0">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </span>
-                      <span className="truncate">
-                        {generationStep === 0 && 'Analyzing query intent & financial terminology...'}
-                        {generationStep === 1 && 'Auditing valuation multiples, balance sheets & SEC filings...'}
-                        {generationStep >= 2 && 'Synthesizing deterministic mathematical intelligence...'}
-                      </span>
-                    </div>
-
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="studio-shimmer-bar h-full rounded-full transition-all duration-500 ease-out"
-                        style={{ width: generationStep === 0 ? '38%' : generationStep === 1 ? '72%' : '96%' }}
-                      />
-                    </div>
-                  </div>
+                  <ArthaReasoningBlock
+                    query={activeQuery}
+                    isGenerating={true}
+                    generationStep={generationStep}
+                  />
                 )}
               </div>
             ) : (
@@ -873,7 +847,21 @@ export default function StudioPage({
                   </div>
                 </div>
 
-                {/* Live Agent Execution Stream */}
+                {/* Live Multi-Agent Reasoning Cockpit (Showcasing which agents are doing what) */}
+                <ArthaReasoningBlock
+                  job={job}
+                  query={activeQuery}
+                  running={running}
+                  submitting={submitting}
+                  isDone={isDone}
+                  askingReport={askingReport}
+                  onViewReport={() => {
+                    setViewMode('report')
+                    setMobilePane('report')
+                  }}
+                />
+
+                {/* Live Agent Execution Stream Details */}
                 <div className="rounded-2xl border border-white/10 bg-[#131518]/60 p-3.5 shadow-inner">
                   <LiveAgentStream
                     job={job}
@@ -895,67 +883,6 @@ export default function StudioPage({
                   user={user}
                   onOpenAuth={onOpenAuth}
                 />
-              </div>
-            )}
-
-            {/* 3. Live Animated Generation Thinking Card (Always visible when pipeline, QA, or Copilot is generating) */}
-            {(running || submitting || askingReport || isGenerating) && (
-              <div className="studio-generating-card rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-[#161f1a] to-[#121722] p-4 shadow-xl text-left space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-500 shadow-md">
-                      <Sparkles size={18} className="text-black animate-spin" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-bold text-white truncate">
-                          {askingReport
-                            ? 'Auditing dossier for answers...'
-                            : isGenerating || isConversational
-                            ? 'Artha AI Copilot is reasoning...'
-                            : 'Synthesizing Institutional Research...'}
-                        </span>
-                        <span className="flex gap-1 shrink-0">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-300 mt-0.5 truncate">
-                        {askingReport
-                          ? 'Cross-referencing verified metrics and citations from completed report'
-                          : isGenerating
-                          ? generationStep === 0
-                            ? 'Analyzing query intent & financial terminology...'
-                            : generationStep === 1
-                            ? 'Auditing valuation multiples, balance sheets & SEC filings...'
-                            : 'Synthesizing deterministic mathematical intelligence...'
-                          : job?.current_node
-                          ? `Executing node: ${job.current_node.replace(/_/g, ' ')}`
-                          : 'Orchestrating 11 autonomous specialists across SEC filings, valuation & momentum'}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-mono text-emerald-400 shrink-0">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    Active
-                  </span>
-                </div>
-                {/* Animated shimmer progress bar */}
-                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="studio-shimmer-bar h-full rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: isGenerating
-                        ? generationStep === 0
-                          ? '38%'
-                          : generationStep === 1
-                          ? '72%'
-                          : '96%'
-                        : '85%'
-                    }}
-                  />
-                </div>
               </div>
             )}
 
@@ -1322,15 +1249,23 @@ export default function StudioPage({
     </button>
     <button
       type="button"
+      disabled={!isDone}
       aria-pressed={mobilePane === 'report' && viewMode === 'report'}
       onClick={() => {
+        if (!isDone) return
         setViewMode('report')
         setMobilePane('report')
       }}
-      className="flex items-center justify-center gap-1.5 font-medium transition-all"
+      className={`flex items-center justify-center gap-1.5 font-medium transition-all ${
+        !isDone ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+      }`}
+      title={isDone ? 'View completed research report' : 'Report is generating...'}
     >
       <FileText size={15} className={mobilePane === 'report' && viewMode === 'report' ? 'text-emerald-400' : 'text-slate-400'} />
-      <span>Report</span>
+      <span>{isDone ? 'Report' : (running || submitting) ? 'Auditing...' : 'Report'}</span>
+      {(running || submitting) && (
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+      )}
     </button>
     {isDone && (
       <button

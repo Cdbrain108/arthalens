@@ -10,7 +10,7 @@ const sameJob = (left, right) => {
 export const initialResearchState = { job: null, error: null, submitting: false, polling: false }
 
 // Keep request ownership separate from rendering so late responses cannot revive an old job.
-export function createResearchJob(client, onChange, schedule = setTimeout, unschedule = clearTimeout) {
+export function createResearchJob(client, onChange, schedule = setTimeout, unschedule = clearTimeout, pollInterval = 2000) {
   let state = initialResearchState
   let generation = 0
   let timer = null
@@ -58,7 +58,7 @@ export function createResearchJob(client, onChange, schedule = setTimeout, unsch
           update({ polling: false })
         }
         // Schedule only after the response: slow requests must never overlap.
-        if (!isTerminalJob(next)) timer = schedule(poll, 2000)
+        if (!isTerminalJob(next)) timer = schedule(poll, pollInterval)
       } catch (error) {
         if (owner !== generation) return
         update({ error: `Status updates paused: ${error.message}`, polling: false })

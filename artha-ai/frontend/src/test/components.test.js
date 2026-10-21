@@ -12,6 +12,7 @@ import ResearchProcessGraph from '../components/ResearchProcessGraph'
 import LandingHero from '../components/LandingHero'
 import LandingExperience from '../components/LandingExperience'
 import PdfViewerModal from '../components/PdfViewerModal'
+import ArthaReasoningBlock from '../components/ArthaReasoningBlock'
 
 test('QueryReasoningAccordion renders with empty state', () => {
   const html = renderToStaticMarkup(
@@ -162,3 +163,44 @@ test('ResearchProcessGraph reflects live pipeline state', () => {
   assert.ok(html.includes('data-node-id="valuation_agent"'))
   assert.ok(html.includes('Jump to live action'))
 })
+
+test('ArthaReasoningBlock renders in generating mode with reasoning badge and stage progress', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(ArthaReasoningBlock, {
+      query: 'Explain PE ratio simply',
+      isGenerating: true,
+      generationStep: 1,
+    })
+  )
+  assert.ok(html.includes('Artha AI Copilot'))
+  assert.ok(html.includes('Reasoning'))
+  assert.ok(html.includes('Auditing valuation multiples, balance sheets &amp; SEC filings...'))
+  assert.ok(html.includes('Financial Health Specialist') || html.includes('Financial Health'))
+  assert.ok(html.includes('Valuation Multiples Specialist') || html.includes('Valuation Multiples'))
+})
+
+test('ArthaReasoningBlock showcases which agents are doing what and live process', () => {
+  const job = {
+    entities: [{ name: 'Tata Consultancy Services', ticker: 'TCS', exchange: 'NSE' }],
+    selected_agents: ['financial', 'valuation', 'risk'],
+    completed_agents: ['financial'],
+    agent_statuses: { financial: 'completed', valuation: 'running', risk: 'queued' },
+    current_node: 'run_specialists',
+  }
+  const html = renderToStaticMarkup(
+    React.createElement(ArthaReasoningBlock, {
+      job,
+      query: 'Should I buy TCS stocks now?',
+      running: true,
+      isDone: false,
+    })
+  )
+  assert.ok(html.includes('TCS'))
+  assert.ok(html.includes('Financial Health'))
+  assert.ok(html.includes('Valuation Multiples'))
+  assert.ok(html.includes('Risk Diligence'))
+  assert.ok(html.includes('Balance sheet solvency verified'))
+  assert.ok(html.includes('Computing trailing P/E, EV/EBITDA'))
+  assert.ok(html.includes('Adversarial Confrontation'))
+})
+
