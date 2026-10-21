@@ -246,6 +246,18 @@ export function getFollowupSuggestions(query = '') {
     ]
   }
 
+  if (
+    /(?:best|which|recommend|suggest|long term|long-term|goal|buy now|portfolio|share|shares).*(?:stock|company|invest)/i.test(qLower) ||
+    /(?:stock|company|invest).*(?:best|buy|long term|long-term|goal|top)/i.test(qLower)
+  ) {
+    return [
+      { label: 'Analyze TCS fundamentals', type: 'stock' },
+      { label: 'Analyze Reliance Industries', type: 'stock' },
+      { label: 'Compare TCS vs Infosys', type: 'stock' },
+      { label: 'Analyze HDFC Bank', type: 'stock' },
+    ]
+  }
+
   // Default initial Copilot suggestions: Pure research actions (educational suggestions reserved for after-report)
   return [
     { label: 'Analyze TCS fundamentals', type: 'stock' },
@@ -319,11 +331,20 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     }
   }
 
+  // Long-term Indian stock recommendations & investment discovery
+  if (
+    /(?:which|what|any|recommend|suggest|best|top|good|ideal).*(?:indian|company|companies|stock|stocks|share|shares|equity|equities).*(?:buy|invest|long term|long-term|goal|growth|holding|compound|portfolio)/i.test(qLower) ||
+    /(?:best|top|which).*(?:stock|stocks|company|companies|share|shares).*(?:for long term|for 5 years|for 10 years|to buy now|to invest|to hold)/i.test(qLower) ||
+    /(?:stocks? to buy|where should i invest|what stock should i buy|best share to buy|top stocks in india|top compounding stocks)/i.test(qLower)
+  ) {
+    return `### 🇮🇳 Top Indian Blue-Chip Pillars for Long-Term Wealth Compounding\n\nFor a **long-term goal (3–10 years)**, the objective is **sustained capital compounding** with high return on invested capital, deep competitive moats, low debt, and structural economic tailwinds.\n\nHere are the top Tier-1 Indian market leaders across core sectors, evaluated by fundamental strength:\n\n---\n\n#### 1. 💻 Technology & Global Services: **TCS (Tata Consultancy Services)**\n* **Competitive Moat:** Zero net debt, industry-leading operating margins (~24–26%), and exceptional **Return on Equity (~45%+)**.\n* **Why Long-Term:** Mission-critical global enterprise contracts, massive free cash flow conversion, and consistent 70%+ shareholder return via dividends and buybacks.\n* **Key Downside to Monitor:** Global enterprise IT spending delays and margin pressure during generative AI transition.\n\n---\n\n#### 2. ⚡ Energy, Telecom & Retail Conglomerate: **Reliance Industries (RIL)**\n* **Competitive Moat:** India’s corporate giant with dominant consumer monopolies in **Jio (450M+ telecom users)** and **Reliance Retail (18,000+ stores)**, alongside national green energy transition.\n* **Why Long-Term:** Unrivaled consumer scale, domestic economic proxy, and traditional energy cash flows funding high-growth digital/retail expansion.\n* **Key Downside to Monitor:** Heavy multi-year capex cycles and pacing of balance sheet deleveraging.\n\n---\n\n#### 3. 🏦 Financials & Credit Expansion: **HDFC Bank / ICICI Bank**\n* **Competitive Moat:** Pristine asset quality (Gross NPAs < 1.2–1.4%), low-cost retail deposits (high CASA ratio), and robust Net Interest Margins (NIM > 3.6–4.2%).\n* **Why Long-Term:** Commercial banking is the fundamental engine of India's GDP growth. HDFC Bank post-merger and ICICI Bank lead institutional and retail credit expansion.\n* **Key Downside to Monitor:** Margin compression during tight liquidity and deposit repricing cycles.\n\n---\n\n#### 4. 🏗️ Infrastructure & Capital Expenditure: **Larsen & Toubro (L&T)**\n* **Competitive Moat:** India's undisputed engineering and infrastructure champion with an all-time record order book of ₹4.5+ Lakh Crore spanning hydrocarbons, defense, and urban infrastructure.\n* **Why Long-Term:** Direct prime beneficiary of India's multi-trillion dollar public & private infrastructure supercycle.\n* **Key Downside to Monitor:** Execution delays and commodity raw material price inflation on fixed-price EPC contracts.\n\n---\n\n### 🛡️ The 4-Pillar Long-Term Selection Checklist\nBefore allocating long-term capital to any Indian company, verify these 4 rules:\n1. **Capital Efficiency:** Delivers **ROE > 18%** and **ROCE > 20%** consistently across a 5-year cycle.\n2. **Balance Sheet Fortress:** **Debt-to-Equity < 0.5x** (or pristine CASA/NPA for banks) to withstand high interest rate periods.\n3. **Pricing Power:** Operating Profit Margin (OPM > 18–25%) defended against inflation.\n4. **Clean Governance:** Proven promoter integrity and disciplined capital allocation.\n\n---\n\n💡 *Select any suggested stock below to launch our 11 autonomous specialist agents for a full fundamental audit, valuation multiples, and filing cross-examination.*`
+  }
+
   // Stock research queries in progress or starting
   if (detectQueryType(q) === 'stock' || extractStockEntities(q).length > 0) {
     const matched = extractStockEntities(q)
     const entityLabel = matched.length > 0 ? matched.map((m) => m.toUpperCase()).join(' & ') : q
-    return `### 🚀 Dispatched Autonomous Research: **${entityLabel}**\n\nI have routed your inquiry to our **11 autonomous specialist agents**. They are actively cross-examining regulatory filings, calculating deterministic valuation metrics, and stress-testing operational risks in real-time.\n\n*Review live agent progress and verified evidence in the **Auditing** tab.*`
+    return `### 🚀 Dispatched Autonomous Research: **${entityLabel}**\n\nI have routed your inquiry to our **11 autonomous specialist agents**. They are actively cross-examining regulatory filings, calculating deterministic valuation metrics, and stress-testing operational risks in real-time.\n\n*Review live agent progress and verified evidence in the live research stream below.*`
   }
 
   // 1. EDUCATIONAL: Price-to-Earnings (P/E) Ratio
@@ -655,5 +676,5 @@ ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-speci
 
   // 17. Contextual response for general financial questions
   const short = q.length > 90 ? q.slice(0, 90) + '…' : q
-  return `### 💡 Copilot Financial Intelligence: *"${short}"*\n\nI have cross-referenced your inquiry with our financial knowledge base and multi-agent evidence engine.\n\nYou can review live agent reasoning and filing verification in the **Auditing** tab, or ask specific follow-ups on valuation multiples, operating profit margins, debt ratios, or downside risks.`
+  return `### 💡 Copilot Financial Intelligence: *"${short}"*\n\nTo evaluate this thoroughly, our multi-agent framework examines **solvency, valuation multiples (P/E, P/B, EV/EBITDA), competitive moats, and cash flow durability**.\n\nYou can:\n• **Analyze a specific company:** e.g., *"Analyze TCS fundamentals"* or *"Analyze Reliance Industries"*\n• **Compare industry peers:** e.g., *"Compare Infosys vs Wipro"*\n• **Clarify financial metrics:** e.g., *"Explain P/E ratio"*, *"What is ROE and ROCE?"*\n\nSelect a prompt below or type any ticker to begin!`
 }

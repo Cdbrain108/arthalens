@@ -151,3 +151,21 @@ test('detectQueryType classifies non-financial queries as out_of_scope and getCo
   }
 })
 
+test('getCopilotResponse delivers comprehensive Indian blue-chip analysis for long-term goal inquiries without phantom Auditing tab', () => {
+  const query = 'Which Indian company stock should be best to buy now for a long term goal?'
+  const mockUser = { uid: 'user_123', name: 'Anuj Kesharwani', guest: false }
+  const response = getCopilotResponse(query, mockUser)
+
+  assert.ok(response.includes('Top Indian Blue-Chip Pillars for Long-Term Wealth Compounding'))
+  assert.ok(response.includes('TCS (Tata Consultancy Services)'))
+  assert.ok(response.includes('Reliance Industries'))
+  assert.ok(response.includes('HDFC Bank'))
+  assert.ok(response.includes('Larsen & Toubro'))
+  assert.ok(response.includes('The 4-Pillar Long-Term Selection Checklist'))
+  assert.ok(!response.includes('Auditing tab'), 'Response should not refer to a non-existent Auditing tab')
+
+  const suggestions = getFollowupSuggestions(query)
+  assert.ok(suggestions.some((s) => s.label.includes('TCS') && s.type === 'stock'))
+  assert.ok(suggestions.some((s) => s.label.includes('Reliance') && s.type === 'stock'))
+})
+

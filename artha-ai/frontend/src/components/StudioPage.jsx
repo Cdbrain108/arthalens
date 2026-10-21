@@ -156,8 +156,8 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
               }}
             />
 
-            {/* Suggestions on latest assistant turn (only when NOT actively running research and either report is done or initial welcome) */}
-            {isLatestAssistant && hasFinishedTyping && isLoggedIn && !running && (isDone || messages.length <= 1) && Array.isArray(msg.suggestions) && msg.suggestions.length > 0 && (
+            {/* Suggestions on latest assistant turn (available for all users whenever research is not actively running) */}
+            {isLatestAssistant && hasFinishedTyping && !running && Array.isArray(msg.suggestions) && msg.suggestions.length > 0 && (
               <div className="pt-3 border-t border-white/5 space-y-2 animate-fade-in">
                 <p className="text-[11px] font-medium text-[#5f6368] uppercase tracking-wide px-0.5">
                   Suggested Research Actions →
@@ -517,6 +517,7 @@ export default function StudioPage({
   const [mobilePane, setMobilePane] = useState(() => (job?.status === 'succeeded' && job?.report ? 'report' : 'chat'))
   const [viewMode, setViewMode] = useState('report') // 'report' | 'copilot'
   const [qaMessages, setQaMessages] = useState([])
+  const [completedQaIds, setCompletedQaIds] = useState(() => new Set())
   const [askingReport, setAskingReport] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStep, setGenerationStep] = useState(0)
@@ -535,6 +536,7 @@ export default function StudioPage({
   // Reset viewMode and Q&A messages on new job, switch to report pane on mobile ONLY when report is ready
   useEffect(() => {
     setQaMessages([])
+    setCompletedQaIds(new Set())
     setViewMode('report')
     if (job?.status === 'succeeded' && job?.report) {
       setMobilePane('report')
@@ -625,7 +627,7 @@ export default function StudioPage({
           id: 'a_init',
           role: 'assistant',
           text: isStock
-            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the **Auditing** tab below.*`
+            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
             : getCopilotResponse(activeQuery, user),
           suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
         },
@@ -651,7 +653,7 @@ export default function StudioPage({
           id: `a_${Date.now() + 1}`,
           role: 'assistant',
           text: isStock
-            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the **Auditing** tab below.*`
+            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
             : getCopilotResponse(activeQuery, user),
           suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
         },
@@ -1049,41 +1051,92 @@ export default function StudioPage({
             {/* 4. Report Q&A messages */}
             {qaMessages.length > 0 && (
               <div className="space-y-3 animate-fade-up" aria-live="polite">
-                {qaMessages.map((message, index) => (
-                  <div
-                    key={`${message.role}-${index}`}
-                    className={message.role === 'user'
-                      ? 'ml-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-[12.5px] leading-relaxed text-[#f1f3f4]'
-                      : 'mr-3 rounded-xl border border-white/10 bg-[#1e2026] p-3 text-[12.5px] leading-relaxed text-[#d2d6dc]'}
-                  >
-                    <span className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-emerald-400">
-                      {message.role === 'user' ? 'You' : 'Artha Copilot'}
-                    </span>
-                    <div className="text-[12.5px] leading-relaxed text-[#d2d6dc]">
-                      <CopilotMarkdown content={message.text} />
-                    </div>
-                    {message.followUp && (
-                      <p className="mt-2 border-t border-white/10 pt-2 text-[11px] text-[#fbbc04]">
-                        This asks for information outside the completed report; a fresh research run is needed for a current answer.
-                      </p>
-                    )}
-                    {message.sources?.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
-                        {message.sources.slice(0, 4).map((source, sourceIndex) => (
-                          <a
-                            key={`${source.title || 'source'}-${sourceIndex}`}
-                            href={source.url || undefined}
-                            target={source.url ? '_blank' : undefined}
-                            rel={source.url ? 'noreferrer' : undefined}
-                            className="max-w-full truncate rounded-md bg-white/5 px-2 py-1 font-mono text-[10px] text-emerald-400 hover:text-white"
-                          >
-                            {source.title || 'Source'}
-                          </a>
-                        ))}
+                {qaMessages.map((message, index) => {
+                  const isUser = message.role === 'user'
+                  const isLatestAssistant = !isUser && index === qaMessages.length - 1
+                  const shouldAnimate = isLatestAssistant && !completedQaIds.has(index)
+
+                  return (
+                    <div
+                      key={`${message.role}-${index}`}
+                      className={isUser
+                        ? 'ml-8 rounded-2xl rounded-tr-sm border border-emerald-500/30 bg-gradient-to-r from-emerald-500/15 to-emerald-600/20 px-4 py-2.5 text-[13px] leading-relaxed text-[#f1f3f4] shadow-md'
+                        : 'mr-3 rounded-2xl rounded-tl-sm border border-white/10 bg-[#1e2026] p-4 text-[13px] leading-relaxed text-[#d2d6dc] shadow-md'}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        {!isUser && (
+                          <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                            <Sparkles size={12} />
+                          </div>
+                        )}
+                        <span className="block font-mono text-[10.5px] uppercase tracking-wider text-emerald-400 font-semibold">
+                          {isUser ? 'You' : 'Artha Copilot'}
+                        </span>
+                        {!isUser && shouldAnimate && (
+                          <span className="flex gap-1 ml-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </span>
+                        )}
                       </div>
-                    )}
+                      <div className="text-[13px] leading-relaxed text-[#d2d6dc]">
+                        {isUser ? (
+                          <p>{message.text}</p>
+                        ) : (
+                          <TypewriterMessage
+                            text={message.text}
+                            shouldAnimate={shouldAnimate}
+                            onTypingDone={() => {
+                              setCompletedQaIds((prev) => new Set(prev).add(index))
+                            }}
+                          />
+                        )}
+                      </div>
+                      {message.followUp && (
+                        <p className="mt-2 border-t border-white/10 pt-2 text-[11px] text-[#fbbc04]">
+                          This asks for information outside the completed report; a fresh research run is needed for a current answer.
+                        </p>
+                      )}
+                      {message.sources?.length > 0 && (
+                        <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
+                          {message.sources.slice(0, 4).map((source, sourceIndex) => (
+                            <a
+                              key={`${source.title || 'source'}-${sourceIndex}`}
+                              href={source.url || undefined}
+                              target={source.url ? '_blank' : undefined}
+                              rel={source.url ? 'noreferrer' : undefined}
+                              className="max-w-full truncate rounded-md bg-white/5 px-2 py-1 font-mono text-[10px] text-emerald-400 hover:text-white"
+                            >
+                              {source.title || 'Source'}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Thinking / Auditing card during Report Q&A */}
+            {askingReport && (
+              <div className="mr-3 rounded-2xl border border-emerald-500/30 bg-[#1e2026] p-4 shadow-lg animate-fade-up">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                    <Sparkles size={13} className="animate-spin" />
                   </div>
-                ))}
+                  <span className="text-[12px] font-bold text-white">Artha AI Copilot</span>
+                  <span className="flex gap-1 ml-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                </div>
+                <p className="text-[12px] text-slate-300">Auditing report evidence &amp; calculating verified answer...</p>
+                <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-400 animate-pulse" style={{ width: '75%' }} />
+                </div>
               </div>
             )}
 
