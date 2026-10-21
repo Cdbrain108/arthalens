@@ -407,8 +407,19 @@ export default function MobileLanding({
           </div>
         )}
 
-        {/* Mobile Hamburger Toggle */}
-        <div className="arg-nav-mobile-right">
+        {/* Mobile Hamburger Toggle & User Status */}
+        <div className="arg-nav-mobile-right flex items-center gap-2">
+          {user && !user.guest && (
+            <button
+              type="button"
+              onClick={onResume}
+              className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300"
+              title={`Logged in as ${user.displayName || user.name || user.email}`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span>{(user.displayName || user.name || user.email || 'User').split(' ')[0]}</span>
+            </button>
+          )}
           <button
             type="button"
             className="arg-nav-toggle"
@@ -486,16 +497,28 @@ export default function MobileLanding({
               </button>
             )}
             {user && !user.guest ? (
-              <button
-                type="button"
-                className="mobile-demo-btn"
-                onClick={() => {
-                  setNavOpen(false)
-                  onResume?.()
-                }}
-              >
-                <span>Workspace ({user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'User'})</span>
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  className="mobile-demo-btn"
+                  onClick={() => {
+                    setNavOpen(false)
+                    onResume?.()
+                  }}
+                >
+                  <span>Workspace ({user.displayName?.split(' ')[0] || user.name?.split(' ')[0] || user.email?.split('@')[0] || 'User'})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavOpen(false)
+                    onLogout?.()
+                  }}
+                  className="w-full text-center text-xs text-rose-400/80 hover:text-rose-300 py-1"
+                >
+                  Sign Out
+                </button>
+              </div>
             ) : (
               <button
                 type="button"

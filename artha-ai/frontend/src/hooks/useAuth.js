@@ -27,88 +27,128 @@ function extractDisplayName(firebaseUser) {
   return ''
 }
 
-export function useAuth() {
-  const [user, setUser] = useState(() => {
+// Module-level global state and subscriber pool to keep all hook instances in sync across the entire app
+let globalUser = (() => {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(GUEST_KEY) : null
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+})()
+
+const listeners = new Set()
+
+export function broadcastUser(nextUser) {
+  globalUser = nextUser
+  try {
+    if (typeof localStorage !== 'undefined') {
+      if (nextUser) {
+        localStorage.setItem(GUEST_KEY, JSON.stringify(nextUser))
+      } else {
+        localStorage.removeItem(GUEST_KEY)
+      }
+    }
+  } catch {}
+  listeners.forEach((listener) => {
     try {
-      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(GUEST_KEY) : null
-      return raw ? JSON.parse(raw) : null
-    } catch {
-      return null
+      listener(nextUser)
+    } catch {}
+  })
+}
+
+// Setup remote auth state change listener once at module level
+let authListenerInitialized = false
+function initAuthListenerOnce() {
+  if (authListenerInitialized) return
+  authListenerInitialized = true
+
+  onAuthStateChange((firebaseUser) => {
+    if (firebaseUser) {
+      const dispName =
+        extractDisplayName(firebaseUser) ||
+        firebaseUser.displayName ||
+        firebaseUser.email?.split('@')[0] ||
+        'Researcher'
+      const u = {
+        uid: firebaseUser.uid,
+        name: dispName,
+        displayName: dispName,
+        email: firebaseUser.email || '',
+        photoURL: firebaseUser.photoURL || null,
+        guest: false,
+        isFirebase: true,
+        isFirebaseRemote: true,
+        ts: Date.now(),
+      }
+      broadcastUser(u)
+    } else {
+      // Only clear user if the active session was a remote Firebase session that logged out
+      if (globalUser?.isFirebaseRemote) {
+        broadcastUser(null)
+      }
     }
   })
-  const [loading, setLoading] = useState(true)
+}
 
-  // Listen to remote Firebase Auth state changes
-  useEffect(() => {
-    let active = true
-
-    const unsubscribe = onAuthStateChange((firebaseUser) => {
-      if (!active) return
-
-      if (firebaseUser) {
-        const u = {
-          uid: firebaseUser.uid,
-          name: extractDisplayName(firebaseUser) || firebaseUser.displayName || '',
-          email: firebaseUser.email || '',
-          photoURL: firebaseUser.photoURL || null,
-          guest: false,
-          isFirebase: true,
-          ts: Date.now(),
-        }
-        try {
-          localStorage.setItem(GUEST_KEY, JSON.stringify(u))
-        } catch {}
-        setUser(u)
-      } else {
-        // Only clear user if the active session was a Firebase session
-        setUser((prev) => {
-          if (prev?.isFirebase) {
-            try {
-              localStorage.removeItem(GUEST_KEY)
-            } catch {}
-            return null
-          }
-          return prev
-        })
+if (typeof window !== 'undefined') {
+  initAuthListenerOnce()
+  window.addEventListener('storage', (e) => {
+    if (e.key === GUEST_KEY) {
+      try {
+        const parsed = e.newValue ? JSON.parse(e.newValue) : null
+        globalUser = parsed
+        listeners.forEach((fn) => fn(parsed))
+      } catch {
+        globalUser = null
+        listeners.forEach((fn) => fn(null))
       }
-      setLoading(false)
-    })
-
-    return () => {
-      active = false
-      unsubscribe?.()
     }
+  })
+}
+
+export function useAuth() {
+  const [user, setUser] = useState(globalUser)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setUser(globalUser)
+    const listener = (next) => setUser(next)
+    listeners.add(listener)
+    return () => listeners.delete(listener)
   }, [])
 
   // Email / Password Login
   const login = useCallback(async (email, password) => {
     if (!isFirebaseConfigured) {
+      const name = email.split('@')[0]
       const u = {
         uid: `guest_${Date.now()}`,
-        name: email.split('@')[0],
+        name,
+        displayName: name,
         email: email.trim(),
         guest: false,
         ts: Date.now(),
       }
-      try {
-        localStorage.setItem(GUEST_KEY, JSON.stringify(u))
-      } catch {}
-      setUser(u)
+      broadcastUser(u)
       return { user: u, error: null }
     }
 
     const { user: firebaseUser, error } = await loginUser(email, password)
     if (firebaseUser) {
+      const name = extractDisplayName(firebaseUser) || firebaseUser.displayName || email.split('@')[0]
       const u = {
         uid: firebaseUser.uid,
-        name: extractDisplayName(firebaseUser),
+        name,
+        displayName: name,
         email: firebaseUser.email || '',
         photoURL: firebaseUser.photoURL || null,
         guest: false,
         isFirebase: true,
+        isFirebaseRemote: true,
         ts: Date.now(),
       }
-      setUser(u)
+      broadcastUser(u)
       return { user: u, error: null }
     }
     return { user: null, error }
@@ -117,29 +157,34 @@ export function useAuth() {
   // Email / Password / Name Registration
   const signup = useCallback(async (name, email, password) => {
     if (!isFirebaseConfigured) {
+      const uName = name.trim() || email.split('@')[0]
       const u = {
         uid: `guest_${Date.now()}`,
-        name: name.trim() || '',
+        name: uName,
+        displayName: uName,
         email: email.trim(),
         guest: false,
         ts: Date.now(),
       }
-      setUser(u)
+      broadcastUser(u)
       return { user: u, error: null }
     }
 
     const { user: firebaseUser, error } = await registerUser(name, email, password)
     if (firebaseUser) {
+      const uName = name.trim() || extractDisplayName(firebaseUser) || firebaseUser.displayName || email.split('@')[0]
       const u = {
         uid: firebaseUser.uid,
-        name: name.trim() || extractDisplayName(firebaseUser),
+        name: uName,
+        displayName: uName,
         email: firebaseUser.email || '',
         photoURL: firebaseUser.photoURL || null,
         guest: false,
         isFirebase: true,
+        isFirebaseRemote: true,
         ts: Date.now(),
       }
-      setUser(u)
+      broadcastUser(u)
       return { user: u, error: null }
     }
     return { user: null, error }
@@ -149,19 +194,19 @@ export function useAuth() {
   const loginWithGoogle = useCallback(async () => {
     const { user: firebaseUser, error } = await signInWithGoogle()
     if (firebaseUser) {
+      const name = extractDisplayName(firebaseUser) || firebaseUser.displayName || firebaseUser.name || 'Google Researcher'
       const u = {
         uid: firebaseUser.uid,
-        name: extractDisplayName(firebaseUser) || firebaseUser.displayName || 'Google Researcher',
-        email: firebaseUser.email || '',
+        name,
+        displayName: name,
+        email: firebaseUser.email || 'researcher@gmail.com',
         photoURL: firebaseUser.photoURL || null,
         guest: false,
         isFirebase: Boolean(firebaseUser.getIdToken),
+        isFirebaseRemote: Boolean(firebaseUser.getIdToken),
         ts: Date.now(),
       }
-      try {
-        localStorage.setItem(GUEST_KEY, JSON.stringify(u))
-      } catch {}
-      setUser(u)
+      broadcastUser(u)
       return { user: u, error: null }
     }
     return { user: null, error }
@@ -177,24 +222,21 @@ export function useAuth() {
     const u = {
       uid: `guest_${Date.now()}`,
       name: name.trim(),
+      displayName: name.trim(),
       email: email.trim(),
       guest: true,
       ts: Date.now(),
     }
-    try {
-      localStorage.setItem(GUEST_KEY, JSON.stringify(u))
-    } catch {}
-    setUser(u)
+    broadcastUser(u)
     return u
   }, [])
 
   // Logout
   const logout = useCallback(async () => {
+    broadcastUser(null)
     try {
-      localStorage.removeItem(GUEST_KEY)
       await logoutUser()
     } catch {}
-    setUser(null)
   }, [])
 
   return {

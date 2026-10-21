@@ -161,18 +161,23 @@ export default function App() {
     [user?.uid]
   )
 
+  const handleLoginSuccess = useCallback(
+    (loggedInUser) => {
+      setAuthModalOpen(false)
+      if (query || job) {
+        navigate('chat')
+      } else {
+        navigate('landing')
+      }
+    },
+    [query, job, navigate]
+  )
+
   // Login Page route
   if (currentPage === 'login') {
     return (
       <Login
-        onLogin={() => {
-          setAuthModalOpen(false)
-          if (query || job) {
-            navigate('chat')
-          } else {
-            navigate('landing')
-          }
-        }}
+        onLogin={handleLoginSuccess}
         onCancel={() => {
           if (query || job) {
             navigate('chat')
@@ -211,7 +216,7 @@ export default function App() {
         {authModalOpen && (
           <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md">
             <Login
-              onLogin={() => setAuthModalOpen(false)}
+              onLogin={handleLoginSuccess}
               onCancel={() => setAuthModalOpen(false)}
             />
           </div>
@@ -258,7 +263,7 @@ export default function App() {
       {authModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md">
           <Login
-            onLogin={() => setAuthModalOpen(false)}
+            onLogin={handleLoginSuccess}
             onCancel={() => setAuthModalOpen(false)}
           />
         </div>

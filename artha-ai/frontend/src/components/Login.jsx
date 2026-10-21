@@ -112,10 +112,8 @@ export default function Login({ onLogin, onCancel }) {
       if (error) {
         setErr(error)
       } else if (user) {
-        setSuccessMsg(`Welcome, ${user.name || user.email || 'Researcher'}!`)
-        setTimeout(() => {
-          onLogin?.(user)
-        }, 150)
+        setSuccessMsg(`Welcome, ${user.displayName || user.name || user.email || 'Researcher'}!`)
+        onLogin?.(user)
       }
     } catch (e) {
       setGoogleLoading(false)
@@ -190,7 +188,7 @@ export default function Login({ onLogin, onCancel }) {
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={googleLoading || loading}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-3 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.09] disabled:opacity-50 cursor-pointer"
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-3 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.09] active:scale-[0.98] touch-manipulation select-none disabled:opacity-50 cursor-pointer"
                 >
                   {googleLoading ? (
                     <Loader2 size={17} className="animate-spin text-white" />
