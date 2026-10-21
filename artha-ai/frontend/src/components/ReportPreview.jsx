@@ -317,13 +317,15 @@ export default function ReportPreview({
     ['hi', 'hello', 'hey', 'greetings', 'help', 'who are you', 'what can you do',
       'good morning', 'good evening'].includes(qLower)
 
+  const isInitialWelcome = !job && !jobId && !report
+
   useEffect(() => {
     if (job?.report) {
       setReport(job.report)
       setLoading(false)
       return
     }
-    if (!jobId || isConversational || (job?.status && job.status !== 'succeeded')) {
+    if (!jobId || isConversational || isInitialWelcome || (job?.status && job.status !== 'succeeded')) {
       setLoading(false)
       return
     }
@@ -344,30 +346,41 @@ export default function ReportPreview({
         }
       })
     return () => { active = false }
-  }, [jobId, isConversational, job?.status, job?.report])
+  }, [jobId, isConversational, isInitialWelcome, job?.status, job?.report])
 
   /* --- Conversational / landing card -------------------------------------- */
-  if (isConversational) {
+  if (isConversational || isInitialWelcome) {
     return (
       <div className="mt-4 w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#181a1f] text-[#f1f3f4] shadow-2xl animate-fade-up">
         <div className="border-b border-white/10 bg-[#1e2026] px-6 py-5 text-left">
           <div className="flex flex-wrap items-center gap-2">
             <Logo size={22} />
-            <span className="font-sans text-[16px] font-bold tracking-tight text-white">Stock Research</span>
+            <span className="font-sans text-[16px] font-bold tracking-tight text-white">Artha AI Research</span>
             <span className="font-mono text-[12px] text-[#9aa0a6]">·</span>
             <span className="text-[12px] font-medium text-[#bdc1c6]">Evidence-First Financial Intelligence</span>
-            <span className="ml-2 rounded-full bg-[#4285f4]/15 px-2.5 py-0.5 font-mono text-[11px] font-medium text-[#8ab4f8]">
-              Copilot Ready
+            <span className="ml-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-400">
+              {isInitialWelcome ? 'Workspace Ready' : 'Copilot Ready'}
             </span>
           </div>
           <h2 className="mt-2 text-[19px] font-bold tracking-tight text-white sm:text-[21px]">
-            Institutional Multi-Agent Equity Research Workspace
+            {isInitialWelcome ? 'Institutional Multi-Agent Equity Research Workspace' : 'Conversational Financial Assistant'}
           </h2>
           <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-[#bdc1c6] sm:text-[13.5px]">
-            Hello. Stock Research dispatches{' '}
-            <span className="font-medium text-[#8ab4f8]">only the minimal required specialist agents in parallel</span>,
-            validates every claim against its source, and reports what it could not establish instead of filling
-            the gap.
+            {isInitialWelcome ? (
+              <>
+                Artha AI dispatches{' '}
+                <span className="font-medium text-emerald-400">11 autonomous specialist agents in parallel</span>,
+                validates every claim against official filings, and stress-tests findings with dual-thesis analysis.
+                Select a research prompt below or ask any stock question in Copilot to begin.
+              </>
+            ) : (
+              <>
+                Artha AI dispatches{' '}
+                <span className="font-medium text-[#8ab4f8]">only the minimal required specialist agents in parallel</span>,
+                validates every claim against its source, and reports what it could not establish instead of filling
+                the gap.
+              </>
+            )}
           </p>
         </div>
 
@@ -504,6 +517,9 @@ export default function ReportPreview({
   }
 
   if (error || !report) {
+    if (!job && !jobId) {
+      return null
+    }
     if (error === 'Report pending' || error?.includes('pending')) {
       return (
         <div className="mt-4 w-full animate-fade-up rounded-2xl border border-[#4285f4]/25 bg-[#181a1f] p-8 text-center shadow-xl">

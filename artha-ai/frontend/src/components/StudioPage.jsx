@@ -1251,7 +1251,7 @@ export default function StudioPage({
 
             <div className="flex shrink-0 items-center gap-3 text-[#9aa0a6]">
               <span className="hidden lg:inline text-[11px] font-mono text-[#bdc1c6]">
-                {isDone ? 'Evidence audit complete' : running ? 'Synthesizing...' : 'Report ready'}
+                {isDone ? 'Evidence audit complete' : running ? 'Synthesizing...' : job ? 'Report ready' : 'Awaiting research'}
               </span>
               <button
                 type="button"

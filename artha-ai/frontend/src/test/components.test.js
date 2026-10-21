@@ -112,6 +112,19 @@ test('ReportPreview renders cleanly without throwing', () => {
   assert.ok(typeof html === 'string')
 })
 
+test('ReportPreview renders welcome starter view when no job or report exists without error', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(ReportPreview, {
+      jobId: null,
+      job: null,
+      pdfUrl: null
+    })
+  )
+  assert.ok(html.includes('Institutional Multi-Agent Equity Research Workspace'))
+  assert.ok(html.includes('Workspace Ready'))
+  assert.ok(!html.includes('Unable to load finalized report'))
+})
+
 test('StudioWaitCarousel and LandingHero render properly', () => {
   const carouselHtml = renderToStaticMarkup(React.createElement(StudioWaitCarousel))
   assert.ok(typeof carouselHtml === 'string')
