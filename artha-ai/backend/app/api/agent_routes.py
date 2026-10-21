@@ -7,7 +7,8 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 
 @router.get("")
 async def list_agents():
-    return [{**entry, "label": DEF_BY_NAME[entry['name']]['role'],
+    return [{**entry, "id": entry['name'],
+             "label": DEF_BY_NAME[entry['name']]['role'],
              "description": DEF_BY_NAME[entry['name']]['goal'],
              "tools": [t.name for t in DEF_BY_NAME[entry['name']]['tools']],
              "limitations": "Configured means local tools initialize. External provider coverage is assessed per research run."}

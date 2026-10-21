@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import {
   AlertTriangle,
   BarChart3,
@@ -75,12 +76,38 @@ function stateLabel(state) {
 }
 
 export default function ResearchProcessGraph({ job, running = false, isDone = false }) {
+  const containerRef = useRef(null)
   const currentNode = job?.current_node || ''
   const steps = job?.steps || []
   const selectedAgents = job?.selected_agents || []
   const completedAgents = job?.completed_agents || []
   const failedAgents = job?.failed_agents || []
   const currentIndex = ORDER.indexOf(currentNode)
+
+  const scrollToActive = () => {
+    if (!containerRef.current) return
+    const activeEl =
+      containerRef.current.querySelector('.process-node-running') ||
+      containerRef.current.querySelector('.process-agent-running') ||
+      (currentNode ? containerRef.current.querySelector(`[data-node-id="${currentNode}"]`) : null)
+
+    if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+      activeEl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      })
+    }
+  }
+
+  // Auto-scroll screen whenever active action or node changes during live research
+  useEffect(() => {
+    if (!running && !currentNode) return
+    const timer = setTimeout(() => {
+      scrollToActive()
+    }, 60)
+    return () => clearTimeout(timer)
+  }, [currentNode, job?.steps, job?.agent_statuses, running])
 
   const stepState = (id) => {
     const recorded = steps.find((step) => step.node === id)
@@ -121,12 +148,26 @@ export default function ResearchProcessGraph({ job, running = false, isDone = fa
   const renderNode = (stage) => {
     const state = stepState(stage.id)
     const Icon = stage.icon
+    const isRunning = state === 'running'
     return (
-      <div key={stage.id} className={`process-node process-node-${state}`}>
+      <div
+        key={stage.id}
+        data-node-id={stage.id}
+        data-state={state}
+        className={`process-node process-node-${state}`}
+      >
         <div className="process-node-icon">{stateIcon(state)}</div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="process-node-label">{stage.label}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="process-node-label">{stage.label}</span>
+              {isRunning && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#4285f4]/20 border border-[#4285f4]/40 px-1.5 py-0.5 text-[9px] font-mono text-[#8ab4f8] animate-pulse">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4285f4]" />
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <span className="process-node-status">{stateLabel(state)}</span>
           </div>
           <div className="process-node-detail">
@@ -139,12 +180,23 @@ export default function ResearchProcessGraph({ job, running = false, isDone = fa
   }
 
   return (
-    <div className="research-process-graph animate-fade-up" aria-live="polite">
+    <div ref={containerRef} className="research-process-graph animate-fade-up" aria-live="polite">
       <div className="research-process-header">
         <div>
           <div className="research-process-kicker">
             <span className={running ? 'process-live-dot' : 'process-ready-dot'} />
-            Live research pipeline
+            <span>Live research pipeline</span>
+            {running && (
+              <button
+                type="button"
+                onClick={scrollToActive}
+                className="ml-2 inline-flex items-center gap-1 rounded-md bg-[#4285f4]/20 hover:bg-[#4285f4]/35 border border-[#4285f4]/35 px-2 py-0.5 text-[10.5px] font-medium text-[#8ab4f8] transition cursor-pointer"
+                title="Move screen to whichever action is running live"
+              >
+                <span>Jump to live action</span>
+                <span className="text-[10px]">↓</span>
+              </button>
+            )}
           </div>
           <h2>Evidence moving through the workspace</h2>
           <p>{running ? `${activeLabel} is active now.` : isDone ? 'Every stage has settled.' : 'The pipeline is ready for a research question.'}</p>
@@ -175,10 +227,21 @@ export default function ResearchProcessGraph({ job, running = false, isDone = fa
             const Icon = meta.icon
             const state = agentState(agent)
             return (
-              <div key={agent} className={`process-agent process-agent-${state} process-agent-${meta.tone}`}>
+              <div
+                key={agent}
+                data-node-id={`${agent}_agent`}
+                data-agent-id={agent}
+                data-state={state}
+                className={`process-agent process-agent-${state} process-agent-${meta.tone}`}
+              >
                 <div className="process-agent-icon">{stateIcon(state)}</div>
                 <Icon size={13} />
-                <span>{meta.label}</span>
+                <span className="flex-1 min-w-0 truncate">{meta.label}</span>
+                {state === 'running' && (
+                  <span className="inline-flex items-center gap-1 rounded bg-[#4285f4]/25 px-1.5 py-0.5 text-[8.5px] font-mono text-[#8ab4f8] animate-pulse">
+                    ACTIVE
+                  </span>
+                )}
                 <span className="process-agent-status">{stateLabel(state)}</span>
               </div>
             )

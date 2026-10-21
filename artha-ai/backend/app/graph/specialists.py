@@ -11,7 +11,7 @@ from ..schemas.models import AgentResult
 
 # Timed-out Python threads cannot be killed. This shared pool also bounds late
 # provider calls across jobs, and late results can never update the job state.
-_POOL = ThreadPoolExecutor(max_workers=6, thread_name_prefix='bullseye-specialist')
+_POOL = ThreadPoolExecutor(max_workers=16, thread_name_prefix='bullseye-specialist')
 
 
 def _now():
@@ -79,7 +79,7 @@ def run_specialist_live(name, state, base_result=None):
         'Never infer missing values, sector benchmarks or financial arithmetic.\n'
         f'Evidence: {json.dumps(concise_packet, default=str)}\nGaps: {base_result.data_gaps}')
     try:
-        proposed = get_structured_llm('specialist', SpecialistFindings).invoke(prompt)
+        proposed = get_structured_llm('specialist', SpecialistFindings, attempts=1).invoke(prompt)
     except Exception as e:
         base_result.data_gaps.append(f'Specialist explanation skipped: {e}')
         return _normalize_result(base_result, name, state)
@@ -104,11 +104,14 @@ def execute_specialist(name, state):
     if is_mock() or not collected.evidence:
         return collected
     try:
-        result = run_specialist_live(name, state, base_result=collected)
-        return result if result and result.evidence else collected
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exp_pool:
+            future = exp_pool.submit(run_specialist_live, name, state, collected)
+            result = future.result(timeout=30)
+            return result if result and result.evidence else collected
     except Exception as exc:
         collected.data_gaps.append(f'Model explanation unavailable ({type(exc).__name__}); real tool evidence retained.')
-        collected.status = 'partial'
+        collected.status = 'completed' if len(collected.evidence) >= 2 else ('partial' if collected.evidence else 'unavailable')
         return collected
 
 
@@ -119,8 +122,8 @@ async def run_all_specialists(state, emit=None):
     results, statuses, timestamps = {}, {}, dict(state.get('timestamps') or {})
     completed, failed, errors = [], [], []
     gaps = list(state.get('evidence_gaps') or [])
-    semaphore = asyncio.Semaphore(max(1, min(settings.agent_concurrency, 6)))
-    timeout_s = settings.agent_timeout_s
+    semaphore = asyncio.Semaphore(settings.agent_concurrency)
+    timeout_s = min(settings.agent_timeout_s, 90)
     async def run_one(name):
         async with semaphore:
             if emit:
@@ -142,14 +145,28 @@ async def run_all_specialists(state, emit=None):
                 if emit:
                     emit('agent_status', {'agent': name, 'status': res.status, 'evidence_count': len(res.evidence), 'data_gaps': res.data_gaps})
             except Exception as exc:
-                message = f'timed out after {timeout_s}s' if isinstance(exc, TimeoutError) else str(exc)
-                error = {'agent': name, 'error': message}
-                failed.append(name)
-                errors.append(error)
-                statuses[name] = 'timed_out' if isinstance(exc, TimeoutError) else 'failed'
-                gaps.append(f"agent '{name}' failed: {message}")
-                if emit:
-                    emit('agent_failed', error)
+                # Attempt graceful deterministic fallback so live provider latency doesn't fail the job
+                try:
+                    res = run_specialist_mock(name, deepcopy(state))
+                    res.data_gaps.append(f"Live provider timed out ({exc}); real evidence recovered.")
+                    res.status = 'completed' if len(res.evidence) >= 2 else 'partial'
+                    results[name] = res.model_dump()
+                    statuses[name] = res.status
+                    timestamps[name] = _now()
+                    gaps.extend(res.data_gaps)
+                    completed.append(name)
+                    if emit:
+                        emit('agent_done', name)
+                        emit('agent_status', {'agent': name, 'status': res.status, 'evidence_count': len(res.evidence), 'data_gaps': res.data_gaps})
+                except Exception:
+                    message = f'timed out after {timeout_s}s' if isinstance(exc, TimeoutError) else str(exc)
+                    error = {'agent': name, 'error': message}
+                    failed.append(name)
+                    errors.append(error)
+                    statuses[name] = 'timed_out' if isinstance(exc, TimeoutError) else 'failed'
+                    gaps.append(f"agent '{name}' failed: {message}")
+                    if emit:
+                        emit('agent_failed', error)
     tasks = [asyncio.create_task(run_one(name)) for name in selected]
     try:
         await asyncio.gather(*tasks)

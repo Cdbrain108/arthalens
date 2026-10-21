@@ -281,12 +281,13 @@ export default function ReportPreview({
   jobId,
   job,
   pdfUrl,
-  initialMode = 'expert',
+  initialMode = 'beginner',
   onModeChange,
-  onStartResearch
+  onStartResearch,
+  onAskMoreAboutReport,
 }) {
-  const [report, setReport] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [report, setReport] = useState(job?.report || null)
+  const [loading, setLoading] = useState(!job?.report)
   const [error, setError] = useState(null)
   const [mode, setMode] = useState(initialMode) // 'beginner' | 'expert'
   const [activeTab, setActiveTab] = useState('all')
@@ -295,6 +296,13 @@ export default function ReportPreview({
   useEffect(() => {
     if (initialMode) setMode(initialMode)
   }, [initialMode])
+
+  useEffect(() => {
+    if (job?.report) {
+      setReport(job.report)
+      setLoading(false)
+    }
+  }, [job?.report])
 
   const handleModeToggle = (newMode) => {
     setMode(newMode)
@@ -310,6 +318,11 @@ export default function ReportPreview({
       'good morning', 'good evening'].includes(qLower)
 
   useEffect(() => {
+    if (job?.report) {
+      setReport(job.report)
+      setLoading(false)
+      return
+    }
     if (!jobId || isConversational || (job?.status && job.status !== 'succeeded')) {
       setLoading(false)
       return
@@ -331,7 +344,7 @@ export default function ReportPreview({
         }
       })
     return () => { active = false }
-  }, [jobId, isConversational, job?.status])
+  }, [jobId, isConversational, job?.status, job?.report])
 
   /* --- Conversational / landing card -------------------------------------- */
   if (isConversational) {
@@ -677,7 +690,7 @@ export default function ReportPreview({
   const plainEnglish = getPlainEnglishSummary()
 
   const executiveHeroCard = (
-    <div className="mx-6 mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-2xl text-left">
+    <div className="mx-2 sm:mx-6 mt-4 sm:mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#1e2026] p-4 sm:p-6 shadow-2xl text-left">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4285f4]/15 text-[#8ab4f8] font-mono text-sm font-bold border border-[#4285f4]/25">
@@ -997,11 +1010,13 @@ export default function ReportPreview({
   /* --- Shared header ------------------------------------------------------ */
 
   const headerBlock = (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-[#1e2026] px-6 py-5">
+    <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 border-b border-white/10 bg-[#1e2026] px-3.5 sm:px-6 py-3.5 sm:py-5">
       <div>
         <div className="flex items-center gap-2">
           <Logo size={28} />
-          <span className="font-sans text-[16px] font-bold tracking-tight text-white">Stock Research</span>
+          <span className="font-sans text-[16px] font-bold tracking-tight text-white">
+            ArthaLens <span className="text-emerald-400">AI</span>
+          </span>
           <span className="font-mono text-[12px] text-[#9aa0a6]">·</span>
           <span className="text-[12px] font-medium text-[#bdc1c6]">Evidence-First Financial Intelligence</span>
         </div>
@@ -1015,7 +1030,7 @@ export default function ReportPreview({
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2.5">
         <div className="flex items-center rounded-xl border border-white/15 bg-black/40 p-1">
           <button
             type="button"
@@ -1039,10 +1054,21 @@ export default function ReportPreview({
           </button>
         </div>
 
+        {typeof onAskMoreAboutReport === 'function' && (
+          <button
+            type="button"
+            onClick={onAskMoreAboutReport}
+            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-1.5 font-sans text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/25 transition shadow-sm cursor-pointer"
+          >
+            <Sparkles size={14} className="text-emerald-400" />
+            <span>Ask More About Report</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => setShowPdfViewer(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-[#4285f4]/35 bg-[#4285f4]/10 px-3.5 py-1.5 font-mono text-[12px] text-[#8ab4f8] transition hover:bg-[#4285f4]/20"
+          className="flex items-center gap-1.5 rounded-xl border border-[#4285f4]/35 bg-[#4285f4]/10 px-3.5 py-1.5 font-mono text-[12px] text-[#8ab4f8] transition hover:bg-[#4285f4]/20 cursor-pointer"
         >
           <Eye size={14} />
           <span>View PDF</span>
@@ -1063,7 +1089,7 @@ export default function ReportPreview({
   /* --- Coverage strip: what this run did and did not establish ------------ */
 
   const coverageStrip = (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-white/10 bg-[#131518] px-6 py-2.5 font-mono text-[11px] text-[#9aa0a6]">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-white/10 bg-[#131518] px-3.5 sm:px-6 py-2.5 font-mono text-[11px] text-[#9aa0a6]">
       <span className="flex items-center gap-1.5">
         <Scale size={12} className="text-[#8ab4f8]" />
         Evidence grounding:{' '}
@@ -2797,6 +2823,36 @@ export default function ReportPreview({
       {executiveHeroCard}
 
       {mode === 'beginner' ? (isComparison ? beginnerComparison : beginnerSingle) : expertMode}
+
+      {/* Ask Artha Copilot Action Banner at bottom of report */}
+      {typeof onAskMoreAboutReport === 'function' && (
+        <div className="border-t border-white/10 bg-gradient-to-r from-emerald-500/15 via-[#181a20] to-blue-500/10 p-5 text-left flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-md">
+              <Sparkles size={22} />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-[14.5px] font-bold text-white">Ask More About This Report</h4>
+                <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-300">
+                  Artha Copilot
+                </span>
+              </div>
+              <p className="text-[12px] text-slate-300 mt-0.5">
+                Dossier attached · Deep-dive into specific findings, valuation multiples, margin drivers or risks.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onAskMoreAboutReport}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-[13px] font-bold text-black shadow-lg hover:brightness-110 transition cursor-pointer shrink-0"
+          >
+            <span>Ask Artha Copilot</span>
+            <Sparkles size={14} />
+          </button>
+        </div>
+      )}
 
       <div className="border-t border-white/10 bg-[#131518] px-6 py-3.5 text-center text-[11px] leading-relaxed text-[#9aa0a6]">
         Multi-agent deterministic evidence validation. Every figure on this page was either measured from a

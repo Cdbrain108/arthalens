@@ -34,10 +34,12 @@ def render_html(report: ReportJSON, charts=None) -> str:
     bear_uri = _file_to_base64_uri(brand_dir / "bear.png")
     duo_uri = _file_to_base64_uri(brand_dir / "bull-bear-duo.png")
     wordmark_uri = _file_to_base64_uri(brand_dir / "arthaai-wordmark.png")
+    mark_uri = _file_to_base64_uri(brand_dir / "logo-mark.png") or logo_uri
     return env.get_template(name).render(
         report=report.model_dump(),
         charts=charts or {},
         logo_uri=logo_uri,
+        mark_uri=mark_uri,
         bull_uri=bull_uri,
         bear_uri=bear_uri,
         duo_uri=duo_uri,
@@ -161,18 +163,18 @@ def _find_chromium_browser() -> str | None:
     import os
     candidates = [
         os.environ.get("CHROME_PATH"),
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
         os.environ.get("EDGE_PATH"),
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
         os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
-        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
     ]
     for c in candidates:
         if c and Path(c).is_file():
             return str(c)
-    for name in ("msedge.exe", "msedge", "chrome.exe", "chrome", "chromium", "google-chrome"):
+    for name in ("chrome.exe", "chrome", "google-chrome", "msedge.exe", "msedge", "chromium"):
         p = shutil.which(name)
         if p:
             return p
@@ -182,15 +184,17 @@ def _find_chromium_browser() -> str | None:
 def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) -> bool:
     import subprocess
     import tempfile
+    temp_html = None
     try:
         with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as f:
             f.write(html_content)
             temp_html = Path(f.name)
         cmd = [
             browser_exe,
-            "--headless",
+            "--headless=new",
             "--disable-gpu",
-            "--run-all-compositor-stages-before-draw",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
             "--no-pdf-header-footer",
             f"--print-to-pdf={output_path.resolve()}",
             str(temp_html.resolve()),
@@ -201,10 +205,11 @@ def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) 
         logger.warning("Browser PDF generation failed: %s", e)
         return False
     finally:
-        try:
-            temp_html.unlink(missing_ok=True)
-        except Exception:
-            pass
+        if temp_html:
+            try:
+                temp_html.unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 def render_pdf(report: ReportJSON, job_id: str) -> str:

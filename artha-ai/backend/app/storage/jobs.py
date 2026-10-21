@@ -35,7 +35,7 @@ def _now() -> str:
 def _parse_status(raw: str) -> JobStatus | None:
     try:
         return JobStatus(**json.loads(raw))
-    except (ValueError, TypeError):
+    except Exception:
         logger.warning("corrupt job row skipped", exc_info=True)
         return None
 
@@ -81,9 +81,17 @@ class JobManager:
                 (status.status, status.model_dump_json(), _now(), status.job_id))
 
     def get(self, job_id: str) -> JobStatus | None:
+        if not job_id:
+            return None
         with closing(self._conn()) as conn:
             row = conn.execute("SELECT state_json FROM jobs WHERE job_id=?",
                                (job_id,)).fetchone()
+            if not row and not job_id.startswith("research_"):
+                row = conn.execute("SELECT state_json FROM jobs WHERE job_id=?",
+                                   (f"research_{job_id}",)).fetchone()
+            elif not row and job_id.startswith("research_"):
+                row = conn.execute("SELECT state_json FROM jobs WHERE job_id=?",
+                                   (job_id.replace("research_", ""),)).fetchone()
         return _parse_status(row["state_json"]) if row else None
 
     def history(self, limit: int = 50) -> list[JobStatus]:
@@ -116,10 +124,18 @@ class JobManager:
             return False
 
     def get_report(self, job_id: str) -> dict | None:
+        if not job_id:
+            return None
         with closing(self._conn()) as conn:
             try:
                 row = conn.execute("SELECT report_json FROM jobs WHERE job_id=?",
                                    (job_id,)).fetchone()
+                if not row and not job_id.startswith("research_"):
+                    row = conn.execute("SELECT report_json FROM jobs WHERE job_id=?",
+                                       (f"research_{job_id}",)).fetchone()
+                elif not row and job_id.startswith("research_"):
+                    row = conn.execute("SELECT report_json FROM jobs WHERE job_id=?",
+                                       (job_id.replace("research_", ""),)).fetchone()
             except sqlite3.Error:
                 logger.exception("get_report: database error for %s", job_id)
                 return None
@@ -133,9 +149,17 @@ class JobManager:
         return report or None
 
     def get_pdf_path(self, job_id: str) -> str | None:
+        if not job_id:
+            return None
         with closing(self._conn()) as conn:
             row = conn.execute("SELECT pdf_path FROM jobs WHERE job_id=?",
                                (job_id,)).fetchone()
+            if not row and not job_id.startswith("research_"):
+                row = conn.execute("SELECT pdf_path FROM jobs WHERE job_id=?",
+                                   (f"research_{job_id}",)).fetchone()
+            elif not row and job_id.startswith("research_"):
+                row = conn.execute("SELECT pdf_path FROM jobs WHERE job_id=?",
+                                   (job_id.replace("research_", ""),)).fetchone()
         return row["pdf_path"] if row and row["pdf_path"] else None
 
     def get_context(self, job_id: str) -> dict | None:

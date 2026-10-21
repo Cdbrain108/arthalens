@@ -1,11 +1,15 @@
 /* ==========================================================================
-   STOCK RESEARCH — Motion & Animated Component Layer
-   Scroll reveals · animated counters · coverage marquee · reading progress ·
-   state-swap transitions · micro-interactions.
-   Everything here is gated behind prefers-reduced-motion where it moves.
+   ArthaLens AI — Motion layer
+   Scroll reveals · reading progress · marquee behaviour · micro-interactions.
+   Loads after landing.css / landing-hero.css / landing-sections.css, so it only
+   adds motion: layout, colour and type stay owned by those files. Every token
+   used here is one the landing actually defines (`--be-*` on `.be-landing`);
+   this file previously referenced a retired `--google-*` / `--be-dim`
+   vocabulary, which resolved to nothing and made the affected text invisible.
+   Everything that moves is gated behind prefers-reduced-motion.
    ========================================================================== */
 
-/* ── Scroll reveal ───────────────────────────────────────────────────────── */
+/* ── Scroll reveal (Reveal.jsx sets data-variant + .is-visible) ──────────── */
 .be-reveal {
   opacity: 0;
   transform: translateY(18px);
@@ -52,145 +56,50 @@
   }
 }
 
-/* ── Visually hidden (sr-only) helper ────────────────────────────────────── */
-.be-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* ── Animated counters: hero proof strip ─────────────────────────────────── */
+/* ── Animated counters (AnimatedCounter.jsx) ─────────────────────────────── */
+/* Tabular figures only: the digits must not reflow while counting up. Size and
+   colour come from .be-stat-value in landing-hero.css. */
 .be-counter { font-variant-numeric: tabular-nums; }
 
-.be-stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(12px, 2.4vw, 24px);
-  margin-top: clamp(28px, 4.5vw, 48px);
-  padding-top: clamp(20px, 3vw, 30px);
-  border-top: 1px solid var(--be-line);
+/* ── Reading progress (ScrollProgress.jsx) ───────────────────────────────── */
+/* The component transforms the inner <span> (scaleX, inline width:100%), so the
+   gradient lives on the span and the container is only a fixed clipping track.
+   It used to be positioned `absolute` against `.be-landing`, which parked it at
+   the very bottom of the page instead of the top of the viewport. */
+.be-scroll-progress {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  z-index: 120;
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;
 }
-.be-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+.be-scroll-progress > span {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--be-blue),
+    var(--be-green) 42%,
+    var(--be-yellow) 72%,
+    var(--be-red)
+  );
+  box-shadow: 0 0 10px rgba(66, 133, 244, 0.55);
+  transition: transform 0.12s linear;
 }
-.be-stat-value {
-  font-size: clamp(26px, 4vw, 42px);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  background: var(--google-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-.be-stat-label {
-  font-size: clamp(9.5px, 1.2vw, 11px);
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--be-dim);
-  line-height: 1.4;
-}
-@media (min-width: 641px) {
-  .be-stat + .be-stat {
-    border-left: 1px solid var(--be-line);
-    padding-left: clamp(12px, 2.4vw, 24px);
-  }
-}
-@media (max-width: 640px) {
-  .be-stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .be-stat:nth-child(n + 3) {
-    border-top: 1px solid var(--be-line-subtle);
-    padding-top: 14px;
-  }
-}
-@media (max-width: 360px) {
-  .be-stats-row { gap: 10px; }
-  .be-stat-value { font-size: 24px; }
+@media (prefers-reduced-motion: reduce) {
+  .be-scroll-progress > span { transition: none; }
 }
 
-/* ── Coverage marquee ────────────────────────────────────────────────────── */
-.be-ticker {
-  display: flex;
-  align-items: center;
-  gap: clamp(10px, 2vw, 20px);
-  padding: 13px var(--be-gutter);
-  border-top: 1px solid var(--be-line);
-  border-bottom: 1px solid var(--be-line);
-  background:
-    linear-gradient(90deg, rgba(66, 133, 244, 0.07), transparent 26%),
-    linear-gradient(270deg, rgba(52, 168, 83, 0.06), transparent 26%),
-    var(--be-bg-subtle);
-  overflow: hidden;
-}
-.be-ticker-label {
-  flex-shrink: 0;
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--be-blue);
-}
-.be-ticker-viewport {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-}
-.be-ticker-track {
-  display: flex;
-  width: max-content;
-  animation: be-ticker-scroll 46s linear infinite;
-}
-.be-ticker-list {
-  display: flex;
-  align-items: center;
-  gap: clamp(16px, 3vw, 34px);
-  margin: 0;
-  padding: 0 clamp(16px, 3vw, 34px) 0 0;
-  list-style: none;
-}
-.be-ticker-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: 0.06em;
-  color: var(--be-muted);
-  white-space: nowrap;
-}
-.be-ticker-item::before {
-  content: '';
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--google-blue);
-  opacity: 0.75;
-}
-.be-ticker-item:nth-child(3n)::before { background: var(--google-green); }
-.be-ticker-item:nth-child(3n + 2)::before { background: var(--google-yellow); }
-.be-ticker-item:nth-child(4n)::before { background: var(--google-red); }
-@keyframes be-ticker-scroll {
-  to { transform: translateX(-50%); }
-}
+/* ── Coverage marquee behaviour (MarketTicker.jsx) ───────────────────────── */
+/* Geometry and colour live in landing-hero.css; this only governs the motion. */
 @media (hover: hover) and (pointer: fine) {
   .be-ticker:hover .be-ticker-track { animation-play-state: paused; }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Static, wrapped list instead of a marquee: no moving content and no
-     scrollable region for reduced-motion users. */
+  /* Static, wrapped list instead of a marquee: nothing moves and there is no
+     scrollable region to get lost in. */
   .be-ticker-track {
     animation: none;
     width: 100%;
@@ -207,69 +116,29 @@
     mask-image: none;
   }
 }
-@media (max-width: 560px) {
-  .be-ticker { padding-block: 11px; }
-  .be-ticker-label { font-size: 8.5px; letter-spacing: 0.12em; }
-  .be-ticker-item { font-size: 11px; }
-}
 
-/* ── Reading progress bar in the sticky nav ──────────────────────────────── */
-.be-scroll-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  z-index: 3;
-  pointer-events: none;
-  background: transparent;
-}
-.be-scroll-progress span {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--google-gradient);
-  box-shadow: 0 0 10px rgba(66, 133, 244, 0.55);
-  transition: width 0.12s linear;
-}
-@media (prefers-reduced-motion: reduce) {
-  .be-scroll-progress span { transition: none; }
-}
-
-/* ── State-swap transitions (process step / bull-bear switch) ────────────── */
+/* ── State-swap transitions (bull/bear switch, disclosure panels) ────────── */
 @keyframes be-swap-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
 .be-swap { animation: be-swap-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-@media (prefers-reduced-motion: reduce) {
-  .be-swap { animation: none; }
-}
 
-/* ── FAQ / details expansion ─────────────────────────────────────────────── */
 .be-faq-accordion details[open] > p,
 .be-history[open] > ul,
 .be-agent-card details[open] > p {
   animation: be-swap-in 0.3s ease both;
 }
-
-/* ── Process tabs: growing accent rail on the active step ────────────────── */
-.be-process-tabs button { position: relative; overflow: hidden; }
-.be-process-tabs button::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--google-blue);
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+@media (prefers-reduced-motion: reduce) {
+  .be-swap,
+  .be-faq-accordion details[open] > p,
+  .be-history[open] > ul,
+  .be-agent-card details[open] > p {
+    animation: none;
+  }
 }
-.be-process-tabs button[aria-pressed='true']::before { transform: scaleY(1); }
 
-/* ── Hero terminal: sequential scan shimmer across pipeline nodes ────────── */
+/* ── Hero terminal: sequential scan shimmer across the pipeline nodes ────── */
 @media (prefers-reduced-motion: no-preference) {
   .be-terminal-node { position: relative; overflow: hidden; }
   .be-terminal-node::after {
@@ -296,7 +165,7 @@
   35%, 100% { transform: translateX(110%); }
 }
 
-/* ── Gradient headline: slow flowing color ───────────────────────────────── */
+/* ── Gradient headline: slow flowing colour ──────────────────────────────── */
 @media (prefers-reduced-motion: no-preference) {
   .be-gradient-text {
     background-size: 220% 100%;
@@ -306,24 +175,4 @@
 @keyframes be-gradient-flow {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
-}
-
-/* ── Desktop nav links: underline grows on hover ─────────────────────────── */
-@media (hover: hover) and (pointer: fine) {
-  .be-nav nav a { position: relative; }
-  .be-nav nav a::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -6px;
-    height: 2px;
-    border-radius: 2px;
-    background: var(--google-gradient);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .be-nav nav a:hover::after,
-  .be-nav nav a:focus-visible::after { transform: scaleX(1); }
 }

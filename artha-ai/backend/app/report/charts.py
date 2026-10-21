@@ -45,11 +45,11 @@ def generate_report_charts(report_data: dict, output_dir: str) -> dict[str, str]
     chart_paths = {}
 
     try:
-        scorecard_path = _generate_bull_bear_chart(report_data, output_dir)
+        scorecard_path = _generate_catalysts_risks_chart(report_data, output_dir)
         if scorecard_path:
             chart_paths["scorecard"] = scorecard_path
     except Exception as exc:
-        logger.warning("Failed to generate bull/bear scorecard chart: %s", exc)
+        logger.warning("Failed to generate catalysts vs risks chart: %s", exc)
 
     try:
         fin_path = _generate_financial_metrics_chart(report_data, output_dir)
@@ -61,8 +61,8 @@ def generate_report_charts(report_data: dict, output_dir: str) -> dict[str, str]
     return chart_paths
 
 
-def _generate_bull_bear_chart(report_data: dict, output_dir: str) -> str:
-    """Horizontal bar comparison of Bull vs Bear evidence count & key catalysts."""
+def _generate_catalysts_risks_chart(report_data: dict, output_dir: str) -> str:
+    """Horizontal bar comparison of Upside Catalysts vs Downside Risks evidence count."""
     bull_items = report_data.get("bull_case") or []
     bear_items = report_data.get("bear_case") or []
     risks = (report_data.get("risk") or {}).get("findings") or []
@@ -76,7 +76,7 @@ def _generate_bull_bear_chart(report_data: dict, output_dir: str) -> str:
     fig.patch.set_facecolor("#FFFFFF")
     ax.set_facecolor("#F8FAFC")
 
-    categories = ["Bull Catalysts", "Downside Risks / Bear Factors"]
+    categories = ["Upside Growth Catalysts", "Downside Risks & Vulnerabilities"]
     counts = [n_bull, n_bear]
     colors = ["#10B981", "#EF4444"]
 
@@ -86,7 +86,7 @@ def _generate_bull_bear_chart(report_data: dict, output_dir: str) -> str:
     ax.set_yticks(y_pos)
     ax.set_yticklabels(categories, fontsize=9.5, fontweight="bold", color="#0F172A")
     ax.set_xlim(0, max(counts) + 2.5)
-    ax.set_xlabel("Number of Verified Thematic Evidence Points", fontsize=8.5, fontweight="bold", color="#64748B")
+    ax.set_xlabel("Number of Verified Primary Evidence Points", fontsize=8.5, fontweight="bold", color="#64748B")
 
     ax.grid(axis="x", linestyle="--", alpha=0.6, color="#E2E8F0", zorder=0)
     for spine in ["top", "right", "left", "bottom"]:
@@ -95,11 +95,11 @@ def _generate_bull_bear_chart(report_data: dict, output_dir: str) -> str:
 
     for bar, count in zip(bars, counts):
         width = bar.get_width()
-        label = f"  {int(count)} Factor{'' if count == 1 else 's'} Identified"
+        label = f"  {int(count)} Factor{'' if count == 1 else 's'} Verified"
         ax.text(width + 0.1, bar.get_y() + bar.get_height() / 2, label,
                 va="center", ha="left", fontsize=9, fontweight="bold", color="#0F172A")
 
-    plt.title("Adversarial Thematic Balance (Bull vs Bear Drivers)",
+    plt.title("Institutional Evidence Balance: Growth Drivers vs Thesis Vulnerabilities",
               fontsize=10.5, fontweight="bold", color="#0F172A", pad=12, loc="left")
 
     plt.tight_layout()

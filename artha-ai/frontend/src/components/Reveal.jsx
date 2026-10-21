@@ -38,7 +38,7 @@ export default function Reveal({
           observer.disconnect()
         }
       },
-      { threshold: 0.12, rootMargin: '0px 0px -6% 0px' }
+      { threshold: 0.02, rootMargin: '120px 0px 120px 0px' }
     )
     observer.observe(node)
     return () => observer.disconnect()

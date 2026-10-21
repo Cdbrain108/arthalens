@@ -1,5 +1,5 @@
 // Bulls Eye API client.
-const rawBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
+const rawBase = (import.meta?.env?.VITE_API_URL || '').replace(/\/+$/, '')
 const BASE = rawBase ? `${rawBase}/api` : '/api'
 
 async function request(path, options = {}, responseType = 'json') {
@@ -44,6 +44,7 @@ export const api = {
     body: JSON.stringify({ question }),
   }),
   getPdf: (jobId, options) => request(`/research/${encodeURIComponent(jobId)}/pdf`, options, 'blob'),
+  pdfUrl: (jobId) => `${BASE}/research/${encodeURIComponent(jobId)}/pdf`,
   getHistory: () => request('/research/history'),
   getAgents: () => request('/agents'),
   uploadDocument: (file, meta = {}) => {

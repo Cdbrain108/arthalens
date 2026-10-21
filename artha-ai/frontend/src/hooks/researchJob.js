@@ -42,7 +42,16 @@ export function createResearchJob(client, onChange, schedule = setTimeout, unsch
         if (owner !== generation) return
         if (next.job_id !== job.job_id || !next.status) throw new Error('Invalid job status response')
         if (!sameJob(state.job, next)) {
-          update({ job: next, polling: !isTerminalJob(next) })
+          let enrichedJob = { ...next }
+          if (next.status === 'succeeded' && !enrichedJob.report) {
+            try {
+              const rep = await client.getReport(next.job_id, { signal })
+              if (rep) enrichedJob.report = rep
+            } catch {
+              // Ignore failure; ReportPreview will also attempt fetch
+            }
+          }
+          update({ job: enrichedJob, polling: !isTerminalJob(next) })
         } else if (isTerminalJob(next)) {
           // Keep the terminal polling flag correct even if a caller restored a
           // snapshot that already matched the first server response.

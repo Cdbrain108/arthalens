@@ -75,13 +75,13 @@ def _detect_conflicts(items: list[EvidenceItem]) -> list[Conflict]:
     for item in items:
         if item.value is None or item.claim_type != "fact":
             continue
-        # Group by metric + entity when available, or by normalized claim text
+        # Group by metric + entity + period when available, or by normalized claim text
         if item.metric:
-            key = (item.metric, item.unit or "", item.entity or "")
+            key = (item.metric, item.unit or "", item.entity or "", item.period or "")
         else:
-            key = (item.claim.lower().strip(), item.unit or "", item.entity or "")
+            key = (item.claim.lower().strip(), item.unit or "", item.entity or "", item.period or "")
         by_key.setdefault(key, []).append(item)
-    for (claim, _unit, _entity), group in by_key.items():
+    for (claim, _unit, _entity, _period), group in by_key.items():
         numeric = [g for g in group if isinstance(g.value, (int, float))]
         # Every pair, not just adjacent ones: a disagreement between two sources
         # was previously missed whenever the pair sitting between them happened
@@ -97,8 +97,9 @@ def _detect_conflicts(items: list[EvidenceItem]) -> list[Conflict]:
                     worst = (spread, a, b)
         if worst is not None:
             _spread, a, b = worst
+            ev_ids = [i.evidence_id for i in (a, b) if i.evidence_id]
             conflicts.append(Conflict(
                 claim=claim, value_a=str(a.value), value_b=str(b.value),
                 source_a=a.source_title, source_b=b.source_title,
-                resolution=None, evidence_ids=[i.evidence_id for i in group if i.evidence_id]))
+                resolution=None, evidence_ids=ev_ids))
     return conflicts

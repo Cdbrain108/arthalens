@@ -58,23 +58,25 @@ _QA_STOPWORDS = {
     "what", "when", "where", "which", "does", "this", "that", "about",
     "with", "from", "have", "been", "were", "will", "should", "could",
     "would", "there", "their", "into", "over", "your", "report", "tell",
+    "explain", "in", "on", "to", "at", "of", "by", "is", "it", "an",
+    "as", "or", "do", "if", "for", "the", "and", "a", "are", "how"
 }
 
 
 def _qa_tokens(value: str) -> set[str]:
-    return {token for token in re.findall(r"[a-z0-9]{3,}", (value or "").lower())
+    # Support 2-letter financial metrics like PE, PB, DE, RO while filtering stopwords
+    return {token for token in re.findall(r"[a-z0-9]{2,}", (value or "").lower())
             if token not in _QA_STOPWORDS}
 
 
 def _extractive_report_answer(question: str, report: dict, context: dict | None) -> ReportAnswer:
-    """Useful offline fallback for mock mode and temporary provider outages."""
+    """Offline extraction across all synthesized report sections and findings."""
     context = context or {}
     query_tokens = _qa_tokens(question)
-    # A completed report is a historical snapshot.  Do not fill a request for
-    # "today/latest/current/now" with loosely related historical bullets: that
-    # looks helpful but can be mistaken for a live quote or live news answer.
-    current_terms = query_tokens & {"current", "latest", "today", "now"}
-    if current_terms:
+
+    is_decision_qa = bool(query_tokens & {"buy", "sell", "hold", "invest", "stance", "verdict", "action", "better", "compare", "winner", "horizon", "recommend", "allocation"})
+    current_price_terms = (query_tokens & {"current", "latest", "today", "now"}) and (query_tokens & {"price", "quote", "live", "ticker"})
+    if current_price_terms and not is_decision_qa:
         gaps = list((report or {}).get("evidence_gaps") or [])[:5]
         gaps.insert(0, "The completed report is a historical snapshot and does not establish live current data.")
         return ReportAnswer(
@@ -85,19 +87,119 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
             evidence_gaps=list(dict.fromkeys(gaps)),
             follow_up_research_needed=True,
         )
+
     candidates: list[tuple[int, str, str, dict | None]] = []
+
+    # 0. Specialized Verdict Structs (Comparison, Action, Discovery)
+    company_obj = (report or {}).get("company") or {}
+    cv = company_obj.get("comparison_verdict")
+    if isinstance(cv, dict):
+        cv_text = f"WINNER: {cv.get('winner_name')} ({cv.get('winner_ticker')}) — {cv.get('winner_reason')}. VALUE PICK: {cv.get('value_name')} ({cv.get('value_ticker')}) — {cv.get('value_reason')}. HOLD vs SELL: {cv.get('hold_vs_sell_guidance')}."
+        overlap = len(query_tokens & _qa_tokens(cv_text))
+        if any(w in query_tokens for w in ("winner", "better", "compare", "difference", "hold", "sell", "buy")):
+            overlap += 8
+        if overlap:
+            candidates.append((overlap + 5, "Peer Comparison Verdict", cv_text, None))
+
+    ad = company_obj.get("action_decision")
+    if isinstance(ad, dict):
+        ad_text = f"ACTION DIRECTIVE: {ad.get('headline')}. Existing Shareholders: {ad.get('existing_holders')}. New Capital: {ad.get('fresh_buyers')}. Investment Horizon: {ad.get('long_term_directive')} | {ad.get('short_term_directive')}. Exit Trigger: {ad.get('sell_triggers')}."
+        overlap = len(query_tokens & _qa_tokens(ad_text))
+        if any(w in query_tokens for w in ("buy", "sell", "hold", "action", "decision", "dip")):
+            overlap += 8
+        if overlap:
+            candidates.append((overlap + 5, "Investment Action Directive", ad_text, None))
+
+    dp = company_obj.get("discovery_portfolio")
+    if isinstance(dp, dict):
+        dp_text = f"PORTFOLIO BLUEPRINT: {dp.get('headline')}. Summary: {dp.get('summary')}. Deployment: {dp.get('deployment_strategy')}."
+        overlap = len(query_tokens & _qa_tokens(dp_text))
+        if any(w in query_tokens for w in ("invest", "money", "portfolio", "allocation", "organization", "good")):
+            overlap += 8
+        if overlap:
+            candidates.append((overlap + 5, "Portfolio Discovery Blueprint", dp_text, None))
+
+    # 1. Executive Summary
+    exec_summary = (report or {}).get("executive_summary")
+    if isinstance(exec_summary, str) and exec_summary.strip():
+        overlap = len(query_tokens & _qa_tokens(exec_summary))
+        if overlap:
+            candidates.append((overlap + 2, "Executive Summary", exec_summary.strip(), None))
+
+    # 2. Overall Assessment / Verdict
+    assessment = (report or {}).get("overall_assessment") or (report or {}).get("verdict")
+    if isinstance(assessment, dict):
+        for field in ("headline", "rationale", "classification"):
+            val = str(assessment.get(field) or "").strip()
+            overlap = len(query_tokens & _qa_tokens(val))
+            if val and overlap:
+                candidates.append((overlap + 3, f"Verdict ({field.title()})", val, None))
+
+    # 3. Dual-Thesis Cases (Bull case, Bear case, Triggers, Deductions, Decision Framework)
+    for case_type in ("bull_case", "bear_case", "what_could_change_view", "reasoned_deductions"):
+        items = (report or {}).get(case_type) or []
+        for item in items:
+            text = str(item.get("claim", item.get("point", "")) if isinstance(item, dict) else item).strip()
+            overlap = len(query_tokens & _qa_tokens(text))
+            # Boost matches if the query explicitly asks for bull, bear, or risk
+            if ("bull" in query_tokens and "bull" in case_type) or \
+               ("bear" in query_tokens and "bear" in case_type) or \
+               ("risk" in query_tokens and "bear" in case_type):
+                overlap += 4
+            if text and overlap:
+                candidates.append((overlap + 2, case_type.replace('_', ' ').title(), text, None))
+
+    # 4. Audited Key Metrics
+    metrics = (report or {}).get("metrics") or {}
+    if isinstance(metrics, dict):
+        for m_key, m_val in metrics.items():
+            metric_label = m_key.replace('_', ' ').upper()
+            val_str = str(m_val)
+            metric_str = f"{metric_label}: {val_str}"
+            overlap = len(query_tokens & _qa_tokens(f"{m_key} {metric_label}"))
+            if ("pe" in query_tokens and "pe" in m_key) or \
+               ("pb" in query_tokens and "pb" in m_key) or \
+               ("roe" in query_tokens and "roe" in m_key) or \
+               ("debt" in query_tokens and "debt" in m_key) or \
+               ("margin" in query_tokens and "opm" in m_key):
+                overlap += 5
+            if overlap:
+                candidates.append((overlap + 4, "Audited Metric", metric_str, None))
+
+    # 5. Valuation Scenarios
+    for scen in (report or {}).get("valuation_scenarios") or []:
+        if isinstance(scen, dict):
+            scen_text = f"Multiple {scen.get('multiple')} ({scen.get('implied_price')}): {scen.get('description')}"
+            overlap = len(query_tokens & _qa_tokens(scen_text))
+            if "pe" in query_tokens or "valuation" in query_tokens:
+                overlap += 3
+            if overlap:
+                candidates.append((overlap + 2, "Valuation Scenario", scen_text, None))
+
+    # 6. Quarterly Financial Performance
+    for q_row in (report or {}).get("quarterly_table") or []:
+        if isinstance(q_row, dict):
+            q_text = f"{q_row.get('period')}: Revenue {q_row.get('revenue')}, Net Profit {q_row.get('net_profit')} ({q_row.get('yoy_growth')})"
+            overlap = len(query_tokens & _qa_tokens(q_text))
+            if "revenue" in query_tokens or "profit" in query_tokens or "margin" in query_tokens or "ebitda" in query_tokens:
+                overlap += 3
+            if overlap:
+                candidates.append((overlap + 2, "Quarterly Financials", q_text, None))
+
+    # 7. Specialist Agent Findings and Sections
     for section, value in (report or {}).items():
         if not isinstance(value, dict):
             continue
-        for field in ("summary", "findings"):
+        for field in ("summary", "findings", "swot", "risks", "strengths"):
             raw = value.get(field)
             texts = raw if isinstance(raw, list) else [raw]
             for text in texts:
-                text = str(text or "").strip()
+                text = str(text.get("claim", "") if isinstance(text, dict) else text or "").strip()
                 overlap = len(query_tokens & _qa_tokens(text))
                 if text and overlap:
-                    candidates.append((overlap, section, text, None))
+                    candidates.append((overlap, section.replace('_', ' ').title(), text, None))
 
+    # 8. Validated Context Evidence
     source_hits: list[dict] = []
     for item in context.get("evidence") or []:
         if not isinstance(item, dict):
@@ -105,11 +207,11 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
         text = " ".join(str(item.get(key) or "") for key in ("claim", "excerpt", "source_title"))
         overlap = len(query_tokens & _qa_tokens(text))
         if text.strip() and overlap:
-            candidates.append((overlap + 1, item.get("agent", "evidence"),
+            candidates.append((overlap + 1, str(item.get("agent", "Evidence")).title(),
                                item.get("claim") or item.get("excerpt") or text, item))
 
     candidates.sort(key=lambda item: item[0], reverse=True)
-    top = candidates[:5]
+    top = candidates[:6]
     if not top:
         return ReportAnswer(
             answer=("That question is not established by the completed report. "
@@ -125,7 +227,7 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
         if key in seen:
             continue
         seen.add(key)
-        lines.append(f"{section.replace('_', ' ').title()}: {text}")
+        lines.append(f"**{section}:** {text}")
         if item:
             source = {
                 "title": item.get("source_title"),
@@ -135,8 +237,9 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
             source_key = (source["title"], source["url"])
             if source_key not in {(s.get("title"), s.get("url")) for s in source_hits}:
                 source_hits.append(source)
+
     return ReportAnswer(
-        answer="Based on the generated report:\n" + "\n".join(f"- {line}" for line in lines),
+        answer="Based on the generated report findings:\n\n" + "\n\n".join(f"* {line}" for line in lines),
         sources=source_hits[:8],
         evidence_gaps=list((report or {}).get("evidence_gaps") or [])[:5],
         follow_up_research_needed=False,
@@ -148,7 +251,15 @@ def _answer_report_question(question: str, report: dict, context: dict | None) -
         return _extractive_report_answer(question, report, context)
     try:
         from ..graph.meta import answer_report_question
-        return answer_report_question(question, report, context)
+        ans = answer_report_question(question, report, context)
+        # If the LLM claim states the question is not established, but our deterministic extractor
+        # finds verified findings (such as peer verdicts, executive summaries, bull/bear triggers),
+        # use the verified report findings so the user receives a factual, grounded answer.
+        if ans and (ans.follow_up_research_needed or "not established" in (ans.answer or "").lower()):
+            extractive = _extractive_report_answer(question, report, context)
+            if extractive and not extractive.follow_up_research_needed:
+                return extractive
+        return ans
     except Exception:
         logger.exception("report Q&A provider failed; using extractive fallback")
         return _extractive_report_answer(question, report, context)
@@ -313,23 +424,62 @@ async def ask_report(job_id: str, req: ReportQuestion):
     return answer.model_dump()
 
 
-@router.get("/{job_id}/pdf")
+@router.api_route("/{job_id}/pdf", methods=["GET", "HEAD"])
 async def get_pdf(job_id: str):
-    if not jobs.get(job_id):
+    job = jobs.get(job_id)
+    if not job:
         raise HTTPException(404, "job not found")
-    path = jobs.get_pdf_path(job_id)
+    real_id = job.job_id
+    clean_id = real_id.replace("research_", "")
+    input_clean = job_id.replace("research_", "")
+
+    path = jobs.get_pdf_path(real_id) or jobs.get_pdf_path(job_id)
+
+    # Search comprehensive candidate filenames
     if not path or not os.path.exists(path):
-        # Backward compatibility with PDFs written before pdf_path was persisted.
-        fallback = os.path.join(settings.reports_dir, f"{job_id}.pdf")
-        path = fallback if os.path.exists(fallback) else None
-    if not path:
+        candidates = [
+            os.path.join(settings.reports_dir, f"{real_id}.pdf"),
+            os.path.join(settings.reports_dir, f"{job_id}.pdf"),
+            os.path.join(settings.reports_dir, f"{clean_id}.pdf"),
+            os.path.join(settings.reports_dir, f"arthalens_{real_id}.pdf"),
+            os.path.join(settings.reports_dir, f"arthalens_research_{clean_id}.pdf"),
+            os.path.join(settings.reports_dir, f"arthalens_{clean_id}.pdf"),
+            os.path.join(str(settings.BASE_DIR), f"arthalens_research_{clean_id}.pdf"),
+            os.path.join(str(settings.BASE_DIR), f"arthalens_{real_id}.pdf"),
+            f"D:/arthalens_research_{clean_id}.pdf",
+            f"D:/arthalens_research_{input_clean}.pdf",
+            f"D:/{real_id}.pdf",
+            f"D:/{clean_id}.pdf",
+        ]
+        for cand in candidates:
+            if cand and os.path.exists(cand):
+                path = cand
+                break
+
+    # On-demand PDF generation if report JSON exists but PDF was not generated yet
+    if not path or not os.path.exists(path):
+        report_data = jobs.get_report(real_id) or jobs.get_report(job_id)
+        if report_data:
+            try:
+                from ..report.pdf import render_pdf
+                from ..schemas.models import ReportJSON
+                path = render_pdf(ReportJSON.model_validate(report_data), real_id)
+                jobs.attach_report(real_id, report_data, path)
+            except Exception as e:
+                logger.error("Failed to render PDF on-demand for %s: %s", real_id, e)
+
+    if not path or not os.path.exists(path):
         raise HTTPException(404, "PDF not ready")
-    response = FileResponse(path, media_type="application/pdf",
-                            filename=f"bullseye_{job_id}.pdf")
-    # The same endpoint supports the in-app iframe viewer as well as download.
-    # The frontend can still force a download with its download action.
-    response.headers["content-disposition"] = (
-        f'inline; filename="bullseye_{job_id}.pdf"')
+
+    response = FileResponse(
+        path,
+        media_type="application/pdf",
+        content_disposition_type="inline",
+        filename=f"arthalens_{real_id}.pdf",
+    )
+    response.headers["content-disposition"] = f'inline; filename="arthalens_{real_id}.pdf"'
+    response.headers["content-type"] = "application/pdf"
+    response.headers["access-control-allow-origin"] = "*"
     return response
 
 

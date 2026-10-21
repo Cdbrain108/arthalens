@@ -1,0 +1,867 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  Search,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  Newspaper,
+  Layers,
+  AlertTriangle,
+  Users,
+  Globe,
+  FileText,
+  FileCheck,
+  CheckCircle2,
+  ChevronDown,
+  Menu,
+  X,
+  Compass,
+  ArrowUpRight,
+  Zap,
+  SlidersHorizontal,
+  Bot,
+  MessageSquare
+} from 'lucide-react'
+import Logo from './Logo'
+
+const AUTO_HIDE_DELAY_MS = 1000
+
+const MOBILE_SECTIONS = [
+  { id: 'm-hero', label: 'Artha AI Copilot', short: 'Research', icon: Sparkles },
+  { id: 'm-specialists', label: 'Multi-Agent Graph', short: 'Agents', icon: Bot },
+  { id: 'm-dual-thesis', label: 'Dual-Thesis Engine', short: 'Thesis', icon: TrendingUp },
+  { id: 'm-copilot', label: 'Intelligence Dossier', short: 'Dossier', icon: FileText },
+  { id: 'm-faq', label: 'Audited Governance', short: 'Governance', icon: ShieldCheck },
+]
+
+const MOBILE_TICKERS = [
+  { name: 'NVIDIA', ticker: 'NVDA', exchange: 'NASDAQ', color: '#10b981', tag: '+3.8%', tagClass: 'green' },
+  { name: 'TCS', ticker: 'TCS', exchange: 'NSE', color: '#06b6d4', tag: 'DCF', tagClass: 'blue' },
+  { name: 'Reliance', ticker: 'RELIANCE', exchange: 'NSE', color: '#8b5cf6', tag: '5-Yr', tagClass: 'purple' },
+  { name: 'Apple', ticker: 'AAPL', exchange: 'NASDAQ', color: '#3b82f6', tag: '+1.4%', tagClass: 'blue' },
+  { name: 'Tesla', ticker: 'TSLA', exchange: 'NASDAQ', color: '#f59e0b', tag: 'Momentum', tagClass: 'amber' },
+  { name: 'Tata Motors', ticker: 'TATAMOTORS', exchange: 'NSE', color: '#10b981', tag: '+2.1%', tagClass: 'green' },
+]
+
+const QUICK_PROMPTS = [
+  { text: 'Compare TCS & Infosys on operating margins', label: '⚡ TCS vs Infosys' },
+  { text: 'Explain P/E ratio and DCF multiples', label: '📊 Explain P/E & DCF' },
+  { text: 'Should I hold Reliance for 5 years?', label: '🛡️ Reliance Thesis' },
+]
+
+const SPECIALISTS = [
+  { id: 'financial', name: 'Financial Health', icon: BarChart3, desc: 'Balance sheet, debt maturities & multi-year cash flows', tag: 'P&L' },
+  { id: 'valuation', name: 'Valuation Multiples', icon: PieChart, desc: 'Historical & peer multiples, EV/EBITDA, P/E & DCF', tag: 'Multiples' },
+  { id: 'market', name: 'Market Momentum', icon: TrendingUp, desc: 'Computed price trends, volume & 52-week ranges', tag: 'Momentum' },
+  { id: 'news', name: 'News & Catalysts', icon: Newspaper, desc: 'Verified corporate actions, earnings & SEC/BSE events', tag: 'Catalysts' },
+  { id: 'growth', name: 'Growth Engine', icon: Layers, desc: 'Capacity expansion, segment CAGR & capex plans', tag: 'Growth' },
+  { id: 'risk', name: 'Risk Diligence', icon: AlertTriangle, desc: 'Downside vectors, litigation & debt vulnerabilities', tag: 'Guardrails' },
+  { id: 'document', name: 'Filings & Doc RAG', icon: FileText, desc: 'Ground-truth regulatory filings & audited citations', tag: 'Filings' },
+  { id: 'social', name: 'Public Sentiment', icon: MessageSquare, desc: 'Qualitative public discussions & retail sentiment', tag: 'Sentiment' },
+  { id: 'workforce', name: 'Workforce & Talent', icon: Users, desc: 'Talent velocity, hiring headcount & attrition', tag: 'Human Cap' },
+  { id: 'industry', name: 'Industry & Moats', icon: Globe, desc: 'Sector tailwinds, cyclical positioning & moats', tag: 'Moats' },
+  { id: 'management', name: 'Management & Governance', icon: ShieldCheck, desc: 'Promoter pledging, capital allocation & board audit', tag: 'Governance' },
+]
+
+export default function MobileLanding({
+  onRun,
+  running,
+  submitting,
+  query = '',
+  onQueryChange,
+  sessions = [],
+  onSelectSession,
+  onDeleteSession,
+  onResume,
+  user,
+  onOpenAuth,
+}) {
+  const [localQuery, setLocalQuery] = useState(query)
+  const [navOpen, setNavOpen] = useState(false)
+  const [activeSpecialist, setActiveSpecialist] = useState(0)
+  const [activeSectionIdx, setActiveSectionIdx] = useState(0)
+  const activeRef = useRef(0)
+  const [taskbarVisible, setTaskbarVisible] = useState(true)
+  const taskbarVisibleRef = useRef(true)
+  const taskbarHideTimerRef = useRef(null)
+  const containerRef = useRef(null)
+  const progressRef = useRef(null)
+
+  useEffect(() => {
+    setLocalQuery(query)
+  }, [query])
+
+  // Cycle specialist highlights for dynamic feel
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSpecialist((prev) => (prev + 1) % SPECIALISTS.length)
+    }, 2800)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Auto-hide taskbar state & robust ref tracking (Argus reference architecture)
+  const showTaskbar = useCallback((autoHideDelayMs = 0) => {
+    if (!taskbarVisibleRef.current) {
+      taskbarVisibleRef.current = true
+      setTaskbarVisible(true)
+    }
+    if (taskbarHideTimerRef.current) {
+      clearTimeout(taskbarHideTimerRef.current)
+      taskbarHideTimerRef.current = null
+    }
+    if (autoHideDelayMs > 0) {
+      taskbarHideTimerRef.current = setTimeout(() => {
+        hideTaskbar()
+      }, autoHideDelayMs)
+    }
+  }, [])
+
+  const hideTaskbar = useCallback(() => {
+    if (taskbarHideTimerRef.current) {
+      clearTimeout(taskbarHideTimerRef.current)
+      taskbarHideTimerRef.current = null
+    }
+    // Never hide taskbar while navigation drawer is open
+    if (navOpen) return
+    // Never hide taskbar when resting at the very top of the first page
+    const root = containerRef.current
+    const isAtTop = root ? root.scrollTop < 20 : activeRef.current === 0
+    if (activeRef.current === 0 && isAtTop) return
+
+    if (taskbarVisibleRef.current) {
+      taskbarVisibleRef.current = false
+      setTaskbarVisible(false)
+    }
+  }, [navOpen])
+
+  // 1. Initial land on very first page: permanent visible, no auto-hide
+  useEffect(() => {
+    showTaskbar(0)
+    return () => {
+      if (taskbarHideTimerRef.current) clearTimeout(taskbarHideTimerRef.current)
+    }
+  }, [showTaskbar])
+
+  // 2. When active section changes:
+  // On very first page: keep visible. On all other sections: visible for 1s then hides smoothly
+  useEffect(() => {
+    const isFirstPage = activeSectionIdx === 0 && (!containerRef.current || containerRef.current.scrollTop < 20)
+    showTaskbar(isFirstPage ? 0 : AUTO_HIDE_DELAY_MS)
+  }, [activeSectionIdx, showTaskbar])
+
+  // 3. User interaction & mobile touch: reveal on movement/scroll, auto-hide after 1s on other sections
+  useEffect(() => {
+    const root = containerRef.current
+    if (!root) return undefined
+
+    let lastScrollTop = root.scrollTop
+
+    const handleScrollActivity = () => {
+      const currentScroll = root.scrollTop
+      const scrollDiff = currentScroll - lastScrollTop
+      if (Math.abs(scrollDiff) < 6) return
+      lastScrollTop = currentScroll
+      const isFirstPage = activeRef.current === 0 && root.scrollTop < 20
+      showTaskbar(isFirstPage ? 0 : AUTO_HIDE_DELAY_MS)
+    }
+
+    const handleTouchStart = () => {
+      const isFirstPage = activeRef.current === 0 && (!root || root.scrollTop < 20)
+      showTaskbar(isFirstPage ? 0 : AUTO_HIDE_DELAY_MS)
+    }
+
+    const handleTouchMove = () => {
+      const isFirstPage = activeRef.current === 0 && (!root || root.scrollTop < 20)
+      showTaskbar(isFirstPage ? 0 : AUTO_HIDE_DELAY_MS)
+    }
+
+    const handlePointerTop = (e) => {
+      const y = e.touches ? e.touches[0].clientY : e.clientY
+      if (y <= 55) {
+        const isFirstPage = activeRef.current === 0 && (!root || root.scrollTop < 20)
+        showTaskbar(isFirstPage ? 0 : AUTO_HIDE_DELAY_MS)
+      }
+    }
+
+    root.addEventListener('scroll', handleScrollActivity, { passive: true })
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('pointermove', handlePointerTop, { passive: true })
+
+    return () => {
+      root.removeEventListener('scroll', handleScrollActivity)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('pointermove', handlePointerTop)
+    }
+  }, [showTaskbar])
+
+  // 4. Active section tracking & hairline progress paint (Argus fast offset calculation, zero layout thrashing)
+  useEffect(() => {
+    const root = containerRef.current
+    if (!root) return undefined
+
+    const elements = MOBILE_SECTIONS.map((p) => root.querySelector(`#${p.id}`))
+    let ticking = false
+
+    const updateActive = () => {
+      ticking = false
+      const currentScroll = root.scrollTop + root.clientHeight * 0.35
+      let current = 0
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i]
+        if (el && el.offsetTop <= currentScroll) {
+          current = i
+          break
+        }
+      }
+      if (root.scrollTop + root.clientHeight >= root.scrollHeight - 50) {
+        current = MOBILE_SECTIONS.length - 1
+      }
+      if (current !== activeRef.current) {
+        activeRef.current = current
+        setActiveSectionIdx(current)
+      }
+      if (progressRef.current) {
+        const max = root.scrollHeight - root.clientHeight
+        const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+        progressRef.current.style.transform = `scaleX(${p})`
+      }
+    }
+
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true
+        requestAnimationFrame(updateActive)
+      }
+    }
+
+    updateActive()
+    root.addEventListener('scroll', onScroll, { passive: true })
+    return () => root.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const goToSection = (id) => {
+    const root = containerRef.current
+    const target = root?.querySelector(`#${id}`)
+    if (!root || !target) return
+    const isFirstPage = id === 'm-hero'
+    showTaskbar(isFirstPage ? 0 : AUTO_HIDE_DELAY_MS)
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const handleSubmit = (e) => {
+    e?.preventDefault()
+    const trimmed = (localQuery || '').trim()
+    if (!trimmed || running || submitting) return
+    onQueryChange?.(trimmed)
+    onRun?.(trimmed)
+  }
+
+  const handleQuickSelect = (ticker) => {
+    setLocalQuery(ticker)
+    onQueryChange?.(ticker)
+    onRun?.(ticker)
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="mobile-landing-container"
+    >
+      {/* Top scroll-progress hairline (Argus pattern, ref-painted) */}
+      <div className="mp-scroll-progress" aria-hidden="true">
+        <i ref={progressRef} />
+      </div>
+
+      {/* ── Fixed Smart Auto-Hiding Taskbar (Argus Pattern) ──────────────── */}
+      <nav
+        className={`arg-nav ${!taskbarVisible ? 'is-taskbar-hidden' : ''}`}
+        onClick={() => {
+          if (!taskbarVisible) {
+            showTaskbar(activeRef.current === 0 && (!containerRef.current || containerRef.current.scrollTop < 20) ? 0 : AUTO_HIDE_DELAY_MS)
+          }
+        }}
+        onMouseEnter={() => showTaskbar(0)}
+        onMouseLeave={() => showTaskbar(activeRef.current === 0 && (!containerRef.current || containerRef.current.scrollTop < 20) ? 0 : AUTO_HIDE_DELAY_MS)}
+      >
+        <a
+          className="arg-nav-brand"
+          href="#m-hero"
+          onClick={(e) => {
+            e.preventDefault()
+            goToSection('m-hero')
+            setNavOpen(false)
+          }}
+        >
+          <Logo size={22} />
+          <div className="arg-nav-brand-text">
+            <span className="arg-nav-word">Artha AI</span>
+            <span className="arg-nav-tagline">Autonomous Equity Intelligence</span>
+          </div>
+        </a>
+
+        {/* Dynamic Current Page Name Indicator (Argus ergonomics) OR Active Workspace Button */}
+        {running || submitting ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onResume?.()
+            }}
+            className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500/25 to-teal-500/20 border border-emerald-500/60 px-2.5 py-1 text-[11px] font-bold text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)] hover:brightness-125 transition active:scale-95 cursor-pointer animate-pulse"
+            title="Research is in progress · Tap to return to workspace"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+            </span>
+            <span className="tracking-tight">Back to Workspace</span>
+            <ArrowRight size={12} className="text-emerald-400" />
+          </button>
+        ) : (
+          <div
+            className="arg-nav-mobile-page-pill"
+            aria-live="polite"
+            onClick={(e) => {
+              e.stopPropagation()
+              goToSection(MOBILE_SECTIONS[activeSectionIdx]?.id || 'm-hero')
+            }}
+          >
+            <span className="mobile-page-dot" />
+            <span className="mobile-page-name">
+              {MOBILE_SECTIONS[activeSectionIdx]?.short || 'Research'}
+            </span>
+          </div>
+        )}
+
+        {/* Mobile Hamburger Toggle */}
+        <div className="arg-nav-mobile-right">
+          <button
+            type="button"
+            className="arg-nav-toggle"
+            aria-label={navOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={navOpen}
+            onClick={(e) => {
+              e.stopPropagation()
+              setNavOpen((open) => {
+                const next = !open
+                if (next) showTaskbar(0)
+                return next
+              })
+            }}
+          >
+            {navOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        <div className={navOpen ? 'arg-nav-drawer open' : 'arg-nav-drawer'}>
+          <div className="arg-nav-mobile-header">
+            <div className="mobile-brand">
+              <Logo size={20} />
+              <span>Artha AI Platform</span>
+            </div>
+            <button
+              type="button"
+              className="mobile-close"
+              onClick={(e) => {
+                e.stopPropagation()
+                setNavOpen(false)
+              }}
+              aria-label="Close menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="arg-nav-mobile-list">
+            {MOBILE_SECTIONS.map(({ id, label, icon: Icon }, idx) => (
+              <a
+                className={`arg-nav-link ${activeSectionIdx === idx ? 'active' : ''}`}
+                href={`#${id}`}
+                key={id}
+                onClick={(e) => {
+                  e.preventDefault()
+                  setNavOpen(false)
+                  goToSection(id)
+                }}
+              >
+                <div className="mobile-link-title">
+                  <Icon size={16} className="mobile-link-icon" />
+                  <span>{label}</span>
+                </div>
+                <ArrowRight size={14} className="mobile-link-arrow" />
+              </a>
+            ))}
+          </div>
+
+          <div className="arg-nav-mobile-actions">
+            {(running || submitting) && (
+              <button
+                type="button"
+                className="w-full flex items-center justify-between gap-2.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/50 p-3 mb-2 text-emerald-300 font-bold text-[12px] hover:bg-emerald-500/30 transition shadow-lg active:scale-95 cursor-pointer animate-pulse"
+                onClick={() => {
+                  setNavOpen(false)
+                  onResume?.()
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Research in Progress · Return</span>
+                </div>
+                <ArrowRight size={14} className="text-emerald-400" />
+              </button>
+            )}
+            {user && !user.guest ? (
+              <button
+                type="button"
+                className="mobile-demo-btn"
+                onClick={() => {
+                  setNavOpen(false)
+                  onResume?.()
+                }}
+              >
+                <span>Workspace ({user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'User'})</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="mobile-demo-btn"
+                onClick={() => {
+                  setNavOpen(false)
+                  onOpenAuth?.()
+                }}
+              >
+                Sign In to Workspace
+              </button>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* Scrim overlay for drawer */}
+      {navOpen && (
+        <div
+          className="arg-nav-scrim"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ════ PAGE 1: MOBILE HERO & COMMAND CENTER ════ */}
+      <section className="mobile-page-section hero-page" id="m-hero">
+        <div className="mobile-hero-badge">
+          <span className="live-pulse" />
+          <span>Artha AI · Multi-Agent Research Engine</span>
+        </div>
+
+        <h1 className="mobile-hero-title">
+          Institutional equity research with <span className="highlight-text">Artha AI</span>.
+        </h1>
+
+        <p className="mobile-hero-subtitle">
+          Artha AI orchestrates 11 autonomous specialist agents to audit regulatory filings, compute deterministic valuation models, and synthesize audit-grade briefs in 60s.
+        </p>
+
+        {/* 3-Pill Institutional Metric Bar */}
+        <div className="mobile-hero-stats">
+          <div className="mobile-hero-stat-pill">
+            <span className="mobile-hero-stat-val">11</span>
+            <span className="mobile-hero-stat-lbl">Specialists</span>
+          </div>
+          <div className="mobile-hero-stat-pill">
+            <span className="mobile-hero-stat-val">60s</span>
+            <span className="mobile-hero-stat-lbl">Synthesis</span>
+          </div>
+          <div className="mobile-hero-stat-pill">
+            <span className="mobile-hero-stat-val">100%</span>
+            <span className="mobile-hero-stat-lbl">Deterministic</span>
+          </div>
+        </div>
+
+        {/* Mobile Action Card: Start Research / Active Research */}
+        <div className="mobile-search-card">
+          {running || submitting ? (
+            <div className="w-full space-y-3 animate-fade-in text-left">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+                  </span>
+                  <span className="text-[12px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
+                    Research Active
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">11 Specialists Running</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onResume?.()}
+                className="mobile-cta-running group cursor-pointer active:scale-98 transition-transform"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="mobile-cta-icon-box relative">
+                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                  <div className="mobile-cta-text">
+                    <span className="mobile-cta-title flex items-center gap-2 text-white font-extrabold text-[15.5px]">
+                      Research is Running
+                      <span className="h-2 w-2 rounded-full bg-emerald-300 animate-ping" />
+                    </span>
+                    <span className="mobile-cta-sub text-emerald-100 font-semibold text-[11.5px]">
+                      Want to go back? Tap to view live workspace →
+                    </span>
+                  </div>
+                </div>
+                <div className="mobile-cta-arrow group-hover:translate-x-1 transition-transform">
+                  <ArrowRight size={18} />
+                </div>
+              </button>
+            </div>
+          ) : (
+            <div className="w-full space-y-3 animate-fade-in text-left">
+              <button
+                type="button"
+                onClick={() => onResume?.()}
+                className="mobile-cta-primary group cursor-pointer active:scale-98 transition-all"
+              >
+                <div className="flex items-center gap-3.5 min-w-0 z-10">
+                  <div className="mobile-cta-icon-box relative shadow-lg">
+                    <Bot size={22} className="text-white group-hover:scale-110 transition-transform" />
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-300" />
+                    </span>
+                  </div>
+                  <div className="mobile-cta-text">
+                    <div className="flex items-center gap-2">
+                      <span className="mobile-cta-title text-white font-extrabold text-[16px]">Start Research</span>
+                      <span className="rounded-full bg-white/20 border border-white/30 px-2 py-0.5 text-[9.5px] font-mono font-bold tracking-tight text-white uppercase">
+                        AI Copilot
+                      </span>
+                    </div>
+                    <span className="mobile-cta-sub text-emerald-50 font-medium text-[11.5px]">
+                      Launch Artha AI Copilot &amp; Multi-Agent Studio →
+                    </span>
+                  </div>
+                </div>
+                <div className="mobile-cta-arrow group-hover:translate-x-1 transition-transform z-10">
+                  <ArrowRight size={18} />
+                </div>
+              </button>
+
+              {/* Live Ticker Diligence Track */}
+              <div className="mobile-ticker-header">
+                <div className="mobile-ticker-header-lbl">
+                  <TrendingUp size={12} className="text-emerald-400" />
+                  <span>Diligence Stream</span>
+                </div>
+                <div className="mobile-ticker-badge-live">
+                  <span className="live-pulse" />
+                  <span>1-TAP RESEARCH</span>
+                </div>
+              </div>
+              <div className="mobile-ticker-scroll">
+                {MOBILE_TICKERS.map((t) => (
+                  <button
+                    key={t.ticker}
+                    type="button"
+                    onClick={() => onRun?.(t.name)}
+                    className="mobile-ticker-chip group cursor-pointer"
+                  >
+                    <span className="ticker-dot group-hover:scale-125 transition-transform" style={{ backgroundColor: t.color, color: t.color }} />
+                    <span className="ticker-name group-hover:text-emerald-300 transition-colors">{t.name}</span>
+                    <span className={`ticker-tag ${t.tagClass}`}>{t.tag}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick Prompts */}
+              <div className="mobile-quick-prompts">
+                {QUICK_PROMPTS.map((p, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => onRun?.(p.text)}
+                    className="mobile-prompt-pill hover:border-emerald-500/50 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-[11px] font-mono text-slate-400 pt-0.5">
+                <Sparkles size={13} className="text-emerald-400 shrink-0" />
+                <span>Autonomous reasoning, peer comparison &amp; valuation audit</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Scroll Indicator */}
+        <div className="mobile-scroll-hint">
+          <span>Swipe to explore multi-agent architecture</span>
+          <ChevronDown size={14} className="animate-bounce" />
+        </div>
+      </section>
+
+      {/* ════ PAGE 2: 11 AUTONOMOUS AGENTS (MULTI-AGENT ENGINE) ════ */}
+      <section className="mobile-page-section" id="m-specialists">
+        <div className="mobile-section-header">
+          <div className="section-pill">
+            <Layers size={13} />
+            <span>Parallel Coordination</span>
+          </div>
+          <h2 className="section-title">11 Autonomous Specialists</h2>
+          <p className="section-sub">
+            Dispatched concurrently to ingest primary disclosures, compute ratios, and eliminate hallucinations.
+          </p>
+        </div>
+
+        {/* Active Specialist Live Showcase Card */}
+        <div className="mobile-highlight-agent-card">
+          {(() => {
+            const spec = SPECIALISTS[activeSpecialist]
+            const Icon = spec.icon
+            return (
+              <div className="flex items-start gap-3">
+                <div className="agent-icon-box">
+                  <Icon size={22} className="text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-white text-[15px]">{spec.name}</h3>
+                    <span className="active-agent-badge">Live Track</span>
+                  </div>
+                  <p className="text-slate-300 text-[12px] mt-1 leading-snug">{spec.desc}</p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <span className="agent-meta-tag">AST Math Runtime</span>
+                    <span className="agent-meta-tag">Verified Filings</span>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+
+        {/* 11 Specialists Balanced Cockpit Grid */}
+        <div className="mobile-agents-grid">
+          {SPECIALISTS.map((spec, idx) => {
+            const Icon = spec.icon
+            const isSelected = activeSpecialist === idx
+            const isLast = idx === SPECIALISTS.length - 1
+            return (
+              <button
+                key={spec.id}
+                type="button"
+                onClick={() => setActiveSpecialist(idx)}
+                className={`mobile-agent-pill ${isSelected ? 'is-selected' : ''} ${isLast ? 'is-featured-span' : ''}`}
+              >
+                <Icon size={14} className={isSelected ? 'text-emerald-400' : 'text-slate-400'} />
+                <span className="agent-pill-name">{spec.name}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mobile-guardrail-callout">
+          <ShieldCheck size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+          <p className="text-[11.5px] text-slate-300 leading-relaxed">
+            <strong className="text-white">Zero Mathematical Fabrication:</strong> Multiples and margins are computed by isolated Python code, never inferred by LLMs.
+          </p>
+        </div>
+      </section>
+
+      {/* ════ PAGE 3: ADVERSARIAL BULL VS. BEAR STRESS TESTING ════ */}
+      <section className="mobile-page-section" id="m-dual-thesis">
+        <div className="mobile-section-header">
+          <div className="section-pill amber">
+            <Zap size={13} />
+            <span>Adversarial Stress Test</span>
+          </div>
+          <h2 className="section-title">Bull vs. Bear Dual Thesis</h2>
+          <p className="section-sub">
+            Every stock is challenged simultaneously from upside and downside perspectives before synthesis.
+          </p>
+        </div>
+
+        <div className="mobile-thesis-cards">
+          {/* Bull Thesis Card */}
+          <div className="mobile-thesis-box bull">
+            <div className="thesis-header">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[13px]">
+                <TrendingUp size={16} />
+                <span>Bullish Catalysts</span>
+              </div>
+              <span className="evidence-cite-badge">[ev_grounded]</span>
+            </div>
+            <ul className="thesis-list">
+              <li>Defensible operational margins supported by audited cash reserves.</li>
+              <li>Compounding enterprise pricing power across core revenue lines.</li>
+              <li>Disciplined capital expenditure with sustained ROCE expansion.</li>
+            </ul>
+          </div>
+
+          {/* Bear Thesis Card */}
+          <div className="mobile-thesis-box bear">
+            <div className="thesis-header">
+              <div className="flex items-center gap-1.5 text-rose-400 font-bold text-[13px]">
+                <AlertTriangle size={16} />
+                <span>Bearish Headwinds &amp; Risks</span>
+              </div>
+              <span className="evidence-cite-badge">[ev_audited]</span>
+            </div>
+            <ul className="thesis-list">
+              <li>Valuation multiples elevated relative to 5-year historical medians.</li>
+              <li>Downside risk from input cost inflation or cyclical customer spending.</li>
+              <li>Regulatory changes or execution delays on major capital projects.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mobile-audit-stat-bar">
+          <div className="stat-item">
+            <span className="stat-num">95.2%</span>
+            <span className="stat-label">Evidence Grounding</span>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat-item">
+            <span className="stat-num">0</span>
+            <span className="stat-label">Math Inventions</span>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat-item">
+            <span className="stat-num">100%</span>
+            <span className="stat-label">Primary Citations</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ════ PAGE 4: INSTANT DOSSIER PDF & ARTHA COPILOT ════ */}
+      <section className="mobile-page-section" id="m-copilot">
+        <div className="mobile-section-header">
+          <div className="section-pill purple">
+            <Bot size={13} />
+            <span>Interactive Intelligence</span>
+          </div>
+          <h2 className="section-title">Audit Dossier &amp; Copilot</h2>
+          <p className="section-sub">
+            Read the comprehensive brief, download the official PDF, and interrogate the evidence in natural language.
+          </p>
+        </div>
+
+        {/* Feature Preview Card */}
+        <div className="mobile-copilot-preview-card">
+          <div className="preview-top">
+            <div className="flex items-center gap-2">
+              <FileCheck size={18} className="text-emerald-400" />
+              <span className="font-bold text-white text-[13px]">Vector PDF Dossier</span>
+            </div>
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+              Ready in 60s
+            </span>
+          </div>
+          <p className="text-[12px] text-slate-300 mt-2 leading-relaxed">
+            Complete with executive summary, audited key financial tables, balance sheet health scores, and full regulatory citation references.
+          </p>
+
+          <div className="preview-divider" />
+
+          <div className="preview-chat-bubble">
+            <span className="chat-avatar">AI</span>
+            <div className="chat-content">
+              <p className="font-semibold text-white text-[11.5px]">Artha Copilot Grounding:</p>
+              <p className="text-slate-300 text-[11px] mt-0.5">
+                "Operating cash flows for NVIDIA increased to $28.09B, supported by 75% gross margins in data center products [ev_10]."
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button to launch Workspace */}
+        <div className="mt-6 flex flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={onResume}
+            className="mobile-workspace-cta"
+          >
+            <Compass size={18} />
+            <span>Open ArthaLens Workspace</span>
+            <ArrowUpRight size={16} />
+          </button>
+
+          <p className="text-center text-[11px] text-slate-500">
+            SEC EDGAR · BSE / NSE India · Real-Time AST AST Runtimes
+          </p>
+        </div>
+      </section>
+
+      {/* ════ PAGE 5: TRUST, DATA PROVENANCE & DILIGENCE PROTOCOL ════ */}
+      <section className="mobile-page-section" id="m-faq">
+        <div className="mobile-section-header">
+          <div className="section-pill emerald">
+            <ShieldCheck size={13} />
+            <span>Audited Governance</span>
+          </div>
+          <h2 className="section-title">Institutional Provenance</h2>
+          <p className="section-sub">
+            Direct regulatory primary disclosures with zero mathematical fabrication.
+          </p>
+        </div>
+
+        {/* Audit Pillars */}
+        <div className="space-y-2.5 my-3">
+          <div className="mobile-audit-pillar">
+            <div className="pillar-header">
+              <span className="pillar-dot blue" />
+              <span className="font-semibold text-white text-[12.5px]">Primary Disclosures Only</span>
+            </div>
+            <p className="text-[11.5px] text-slate-400 mt-1 leading-relaxed">
+              SEC EDGAR (10-K, 10-Q), BSE &amp; NSE filings, earnings transcripts. Linked to original regulatory sources with timestamps.
+            </p>
+          </div>
+
+          <div className="mobile-audit-pillar">
+            <div className="pillar-header">
+              <span className="pillar-dot green" />
+              <span className="font-semibold text-white text-[12.5px]">Isolated Python AST Math</span>
+            </div>
+            <p className="text-[11.5px] text-slate-400 mt-1 leading-relaxed">
+              Multiples, margins, and CAGR rates computed strictly in isolated Python runtimes. LLMs never invent financial figures.
+            </p>
+          </div>
+
+          <div className="mobile-audit-pillar">
+            <div className="pillar-header">
+              <span className="pillar-dot amber" />
+              <span className="font-semibold text-white text-[12.5px]">Non-Advisory Aid Guarantee</span>
+            </div>
+            <p className="text-[11.5px] text-slate-400 mt-1 leading-relaxed">
+              Factual synthesis engine, not an investment adviser or broker-dealer. Verify all figures before making capital decisions.
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile Footer Dock */}
+        <footer className="mt-auto pt-4 border-t border-white/10 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-white font-medium">SEC EDGAR Live</span>
+            </div>
+            <span>© 2026 ArthaLens AI</span>
+          </div>
+          <p className="text-[10px] text-slate-500 text-center leading-normal">
+            Evidence-first equity research aid · Not financial advice · Always verify against original filings
+          </p>
+        </footer>
+      </section>
+    </div>
+  )
+}

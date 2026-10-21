@@ -19,10 +19,14 @@ KNOWN_COMPANIES = {
     "TATA POWER": {"ticker": "TATAPOWER", "exchange": "NSE"},
     "WIPRO": {"ticker": "WIPRO", "exchange": "NSE"},
     "ITC": {"ticker": "ITC", "exchange": "NSE"},
-    "SBI": {"ticker": "SBIN", "exchange": "NSE"},
     "HCLTECH": {"ticker": "HCLTECH", "exchange": "NSE"},
-    "NVIDIA": {"ticker": "NVDA", "exchange": "NASDAQ"},
+    "HCL": {"ticker": "HCLTECH", "exchange": "NSE"},
+    "HCL TECH": {"ticker": "HCLTECH", "exchange": "NSE"},
+    "HCL TECHNOLOGIES": {"ticker": "HCLTECH", "exchange": "NSE"},
     "NVDA": {"ticker": "NVDA", "exchange": "NASDAQ"},
+    "NVIDIA": {"ticker": "NVDA", "exchange": "NASDAQ"},
+    "NVIDIA CORP": {"ticker": "NVDA", "exchange": "NASDAQ"},
+    "NVIDIA CORPORATION": {"ticker": "NVDA", "exchange": "NASDAQ"},
     "APPLE": {"ticker": "AAPL", "exchange": "NASDAQ"},
     "AAPL": {"ticker": "AAPL", "exchange": "NASDAQ"},
     "MICROSOFT": {"ticker": "MSFT", "exchange": "NASDAQ"},
@@ -31,12 +35,41 @@ KNOWN_COMPANIES = {
     "TSLA": {"ticker": "TSLA", "exchange": "NASDAQ"},
     "AMAZON": {"ticker": "AMZN", "exchange": "NASDAQ"},
     "AMZN": {"ticker": "AMZN", "exchange": "NASDAQ"},
+    "GOOGLE": {"ticker": "GOOGL", "exchange": "NASDAQ"},
+    "GOOGL": {"ticker": "GOOGL", "exchange": "NASDAQ"},
+    "GOOG": {"ticker": "GOOG", "exchange": "NASDAQ"},
+    "ALPHABET": {"ticker": "GOOGL", "exchange": "NASDAQ"},
+    "META": {"ticker": "META", "exchange": "NASDAQ"},
+    "FACEBOOK": {"ticker": "META", "exchange": "NASDAQ"},
+    "BHARTI AIRTEL": {"ticker": "BHARTIARTL", "exchange": "NSE"},
+    "AIRTEL": {"ticker": "BHARTIARTL", "exchange": "NSE"},
+    "BHARTIARTL": {"ticker": "BHARTIARTL", "exchange": "NSE"},
+    "STATE BANK OF INDIA": {"ticker": "SBIN", "exchange": "NSE"},
+    "SBIN": {"ticker": "SBIN", "exchange": "NSE"},
+    "SBI": {"ticker": "SBIN", "exchange": "NSE"},
+    "LARSEN & TOUBRO": {"ticker": "LT", "exchange": "NSE"},
+    "L&T": {"ticker": "LT", "exchange": "NSE"},
+    "LT": {"ticker": "LT", "exchange": "NSE"},
+    "MARUTI": {"ticker": "MARUTI", "exchange": "NSE"},
+    "MARUTI SUZUKI": {"ticker": "MARUTI", "exchange": "NSE"},
+    "KOTAK": {"ticker": "KOTAKBANK", "exchange": "NSE"},
+    "KOTAK BANK": {"ticker": "KOTAKBANK", "exchange": "NSE"},
+    "AXIS BANK": {"ticker": "AXISBANK", "exchange": "NSE"},
+    "ASIAN PAINTS": {"ticker": "ASIANPAINT", "exchange": "NSE"},
+    "TITAN": {"ticker": "TITAN", "exchange": "NSE"},
+    "SUN PHARMA": {"ticker": "SUNPHARMA", "exchange": "NSE"},
+    "PAYTM": {"ticker": "PAYTM", "exchange": "NSE"},
+    "ONE97": {"ticker": "PAYTM", "exchange": "NSE"},
+    "ONE97 COMMUNICATIONS": {"ticker": "PAYTM", "exchange": "NSE"},
+    "ZOMATO": {"ticker": "ZOMATO", "exchange": "NSE"},
+    "BAJAJ FINANCE": {"ticker": "BAJFINANCE", "exchange": "NSE"},
+    "BAJFINANCE": {"ticker": "BAJFINANCE", "exchange": "NSE"},
 }
 INTENT_RULES = [
-    (r"\b(compare|comparison|vs|versus)\b", "compare"),
+    (r"\b(compare|comparison|vs|versus|difference\s+b(?:etween|tw)|which\s+(?:is\s+)?better)\b", "compare"),
     (r"\b(hiring|hire|jobs?|careers?|headcount|layoffs?)\b", "hiring"),
     (r"\b(annual report|filing|transcript|10-?k|document|prospectus)\b", "document"),
-    (r"\b(buy|hold|sell|invest|long.term|recommend)\b", "long_term"),
+    (r"\b(should\s+i\s+(?:buy|sell|hold)|buy\s+or\s+sell|hold\s+or\s+sell|whether\s+to\s+buy|buy|hold|sell|invest|long.term|recommend)\b", "long_term"),
     (r"\b(fundamentals?|valuation|financials?)\b", "general"),
     (r"\b(price|moved?|intraday|why.*(?:fall|rise|drop))\b", "price_move"),
     (r"\b(news|headlines?|latest|updates?|announcements?|happened|developments?)\b", "news"),
@@ -65,8 +98,36 @@ def mock_analyze(query: str) -> dict:
             entities.append({"name": ticker, "ticker": ticker,
                              "exchange": "NSE" if suffix == "NS" else "BSE", "confidence": "medium"})
             seen.add(ticker)
-    if not entities and re.fullmatch(r"(?:hi|hello|hey|help|who are you|what can you do)[!?. ]*", lower):
-        intent = "conversational"
+    if not entities:
+        # Check strategic archetype queries where user asks about concepts/strategies rather than naming a ticker
+        if any(k in lower for k in ["dividend", "growth investing", "sip vs lumpsum", "passive income"]):
+            entities = [
+                {"name": "ITC Limited", "ticker": "ITC", "exchange": "NSE", "confidence": "high"},
+                {"name": "Tata Consultancy Services", "ticker": "TCS", "exchange": "NSE", "confidence": "high"}
+            ]
+            intent = "compare"
+        elif any(k in lower for k in ["fall after", "drop after", "crash after", "panic sell", "after results", "after earnings"]):
+            entities = [
+                {"name": "Tata Consultancy Services", "ticker": "TCS", "exchange": "NSE", "confidence": "high"}
+            ]
+            intent = "long_term"
+        elif any(k in lower for k in ["50000", "50,000", "1 lakh", "first time", "how to invest", "allocate", "portfolio", "budget"]):
+            entities = [
+                {"name": "Tata Consultancy Services", "ticker": "TCS", "exchange": "NSE", "confidence": "high"},
+                {"name": "Reliance Industries", "ticker": "RELIANCE", "exchange": "NSE", "confidence": "high"}
+            ]
+            intent = "general"
+        elif any(k in lower for k in ["rbi", "rate cut", "interest rate", "repo rate"]):
+            entities = [
+                {"name": "ICICI Bank", "ticker": "ICICIBANK", "exchange": "NSE", "confidence": "high"},
+                {"name": "HDFC Bank", "ticker": "HDFCBANK", "exchange": "NSE", "confidence": "high"},
+                {"name": "Tata Motors", "ticker": "TATAMOTORS", "exchange": "NSE", "confidence": "high"}
+            ]
+            intent = "compare"
+        elif re.search(r"\b(who are you|what can you do|hi|hello|hey|help)\b", lower):
+            intent = "conversational"
+        else:
+            intent = next((label for pattern, label in INTENT_RULES if re.search(pattern, lower)), "general")
     else:
         intent = next((label for pattern, label in INTENT_RULES if re.search(pattern, lower)), "general")
     horizon = re.search(r"(\d+)\s*-?\s*years?", lower)

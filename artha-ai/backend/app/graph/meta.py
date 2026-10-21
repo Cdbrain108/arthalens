@@ -30,8 +30,8 @@ def _prompt_safe(items: list[dict]) -> list[dict]:
     return safe
 
 
-def _balanced_evidence(evidence, per_agent=6):
-    """Retain coverage from every specialist instead of only the first agent."""
+def _balanced_evidence(evidence, per_agent=2):
+    """Retain concise high-signal coverage from every specialist instead of huge bloated context."""
     counts, selected = {}, []
     for item in evidence:
         key = (item.get('agent'), item.get('entity'))
@@ -43,9 +43,14 @@ def _balanced_evidence(evidence, per_agent=6):
 
 def analyze(query: str) -> QueryAnalysis:
     """Analyze query to extract entities, intent, horizon, and comparison mode."""
+    # Fast path: instant deterministic extraction for recognized entities and tickers (<1ms)
+    from ..llm_mock import mock_analyze
+    quick = mock_analyze(query)
+    if quick.get("entities") and quick.get("intent"):
+        return QueryAnalysis.model_validate(quick)
+
     if is_mock():
-        from ..llm_mock import mock_analyze
-        return QueryAnalysis.model_validate(mock_analyze(query))
+        return QueryAnalysis.model_validate(quick)
 
     prompt = (
         "Extract the company/entity names and tickers explicitly present in this query. "
@@ -144,10 +149,10 @@ def synthesize(state: dict[str, Any]) -> ReportJSON:
     agent_findings = {}
     for agent_name, agent_data in (state.get("agent_results") or {}).items():
         if isinstance(agent_data, dict):
-            findings_list = [f.get("claim") if isinstance(f, dict) else str(f) for f in agent_data.get("findings", [])[:8]]
+            findings_list = [f.get("claim") if isinstance(f, dict) else str(f) for f in agent_data.get("findings", [])[:4]]
             agent_findings[agent_name] = {
                 "findings": findings_list,
-                "sources": agent_data.get("sources", [])[:4]
+                "sources": agent_data.get("sources", [])[:2]
             }
 
     context = {
@@ -213,12 +218,23 @@ def answer_report_question(question: str, report: dict[str, Any], context: dict[
         from ..api.research_routes import _extractive_report_answer
         return _extractive_report_answer(question, report, context)
 
+    # Build a high-density, structured summary so verdict, cases, and metrics are never clipped
+    key_sections = {}
+    for k in (
+        "query", "company", "executive_summary", "overall_assessment", "verdict",
+        "bull_case", "bear_case", "what_could_change_view", "valuation_scenarios",
+        "metrics", "decision_framework", "reasoned_deductions"
+    ):
+        if k in (report or {}):
+            key_sections[k] = report[k]
+
     prompt = (
         "Answer the user's question using ONLY the provided report sections and evidence packet. "
         "Distinguish clearly between what the report establishes and what would require fresh research.\n"
         f"Question: {question}\n"
-        f"Report: {json.dumps(report, default=str)[:8000]}\n"
-        f"Evidence: {json.dumps((context or {}).get('evidence', [])[:20], default=str)}"
+        f"Key Report Sections: {json.dumps(key_sections, default=str)[:14000]}\n"
+        f"Evidence Excerpts: {json.dumps((context or {}).get('evidence', [])[:20], default=str)[:6000]}"
     )
     llm = get_structured_llm("report_qa", ReportAnswer)
     return llm.invoke(prompt)
+

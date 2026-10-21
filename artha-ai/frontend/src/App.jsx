@@ -1,9 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import LandingExperience from './components/LandingExperience'
+import MobileLanding from './components/MobileLanding'
 import Login from './components/Login'
 import { useResearchJob } from './hooks/useResearchJob'
 import { isTerminalJob } from './hooks/researchJob'
 import { useAuth } from './hooks/useAuth'
+import { useIsMobile } from './hooks/useIsMobile'
 import { api } from './api/client'
 import {
   loadSessions,
@@ -11,11 +13,14 @@ import {
   mergeSessions,
   deleteSession,
   loadUserSessions,
+  saveChatQuery,
 } from './storage/chatSessions'
+import { detectQueryType } from './utils/queryRouter'
 
 const StudioPage = lazy(() => import('./components/StudioPage'))
 
 export default function App() {
+  const isMobile = useIsMobile(768)
   const { user, logout, loading: authLoading } = useAuth()
   const { job, submitting, error, start, reset, restore } = useResearchJob()
 
@@ -94,9 +99,12 @@ export default function App() {
   const handleStartResearch = useCallback(
     (value) => {
       const trimmed = (value || '').trim()
-      if (!trimmed || running) return
+      if (running) return
       setQuery(trimmed)
       navigate('chat')
+      if (!trimmed) {
+        return
+      }
       start(trimmed)
     },
     [start, navigate, running]
@@ -161,9 +169,9 @@ export default function App() {
             onAskReport={(jobId, question) => api.askReport(jobId, question)}
             onNewResearch={handleNewResearch}
             onBackToStart={() => navigate('landing')}
-            user={user || { name: 'Stock Researcher', guest: true }}
+            user={user}
             onLogout={logout}
-            onOpenAuth={() => navigate('login')}
+            onOpenAuth={() => setAuthModalOpen(true)}
             sessions={sessions}
             onSelectSession={handleSelectSession}
             onDeleteSession={handleDeleteSession}
@@ -182,23 +190,40 @@ export default function App() {
     )
   }
 
-  // Public Landing Experience route
+  // Public Landing Experience route (Mobile vs Desktop)
   return (
     <>
-      <LandingExperience
-        onRun={handleStartResearch}
-        running={running}
-        submitting={submitting}
-        query={query}
-        onQueryChange={setQuery}
-        sessions={sessions}
-        onSelectSession={handleSelectSession}
-        onDeleteSession={handleDeleteSession}
-        onResume={() => navigate('chat')}
-        user={user}
-        onLogout={logout}
-        onOpenAuth={() => navigate('login')}
-      />
+      {isMobile ? (
+        <MobileLanding
+          onRun={handleStartResearch}
+          running={running}
+          submitting={submitting}
+          query={query}
+          onQueryChange={setQuery}
+          sessions={sessions}
+          onSelectSession={handleSelectSession}
+          onDeleteSession={handleDeleteSession}
+          onResume={() => navigate('chat')}
+          user={user}
+          onLogout={logout}
+          onOpenAuth={() => navigate('login')}
+        />
+      ) : (
+        <LandingExperience
+          onRun={handleStartResearch}
+          running={running}
+          submitting={submitting}
+          query={query}
+          onQueryChange={setQuery}
+          sessions={sessions}
+          onSelectSession={handleSelectSession}
+          onDeleteSession={handleDeleteSession}
+          onResume={() => navigate('chat')}
+          user={user}
+          onLogout={logout}
+          onOpenAuth={() => navigate('login')}
+        />
+      )}
 
       {authModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md">

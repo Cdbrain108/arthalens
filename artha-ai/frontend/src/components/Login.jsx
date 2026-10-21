@@ -132,7 +132,7 @@ export default function Login({ onLogin, onCancel }) {
   ].join(' ')
 
   return (
-    <div className="welcome-page relative min-h-screen overflow-hidden bg-[#0d1014] text-[#f1f3f4]">
+    <div className="welcome-page relative min-h-screen min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#0d1014] text-[#f1f3f4]">
       {/* Background Aurora Lighting */}
       <div className="welcome-aurora pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <span className="absolute -left-24 -top-40 h-96 w-96 rounded-full bg-[#22c55e]/10 blur-3xl" />
@@ -140,15 +140,14 @@ export default function Login({ onLogin, onCancel }) {
       </div>
 
       {/* Header */}
-      <header className="welcome-header relative z-10 flex items-center justify-between border-b border-white/[0.08] px-6 py-4 lg:px-12">
-        <a className="welcome-logo flex items-center gap-3 text-lg font-semibold tracking-[-0.03em] text-white" href="#home" aria-label="Stock Research Home">
-          <Logo size={36} />
+      <header className="welcome-header relative z-10 flex items-center justify-between border-b border-white/[0.08] px-4 py-3.5 sm:px-6 lg:px-12">
+        <a className="welcome-logo flex items-center gap-2.5 text-base sm:text-lg font-semibold tracking-[-0.03em] text-white" href="#home" aria-label="ArthaLens AI Home">
+          <Logo size={30} />
           <span className="flex items-center gap-1.5 font-bold tracking-tight">
-            Stock Research
-            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-          </span>
-          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-mono font-semibold tracking-widest text-emerald-400">
-            PRO PLATFORM
+            ArthaLens
+            <span className="text-[9px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+              AI
+            </span>
           </span>
         </a>
 
@@ -163,51 +162,51 @@ export default function Login({ onLogin, onCancel }) {
       </header>
 
       {/* Main Container */}
-      <main className="welcome-main relative z-10 mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(380px,460px)] lg:gap-16 lg:px-12 lg:pt-12">
-        {/* Left Column: Visual Story */}
-        <section className="welcome-story animate-fade-up">
+      <main className="welcome-main relative z-10 mx-auto grid w-full max-w-7xl gap-8 px-4 pb-24 pt-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(380px,460px)] lg:gap-16 lg:px-12 lg:pt-12">
+        {/* Left Column: Visual Story (Shows on desktop or below card on mobile) */}
+        <section className="welcome-story animate-fade-up order-2 lg:order-1">
           <div className="welcome-eyebrow flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-[#22c55e]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_rgba(34,197,94,0.9)]" />
             EVIDENCE-FIRST FINANCIAL INTELLIGENCE
           </div>
-          <h1 className="mt-5 max-w-2xl text-4xl font-normal leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+          <h1 className="mt-4 max-w-2xl text-2xl font-normal leading-[1.12] tracking-[-0.03em] text-white sm:text-4xl lg:text-5xl">
             See the upside.<br />
             <span className="text-[#22c55e]">Audit the downside.</span>
           </h1>
-          <p className="welcome-description mt-5 max-w-xl text-sm leading-relaxed text-[#a8afb8] sm:text-base">
+          <p className="welcome-description mt-3 max-w-xl text-xs sm:text-sm leading-relaxed text-[#a8afb8]">
             Autonomous multi-agent stock research that cross-examines financial filings, earnings calls, news, and valuation with verified provenance.
           </p>
 
-          <div className="welcome-tags mt-6 flex flex-wrap gap-2.5 text-xs text-[#c8ced5]">
-            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
-              <Check size={14} className="text-[#22c55e]" /> Deterministic Math
+          <div className="welcome-tags mt-4 flex flex-wrap gap-2 text-[11px] text-[#c8ced5]">
+            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">
+              <Check size={13} className="text-[#22c55e]" /> Deterministic Math
             </span>
-            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
-              <Check size={14} className="text-[#22c55e]" /> Primary Filings & Sources
+            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">
+              <Check size={13} className="text-[#22c55e]" /> Primary Filings & Sources
             </span>
-            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
-              <Check size={14} className="text-[#22c55e]" /> Institutional PDF Dossiers
+            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1">
+              <Check size={13} className="text-[#22c55e]" /> Institutional PDF Dossiers
             </span>
           </div>
 
-          <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-2xl sm:p-5">
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3 shadow-2xl sm:p-5">
             <MarketVisual />
           </div>
         </section>
 
-        {/* Right Column: Authentication Card */}
-        <section className="welcome-access animate-fade-up">
-          <div className="rounded-3xl border border-white/10 bg-[#161a20]/95 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
-            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center gap-2.5">
-                <Logo size={28} />
-                <span className="text-sm font-semibold text-white">
-                  {mode === 'signin' && 'Sign in to Stock Research'}
-                  {mode === 'signup' && 'Create your Research Account'}
+        {/* Right Column: Authentication Card (Appears FIRST on mobile) */}
+        <section className="welcome-access animate-fade-up order-1 lg:order-2">
+          <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#161a20]/95 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
+            <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-3.5">
+              <div className="flex items-center gap-2">
+                <Logo size={24} />
+                <span className="text-xs sm:text-sm font-semibold text-white">
+                  {mode === 'signin' && 'Sign in to ArthaLens'}
+                  {mode === 'signup' && 'Create Research Account'}
                   {mode === 'forgot' && 'Reset your Password'}
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400">
+              <span className="text-[9px] font-mono text-emerald-400">
                 {isFirebaseConfigured ? 'FIREBASE CLOUD' : 'LOCAL MODE'}
               </span>
             </div>

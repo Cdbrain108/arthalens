@@ -34,16 +34,27 @@ export default function Sidebar({
   user,
   onLogout,
   onOpenAuth,
-  onNew,
   running,
   onNavSelect,
-  history = [],
+  currentPage = 'landing',
+  // StudioPage passes the session-shaped props; the older history-shaped names
+  // are still accepted so either call site works.
+  sessions,
+  onSelectSession,
+  onDeleteSession,
+  onNewChat,
+  onNew,
+  history,
   onSelectHistory,
   onDeleteHistory,
-  currentPage = 'landing',
 }) {
   const ref = useRef(null)
   const [activeTab, setActiveTab] = useState('threads') // 'threads' | 'reports'
+
+  const historyItems = sessions || history || []
+  const selectItem = onSelectSession || onSelectHistory
+  const deleteItem = onDeleteSession || onDeleteHistory
+  const startNew = onNewChat || onNew
 
   useEffect(() => {
     if (!open) return
@@ -84,7 +95,7 @@ export default function Sidebar({
   }
 
   // Filter reports
-  const reportItems = (history || []).filter(
+  const reportItems = historyItems.filter(
     (item) => item && (item.pdfUrl || item.storagePdfUrl || item.status === 'succeeded')
   )
 
@@ -126,7 +137,7 @@ export default function Sidebar({
       <button
         className="new-research"
         onClick={() => {
-          onNew()
+          startNew?.()
           onClose()
         }}
         disabled={running}
@@ -155,7 +166,7 @@ export default function Sidebar({
           <span>Platform Home</span>
           {currentPage === 'landing' && <span className="nav-dot" />}
         </button>
-        <button onClick={() => handleNav('methodology')} className="nav-link">
+        <button onClick={() => handleNav('engine')} className="nav-link">
           <BookOpen size={17} />
           <span>Multi-Agent Flow</span>
         </button>
@@ -172,7 +183,7 @@ export default function Sidebar({
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Threads ({history.length})
+              Threads ({historyItems.length})
             </button>
             <button
               type="button"
@@ -188,9 +199,9 @@ export default function Sidebar({
           </div>
 
           {activeTab === 'threads' ? (
-            history && history.length > 0 ? (
+            historyItems.length > 0 ? (
               <div className="space-y-1">
-                {history.map((item, idx) => {
+                {historyItems.map((item, idx) => {
                   const isStr = typeof item === 'string'
                   const q = isStr ? item : item.query || 'Untitled Research'
                   const key = isStr ? `legacy-${idx}` : item.job_id || `${idx}`
@@ -212,7 +223,7 @@ export default function Sidebar({
                     >
                       <button
                         onClick={() => {
-                          onSelectHistory?.(item)
+                          selectItem?.(item)
                           onClose()
                         }}
                         className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left transition"
@@ -234,14 +245,16 @@ export default function Sidebar({
                           </span>
                         </span>
                       </button>
-                      {!isStr && onDeleteHistory && (
+                      {!isStr && deleteItem && (
                         <button
-                          onClick={() => onDeleteHistory(item.job_id)}
+                          onClick={() => deleteItem(item.job_id)}
                           aria-label="Delete thread"
-                          className="mr-1 hidden rounded p-1 text-[#5f6368] hover:text-rose-400 group-hover:block transition"
+                          /* Always visible: `group-hover` alone made this
+                             unreachable on touch devices. */
+                          className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded text-[#5f6368] transition hover:text-rose-400 focus-visible:text-rose-400"
                           title="Delete thread"
                         >
-                          <Trash2 size={12} />
+                          <Trash2 size={13} />
                         </button>
                       )}
                     </div>
@@ -269,7 +282,7 @@ export default function Sidebar({
                     >
                       <button
                         onClick={() => {
-                          onSelectHistory?.(item)
+                          selectItem?.(item)
                           onClose()
                         }}
                         className="flex min-w-0 flex-1 items-center gap-2 text-left"

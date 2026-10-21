@@ -125,9 +125,8 @@ test('landing experience and in-app PDF viewer render their core actions', () =>
   const landing = renderToStaticMarkup(React.createElement(LandingExperience, {
     onRun: () => {}, running: false, submitting: false, query: '', onQueryChange: () => {}
   }))
-  assert.ok(landing.includes('See the upside.'))
-  assert.ok(landing.includes('Loading the specialist registry'))
-  assert.ok(landing.includes('Evidence before opinion'))
+  assert.ok(landing.includes('ArthaLens'))
+  assert.ok(landing.includes('Evidence-first research aid'))
 
   const viewer = renderToStaticMarkup(React.createElement(PdfViewerModal, {
     jobId: 'job-1', pdfUrl: 'blob:report', onClose: () => {}
@@ -160,4 +159,6 @@ test('ResearchProcessGraph reflects live pipeline state', () => {
   assert.ok(html.includes('Financial health'))
   assert.ok(html.includes('Valuation'))
   assert.ok(html.includes('Working'))
+  assert.ok(html.includes('data-node-id="valuation_agent"'))
+  assert.ok(html.includes('Jump to live action'))
 })

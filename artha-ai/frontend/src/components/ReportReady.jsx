@@ -3,6 +3,7 @@ import { FileText, Download, RotateCcw, Eye, EyeOff, CloudCheck, CheckCircle2, S
 import { api } from '../api/client'
 import { persistReportPdfToStorage } from '../storage/chatSessions'
 import ReportPreview from './ReportPreview'
+import PdfViewerModal from './PdfViewerModal'
 
 // Report-ready state — the control room's terminal action: view / download PDF / interactive preview.
 export default function ReportReady({ job, onReset, user }) {
@@ -11,6 +12,7 @@ export default function ReportReady({ job, onReset, user }) {
   const [attempt, setAttempt] = useState(0)
   const [showPreview, setShowPreview] = useState(true)
   const [cloudSynced, setCloudSynced] = useState(false)
+  const [showPdfModal, setShowPdfModal] = useState(false)
 
   useEffect(() => {
     if (!jobId) return
@@ -109,17 +111,16 @@ export default function ReportReady({ job, onReset, user }) {
                 {showPreview ? <EyeOff size={14} /> : <Eye size={14} />}
                 {showPreview ? 'Hide Interactive Preview' : 'Show Interactive Preview'}
               </button>
-              <a
-                href={pdf.url}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-press flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[13px] text-white hover:bg-white/10"
+              <button
+                type="button"
+                onClick={() => setShowPdfModal(true)}
+                className="btn-press flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[13px] text-white hover:bg-white/10 cursor-pointer"
               >
-                <FileText size={14} /> Open PDF
-              </a>
+                <FileText size={14} className="text-emerald-400" /> View PDF In-App
+              </button>
               <a
                 href={pdf.url}
-                download={`stock_research_${jobId}.pdf`}
+                download={`arthalens_research_${jobId}.pdf`}
                 className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2 text-[13px] font-semibold text-black shadow-md hover:brightness-110"
               >
                 <Download size={14} /> Download PDF
@@ -145,6 +146,14 @@ export default function ReportReady({ job, onReset, user }) {
       {/* Interactive In-Browser Report Preview with KPI Cards & Charts */}
       {showPreview && (
         <ReportPreview jobId={jobId} job={job} pdfUrl={pdf?.url} />
+      )}
+
+      {showPdfModal && (
+        <PdfViewerModal
+          jobId={jobId}
+          pdfUrl={pdf?.url}
+          onClose={() => setShowPdfModal(false)}
+        />
       )}
     </div>
   )

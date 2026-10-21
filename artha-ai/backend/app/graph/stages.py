@@ -59,8 +59,9 @@ def analyze_query(state: dict) -> dict:
     # unless the query explicitly specifies US ADR / NYSE / NASDAQ / USD.
     INDIAN_NAMES = {"infosys", "tcs", "tata consultancy services", "reliance", "wipro", 
                     "hdfc bank", "icici bank", "bharti airtel", "itc", "state bank of india", 
-                    "sbi", "larsen & toubro", "l&t", "tata motors"}
-    INDIAN_TICKERS = {"INFY", "TCS", "RELIANCE", "WIPRO", "HDFCBANK", "ICICIBANK", "BHARTIARTL", "SBIN", "TATAMOTORS", "ITC", "LT"}
+                    "sbi", "larsen & toubro", "l&t", "tata motors", "paytm", "one97", "one97 communications", "zomato", "bajaj finance",
+                    "hcl", "hcltech", "hcl tech", "hcl technologies"}
+    INDIAN_TICKERS = {"INFY", "TCS", "RELIANCE", "WIPRO", "HDFCBANK", "ICICIBANK", "BHARTIARTL", "SBIN", "TATAMOTORS", "ITC", "LT", "PAYTM", "ZOMATO", "BAJFINANCE", "HCLTECH"}
     q_lower = state.get("query", "").lower()
     is_explicit_us = any(k in q_lower for k in ("nyse", "nasdaq", "adr", "usd", "$"))
 
@@ -77,27 +78,24 @@ def analyze_query(state: dict) -> dict:
 
 
 def create_plan(state: dict) -> dict:
-    if is_mock():
-        from ..llm_mock import mock_plan
-        plan_d = mock_plan(state["intent"], state.get("compare_mode", False))
-        from ..schemas.models import QueryAnalysis as _QA, ResearchPlan as _RP
-        analysis = _QA(entities=state["entities"], intent=state["intent"],
-            time_horizon=state.get("time_horizon"), compare_mode=state.get("compare_mode", False))
-        selected = enforce_policy(analysis, _RP(**plan_d))
-        return {**_stamp(state, "create_plan"),
-                "research_plan": {**plan_d, "selected_agents": selected},
-                "selected_agents": selected}
-    analysis = QueryAnalysis(
+    from ..llm_mock import mock_plan
+    from ..schemas.models import QueryAnalysis as _QA, ResearchPlan as _RP
+    analysis = _QA(
         entities=state["entities"], intent=state["intent"],
-        time_horizon=state.get("time_horizon"), compare_mode=state["compare_mode"])
-    try:
-        plan: ResearchPlan = meta.plan(state["query"], analysis)
-    except Exception:
-        from ..llm_mock import mock_plan
-        plan = ResearchPlan.model_validate(mock_plan(analysis.intent, analysis.compare_mode))
-    selected = enforce_policy(analysis, plan)  # deterministic guardrail
+        time_horizon=state.get("time_horizon"), compare_mode=state.get("compare_mode", False))
+    if is_mock():
+        plan_d = mock_plan(analysis.intent, analysis.compare_mode)
+        plan_obj = _RP(**plan_d)
+    else:
+        try:
+            plan_obj = meta.plan(state["query"], analysis)
+            plan_d = plan_obj.model_dump()
+        except Exception:
+            plan_d = mock_plan(analysis.intent, analysis.compare_mode)
+            plan_obj = _RP(**plan_d)
+    selected = enforce_policy(analysis, plan_obj)  # deterministic policy guardrail
     return {**_stamp(state, "create_plan"),
-            "research_plan": {**plan.model_dump(), "selected_agents": selected},
+            "research_plan": {**plan_d, "selected_agents": selected},
             "selected_agents": selected}
 
 

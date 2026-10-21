@@ -12,17 +12,23 @@ import {
 
 const GUEST_KEY = 'stock_research_user_guest'
 
-function loadLocalGuest() {
-  try {
-    const raw = localStorage.getItem(GUEST_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
+function extractDisplayName(firebaseUser) {
+  if (!firebaseUser) return ''
+  if (firebaseUser.displayName && firebaseUser.displayName.trim()) {
+    return firebaseUser.displayName.trim()
   }
+  if (Array.isArray(firebaseUser.providerData)) {
+    for (const p of firebaseUser.providerData) {
+      if (p?.displayName && p.displayName.trim()) {
+        return p.displayName.trim()
+      }
+    }
+  }
+  return ''
 }
 
 export function useAuth() {
-  const [user, setUser] = useState(() => loadLocalGuest())
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   // Listen to remote Firebase Auth state changes
@@ -35,7 +41,7 @@ export function useAuth() {
       if (firebaseUser) {
         const u = {
           uid: firebaseUser.uid,
-          name: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Researcher'),
+          name: extractDisplayName(firebaseUser),
           email: firebaseUser.email || '',
           photoURL: firebaseUser.photoURL || null,
           guest: false,
@@ -43,13 +49,8 @@ export function useAuth() {
           ts: Date.now(),
         }
         setUser(u)
-        try {
-          localStorage.removeItem(GUEST_KEY)
-        } catch {}
       } else {
-        // Fall back to local guest user if available
-        const local = loadLocalGuest()
-        setUser(local)
+        setUser(null)
       }
       setLoading(false)
     })
@@ -81,7 +82,7 @@ export function useAuth() {
     if (firebaseUser) {
       const u = {
         uid: firebaseUser.uid,
-        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Researcher',
+        name: extractDisplayName(firebaseUser),
         email: firebaseUser.email || '',
         photoURL: firebaseUser.photoURL || null,
         guest: false,
@@ -89,9 +90,6 @@ export function useAuth() {
         ts: Date.now(),
       }
       setUser(u)
-      try {
-        localStorage.removeItem(GUEST_KEY)
-      } catch {}
       return { user: u, error: null }
     }
     return { user: null, error }
@@ -102,14 +100,11 @@ export function useAuth() {
     if (!isFirebaseConfigured) {
       const u = {
         uid: `guest_${Date.now()}`,
-        name: name.trim() || email.split('@')[0],
+        name: name.trim() || '',
         email: email.trim(),
         guest: false,
         ts: Date.now(),
       }
-      try {
-        localStorage.setItem(GUEST_KEY, JSON.stringify(u))
-      } catch {}
       setUser(u)
       return { user: u, error: null }
     }
@@ -118,7 +113,7 @@ export function useAuth() {
     if (firebaseUser) {
       const u = {
         uid: firebaseUser.uid,
-        name: name.trim() || firebaseUser.email?.split('@')[0] || 'Researcher',
+        name: name.trim() || extractDisplayName(firebaseUser),
         email: firebaseUser.email || '',
         photoURL: firebaseUser.photoURL || null,
         guest: false,
@@ -126,9 +121,6 @@ export function useAuth() {
         ts: Date.now(),
       }
       setUser(u)
-      try {
-        localStorage.removeItem(GUEST_KEY)
-      } catch {}
       return { user: u, error: null }
     }
     return { user: null, error }
@@ -140,7 +132,7 @@ export function useAuth() {
     if (firebaseUser) {
       const u = {
         uid: firebaseUser.uid,
-        name: firebaseUser.displayName || 'Researcher',
+        name: extractDisplayName(firebaseUser),
         email: firebaseUser.email || '',
         photoURL: firebaseUser.photoURL || null,
         guest: false,
@@ -148,9 +140,6 @@ export function useAuth() {
         ts: Date.now(),
       }
       setUser(u)
-      try {
-        localStorage.removeItem(GUEST_KEY)
-      } catch {}
       return { user: u, error: null }
     }
     return { user: null, error }
