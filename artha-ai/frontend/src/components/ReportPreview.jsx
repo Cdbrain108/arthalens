@@ -622,8 +622,19 @@ export default function ReportPreview({
 
   const getPlainEnglishSummary = () => {
     if (isComparison && compEntities.length > 0) {
-      const names = compEntities.map((e) => e.name || e.ticker).join(', ')
-      const verdictText = `In Plain English (Peer Comparison): This study analyzes ${compEntities.length} industry leaders (${names}) side-by-side to assess operational resilience, margin protection, and balance sheet safety. All examined entities maintain conservative balance sheets with low borrowing, providing strong structural resilience against sector headwinds such as US visa fee increases or higher onshore subcontractor costs.`
+      const benchmarkMap = {
+        '^GSPC': 'S&P 500 Index',
+        'GSPC': 'S&P 500 Index',
+        '^NSEI': 'Nifty 50 Index',
+        'NSEI': 'Nifty 50 Index',
+        '^BSESN': 'BSE Sensex',
+        'BSESN': 'BSE Sensex',
+        '^IXIC': 'Nasdaq Composite',
+        'IXIC': 'Nasdaq Composite',
+      }
+      const formatName = (t) => benchmarkMap[t] || benchmarkMap[String(t).replace(/^\^/, '')] || t
+      const names = compEntities.map((e) => formatName(e.name || e.ticker)).join(', ')
+      const verdictText = `In Plain English (Peer Comparison): This study analyzes ${compEntities.length} entities (${names}) side-by-side to assess operational resilience, valuation benchmarks, and balance sheet safety against broad market headwinds.`
       const pills = [
         {
           title: 'Financial Safety',
@@ -707,7 +718,7 @@ export default function ReportPreview({
             </div>
             <h3 className="text-xl font-bold tracking-tight text-white sm:text-2xl mt-0.5">
               {isComparison
-                ? `${report.company?.comparison_title || 'Sector Peer Group'} — Multi-Asset Analysis`
+                ? `${(report.company?.comparison_title || 'Sector Peer Group').replace(/\^GSPC/g, 'S&P 500 Index').replace(/\^NSEI/g, 'Nifty 50 Index').replace(/\^BSESN/g, 'BSE Sensex')} — Multi-Asset Analysis`
                 : `${companyName || 'Institutional'} Equity Intelligence Dossier`}
             </h3>
           </div>

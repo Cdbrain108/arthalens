@@ -908,36 +908,19 @@ export default function StudioPage({
             ) : (
               /* 2. Stock Multi-Agent Research Stream */
               <div className="space-y-4">
-                {/* User Prompt Card */}
-                <div className="rounded-2xl border border-white/15 bg-[#1e2026] p-4 shadow-md text-left animate-fade-up">
-                  <p className="text-[14px] sm:text-[15px] font-medium text-[#f1f3f4] leading-relaxed">{activeQuery}</p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {(job?.entities || []).map((e, i) => (
-                      <span
-                        key={`${e.ticker || e.name || 'entity'}-${i}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-mono text-emerald-400"
-                      >
-                        {e.exchange ? `${e.exchange}: ` : ''}
-                        {e.ticker || e.name || 'Unresolved'}
-                      </span>
-                    ))}
-
-                    {job?.intent && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-mono text-[#9aa0a6]">
-                        {INTENT_LABEL[job.intent] || job.intent}
-                      </span>
-                    )}
-
-                    {job?.selected_agents != null && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-mono text-[#9aa0a6]">
-                        {job.selected_agents.length}{' '}
-                        {job.selected_agents.length === 1 ? 'Agent' : 'Agents'}
-                      </span>
-                    )}
+                {/* 1. Conversational Dispatch Message (Copilot announces dispatch first) */}
+                {!isConversational && copilotMessages.length > 1 && (
+                  <div className="space-y-3">
+                    <ConversationalCopilot
+                      messages={copilotMessages.slice(1)}
+                      onAction={handleCopilotAction}
+                      user={user}
+                      onOpenAuth={onOpenAuth}
+                    />
                   </div>
-                </div>
+                )}
 
-                {/* Live Multi-Agent Reasoning Cockpit (Showcasing which agents are doing what) */}
+                {/* 2. Live Multi-Agent Reasoning Cockpit (The execution stream below) */}
                 <ArthaReasoningBlock
                   job={job}
                   query={activeQuery}
@@ -950,29 +933,6 @@ export default function StudioPage({
                     setViewMode('report')
                     setMobilePane('report')
                   }}
-                />
-
-                {/* Live Agent Execution Stream Details */}
-                <div className="rounded-2xl border border-white/10 bg-[#131518]/60 p-3.5 shadow-inner">
-                  <LiveAgentStream
-                    job={job}
-                    query={activeQuery}
-                    running={running}
-                    isDone={isDone}
-                    onSelectPrompt={onStartResearch}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Follow-up Copilot Messages in Stock Research View */}
-            {!isConversational && copilotMessages.length > 1 && (
-              <div className="space-y-3 pt-1">
-                <ConversationalCopilot
-                  messages={copilotMessages.slice(1)}
-                  onAction={handleCopilotAction}
-                  user={user}
-                  onOpenAuth={onOpenAuth}
                 />
               </div>
             )}
