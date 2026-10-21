@@ -235,6 +235,9 @@ function StudioTopHeader({
   onLogout,
   onViewPdf,
   onShare,
+  isDone,
+  mobilePane,
+  onToggleMobilePane,
 }) {
   const resolved = (entities || []).map((e) => e.name || e.ticker).filter(Boolean)
   const workspaceTitle = isConversational
@@ -287,6 +290,27 @@ function StudioTopHeader({
 
       {/* Right: Actions (Clean cluster, zero collision on mobile) */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+        {isDone && (
+          <button
+            type="button"
+            onClick={onToggleMobilePane}
+            className="sm:hidden flex h-8 items-center gap-1 rounded-xl border border-emerald-500/40 bg-emerald-500/20 px-2.5 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/30 active:scale-95 cursor-pointer shadow-sm"
+            title={mobilePane === 'chat' ? 'Switch to Research Report Dossier' : 'Switch to Artha AI Copilot'}
+          >
+            {mobilePane === 'chat' ? (
+              <>
+                <FileText size={12} className="text-emerald-400" />
+                <span>Report</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={12} className="text-emerald-400" />
+                <span>Copilot</span>
+              </>
+            )}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onNewResearch}
@@ -894,12 +918,16 @@ export default function StudioPage({
         onLogout={onLogout}
         onViewPdf={() => setShowPdfModal(true)}
         onShare={handleShare}
+        isDone={isDone}
+        mobilePane={mobilePane}
+        onToggleMobilePane={() => setMobilePane((prev) => (prev === 'chat' ? 'report' : 'chat'))}
       />
 
       {/* 2-column split workspace (stacks into tabs on mobile) */}
       <div
         className="studio-split flex flex-1 overflow-hidden"
         data-running={String(running || submitting)}
+        data-pane={mobilePane}
       >
 
         {/* ══ LEFT COLUMN: Chat & Agent Stream ══ */}
@@ -1413,8 +1441,8 @@ export default function StudioPage({
         </section>
       </div>
 
-      {/* Mobile-only pane switcher: rendered ONLY after report is generated so running research has 100% viewport height */}
-      {isDone && (
+      {/* Mobile-only pane switcher: rendered ONLY in report view when report is generated, never under chat composer */}
+      {isDone && mobilePane === 'report' && (
         <div className="studio-mobile-tabs" role="group" aria-label="Workspace views">
           <button
             type="button"

@@ -1711,9 +1711,9 @@
     color: #34d399 !important;
   }
 
-  /* Chat composer bar on mobile: docked at the very bottom above fixed tabs */
+  /* Chat composer bar on mobile: docked cleanly at the very bottom */
   .studio-chat-input {
-    padding: 8px 10px 10px !important;
+    padding: 8px 10px max(10px, env(safe-area-inset-bottom, 8px)) !important;
     margin-bottom: 0 !important;
     background: #15181e !important;
     border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -1721,8 +1721,12 @@
     z-index: 30 !important;
   }
 
-  /* Split pane sizing on mobile: reserves exact space for bottom navigation tabs */
+  /* Split pane sizing on mobile: zero bottom padding on chat so input docks to bottom */
   .studio-split {
+    padding-bottom: 0 !important;
+  }
+
+  .studio-split[data-pane='report'] {
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
 

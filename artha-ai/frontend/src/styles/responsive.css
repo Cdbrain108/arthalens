@@ -157,8 +157,11 @@ h1, h2, h3, h4, p, li, dd, dt, td, th, summary {
   .studio-right-pane:not([data-active='true']) {
     display: none !important;
   }
-  /* Leave room for the fixed bottom switcher */
+  /* On mobile chat pane, split has zero bottom padding so composer docks to bottom */
   .studio-split {
+    padding-bottom: 0;
+  }
+  .studio-split[data-pane='report'] {
     padding-bottom: calc(var(--studio-tabs-h) + env(safe-area-inset-bottom, 0px));
   }
 }
@@ -242,11 +245,10 @@ h1, h2, h3, h4, p, li, dd, dt, td, th, summary {
   padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
 }
 @media (max-width: 767px) {
-  /* Only in the split layout does the bottom switcher carry the safe-area
-     padding. The conversational layout has no switcher, so its composer keeps
-     the inset or it would sit under the home indicator. */
+  /* On mobile chat pane, composer is docked cleanly at the bottom with safe-area padding */
+  .studio-chat-input,
   .studio-split .studio-chat-input {
-    padding-bottom: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 8px));
   }
 }
 
