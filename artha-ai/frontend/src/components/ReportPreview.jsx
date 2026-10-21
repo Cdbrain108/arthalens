@@ -635,26 +635,75 @@ export default function ReportPreview({
       const formatName = (t) => benchmarkMap[t] || benchmarkMap[String(t).replace(/^\^/, '')] || t
       const names = compEntities.map((e) => formatName(e.name || e.ticker)).join(', ')
       const verdictText = `In Plain English (Peer Comparison): This study analyzes ${compEntities.length} entities (${names}) side-by-side to assess operational resilience, valuation benchmarks, and balance sheet safety against broad market headwinds.`
-      const pills = [
-        {
-          title: 'Financial Safety',
-          label: 'Virtually Debt-Free Sector',
-          desc: 'All analyzed peers maintain conservative leverage (D/E < 0.25x); zero danger of running out of cash.',
-          type: 'good'
-        },
-        {
-          title: 'Profit Power',
-          label: 'Resilient Margins (16–31%)',
-          desc: 'High operating profit margins buffer against wage pressure and higher onshore delivery costs.',
-          type: 'good'
-        },
-        {
-          title: 'Strategic Exposure',
-          label: 'US Visa Tightening',
-          desc: 'Higher H-1B/L-1 visa application fees absorbed via >55% local US hiring and shift to fixed-price AI.',
-          type: 'neutral'
+      const pills = []
+      // 1. Debt / Financial safety pill from compEntities or report
+      const deValues = compEntities.map(e => parseFloat(e.de || e.metrics?.debt_equity)).filter(v => !isNaN(v))
+      if (deValues.length > 0) {
+        const maxDe = Math.max(...deValues)
+        if (maxDe <= 0.5) {
+          pills.push({
+            title: 'Financial Safety',
+            label: 'Conservative Solvency',
+            desc: `Analyzed peers maintain disciplined debt leverage (Debt/Equity <= ${maxDe.toFixed(2)}x) with solid balance sheet insulation.`,
+            type: 'good'
+          })
+        } else {
+          pills.push({
+            title: 'Financial Safety',
+            label: 'Managed Leverage',
+            desc: `Analyzed peers maintain operational leverage with peak Debt/Equity of ${maxDe.toFixed(2)}x.`,
+            type: 'neutral'
+          })
         }
-      ]
+      } else {
+        pills.push({
+          title: 'Financial Safety',
+          label: 'Capital Health',
+          desc: 'Balance sheet profiles evaluated across peer statutory filings and audited metrics.',
+          type: 'good'
+        })
+      }
+
+      // 2. Profitability / Operating margin pill
+      const opmValues = compEntities.map(e => parseFloat(e.opm || e.metrics?.opm_pct)).filter(v => !isNaN(v))
+      if (opmValues.length > 0) {
+        const minOpm = Math.min(...opmValues)
+        const maxOpm = Math.max(...opmValues)
+        pills.push({
+          title: 'Profit Power',
+          label: `Operating Margins (${minOpm.toFixed(1)}%–${maxOpm.toFixed(1)}%)`,
+          desc: 'Underlying operating cash flow and pricing discipline support operational defense across cycles.',
+          type: 'good'
+        })
+      } else {
+        pills.push({
+          title: 'Profit Power',
+          label: 'Operational Profitability',
+          desc: 'Peer operating performance benchmarks evaluated across comparative financial disclosures.',
+          type: 'good'
+        })
+      }
+
+      // 3. Strategic / Risk Exposure from actual findings or bear case
+      const riskFinding = (report.risk?.findings && report.risk.findings[0])
+        ? (report.risk.findings[0].claim || report.risk.findings[0])
+        : (report.bear_case && report.bear_case[0])
+      if (riskFinding) {
+        const cleanRisk = String(riskFinding).replace(/^\[.*?\]\s*/, '').replace(/\[\d+\]/g, '').trim()
+        pills.push({
+          title: 'Strategic Watchpoint',
+          label: 'Key Vulnerability',
+          desc: cleanRisk.slice(0, 140) + (cleanRisk.length > 140 ? '...' : ''),
+          type: 'warn'
+        })
+      } else {
+        pills.push({
+          title: 'Strategic Execution',
+          label: 'Operational Focus',
+          desc: 'Monitor forward demand momentum, contract execution, and competitive industry dynamics.',
+          type: 'neutral'
+        })
+      }
       return { verdictText, pills }
     }
 

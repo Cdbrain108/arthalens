@@ -1750,18 +1750,18 @@
         </tr>
       {% endfor %}
     {% else %}
-      {% set fallback_peers = report.company_profile.peers if report.company_profile and report.company_profile.peers else [{'nse_ticker': report.company.ticker or 'TCS'}] %}
+      {% set fallback_peers = report.company_profile.peers if report.company_profile and report.company_profile.peers else [{'nse_ticker': report.company.ticker or 'EQUITY'}] %}
       {% for p in fallback_peers %}
-        {% set tick = p.nse_ticker if p.nse_ticker else 'TCS' %}
+        {% set tick = p.nse_ticker if p.nse_ticker else (report.company.ticker or 'EQUITY') %}
         <tr>
           <td style="text-align: center; font-weight: 800; color: #2563eb;">[{{ loop.index * 2 - 1 }}]</td>
           <td>
             <span class="agent-badge" style="background: #1e293b; font-size: 5.0pt;">GOV</span>
-            <span style="font-size: 5.3pt; color: #334155; font-weight: 600;">NSE Statutory Feed</span>
+            <span style="font-size: 5.3pt; color: #334155; font-weight: 600;">Exchange Statutory Filing</span>
           </td>
-          <td><strong>NSE India Statutory Disclosures ({{ tick }})</strong></td>
-          <td style="text-align: center; color: #64748b;">2026-10-10</td>
-          <td><a href="https://www.nseindia.com/get-quotes/equity?symbol={{ tick }}" style="color: #0284c7; text-decoration: none;">https://www.nseindia.com/get-quotes/equity?symbol={{ tick }}</a></td>
+          <td><strong>Regulatory Disclosures ({{ tick }})</strong></td>
+          <td style="text-align: center; color: #64748b;">Primary Source</td>
+          <td><span style="color: #64748b;">Statutory Regulatory &amp; Stock Exchange Disclosure</span></td>
         </tr>
         <tr>
           <td style="text-align: center; font-weight: 800; color: #2563eb;">[{{ loop.index * 2 }}]</td>

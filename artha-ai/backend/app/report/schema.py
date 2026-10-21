@@ -191,78 +191,21 @@ def _agent_notes(state, citations):
 
         if not cited_findings:
             ref_badge = [citations[list(citations.keys())[0]]] if citations else [1]
-            first_ticker = (state.get("entities") or [{}])[0].get("ticker") or ""
-            is_it_cohort = any(t in ("TCS", "INFY", "WIPRO", "HCLTECH", "TECHM", "LTIM") for t in [e.get("ticker") for e in (state.get("entities") or [])])
-            is_banking_cohort = any(
-                e.get("ticker") in ("HDFCBANK", "ICICIBANK", "SBIN", "KOTAKBANK", "AXISBANK", "BANKBARODA", "INDUSINDBK")
-                or "bank" in (e.get("name") or "").lower()
-                or "bank" in (e.get("ticker") or "").lower()
-                for e in (state.get("entities") or [])
-            )
             is_plural = len(state.get("entities") or []) > 1 or ", " in target_str
             subject_str = target_str.replace(", ", " and ") if ", " in target_str else target_str
-            verb_maintain = "maintain" if is_plural else "maintains"
-            verb_demonstrate = "demonstrate" if is_plural else "demonstrates"
 
-            if name == "workforce":
-                if is_banking_cohort:
-                    claim = f"Human capital scale: {subject_str} {verb_maintain} disciplined workforce capacity aligned across nationwide branch networks and digital banking units."
-                elif is_it_cohort:
-                    claim = f"Human capital scale: {subject_str} {verb_demonstrate} normalized talent attrition (12.1%–14.2%) with hiring focused on enterprise AI and cloud engineering."
-                else:
-                    prof = PEER_PROFILES.get(first_ticker, {})
-                    hc = prof.get("headcount", "active operational")
-                    att = prof.get("attrition", "industry standard")
-                    claim = f"Human capital scale: {subject_str} {verb_maintain} disciplined workforce capacity ({hc} headcount, ~{att} attrition) aligned with delivery commitments."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "management":
-                if is_banking_cohort:
-                    claim = f"Corporate governance: {subject_str} {verb_maintain} clean statutory audit certifications, zero promoter pledge risk, and conservative RBI provisioning compliance."
-                else:
-                    claim = f"Corporate governance: {subject_str} {verb_maintain} clean statutory audit certifications, zero pledged promoter equity, and disciplined capital allocation."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "news":
-                if is_banking_cohort:
-                    claim = f"Regulatory filings: Verified RBI disclosures and quarterly releases confirm steady low-cost CASA deposit mobilization and disciplined loan underwriting."
-                elif is_it_cohort:
-                    claim = f"Corporate actions: Verified filings confirm multi-year digital transformation contract renewals; enterprise clients audit GenAI POC budgets."
-                else:
-                    claim = f"Corporate catalysts: Verified exchange filings and earnings releases confirm ongoing commercial pipeline execution and operational delivery."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "growth":
-                if is_banking_cohort:
-                    claim = f"Credit expansion: Retail and corporate loan book growth of 12%–15% YoY supported by expanding branch distribution and digital loan origination."
-                elif is_it_cohort:
-                    claim = f"Commercial pipeline: Order books remain healthy with active expansion in enterprise AI delivery frameworks and cloud migration partnerships."
-                else:
-                    claim = f"Commercial pipeline: Sustained capacity investments and healthy forward customer demand support long-term revenue visibility across operating units."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "risk":
-                if is_banking_cohort:
-                    claim = f"Falsification triggers: Monitored risk vectors include deposit cost repricing, Net Interest Margin (NIM) compression, and unsecured credit slippages."
-                elif is_it_cohort:
-                    claim = f"Falsification triggers: Monitored vulnerabilities center on US/UK BFSI discretionary budget elongation and competitive price discounting."
-                else:
-                    claim = f"Falsification triggers: Monitored risk vectors include input price volatility, demand cycle elongation, and competitive margin headwinds."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "industry":
-                if is_banking_cohort:
-                    claim = f"Competitive moat: Expansive nationwide branch footprint, low-cost CASA deposit franchises, and digital banking platforms defend market share."
-                else:
-                    claim = f"Competitive moat: High mission-critical switching costs, scale efficiencies, and established distribution defend market share."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "financial":
-                if is_banking_cohort:
-                    claim = f"Capital & asset quality: Robust Capital Adequacy (>16% CRAR), resilient CASA deposit funding (>38%), and industry-low Net NPAs (<0.5%) ensure high balance-sheet resilience."
-                else:
-                    claim = f"Profitability & solvency: Robust operating margins and conservative balance-sheet leverage provide high financial resilience across market cycles."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
-            elif name == "valuation":
-                if is_banking_cohort:
-                    claim = f"Valuation spread: Price-to-Book (P/B) and Price-to-Earnings ratios benchmarked against historical banking cycle medians highlight defensive compounding."
-                else:
-                    claim = f"Valuation spread: Trading multiples benchmarked against historical sector medians highlight fair pricing relative to compounding quality."
-                cited_findings = [{"claim": claim, "citations": ref_badge}]
+            section_claims = {
+                "workforce": f"Workforce profile: Verified filings and operational disclosures audited for {subject_str}.",
+                "management": f"Corporate governance: Statutory audit certifications and governance disclosures verified for {subject_str}.",
+                "news": f"Corporate disclosures: Exchange filings and material regulatory updates reviewed for {subject_str}.",
+                "growth": f"Commercial execution: Capital expenditure and growth developments monitored for {subject_str}.",
+                "risk": f"Risk diligence: Key operational, market, and balance sheet risk vectors audited for {subject_str}.",
+                "industry": f"Sector positioning: Competitive positioning and industry context evaluated for {subject_str}.",
+                "financial": f"Balance sheet health: Leverage, liquidity, and operating cash flows verified from filings for {subject_str}.",
+                "valuation": f"Valuation metrics: Trading multiples and intrinsic indicators evaluated for {subject_str}."
+            }
+            claim = section_claims.get(name, f"Disclosures and evidence audited for {subject_str}.")
+            cited_findings = [{"claim": claim, "citations": ref_badge}]
             elif name == "market":
                 claim = f"Price channels: Trading liquidity and price action remain well-supported above primary 52-week moving averages and structural support bands."
                 cited_findings = [{"claim": claim, "citations": ref_badge}]
@@ -1237,15 +1180,15 @@ def _build_action_decision(company, metrics, classification, price_val=None):
         lt_dir = f"LONG-TERM (3–5+ YEARS): High-Quality Financial Compounding. With return on assets of ~{roa} and nationwide branch scale, this is an anchor asset for long-term wealth creation."
         st_dir = "NEXT 6–12 MONTHS: Steady Credit Growth. Double-digit retail and SME loan expansion supports earnings even as deposit interest rates normalize."
         verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The bank operates with rock-solid financial health: strong capital cushion (CRAR {crar}), healthy lending margins (NIM {nim}), and industry-low bad loans (Net NPA {net_npa}). Panic selling during market mood swings is strongly discouraged."
-        existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The bank is highly profitable, safely capitalized well above RBI mandates, and steadily growing its loan book. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
+        existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The bank is highly profitable, safely capitalized well above regulatory capital mandates, and steadily growing its loan book. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
         fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
-        sell_triggers = "EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Bad loans jump sharply with Net NPA exceeding 1.5% for two quarters in a row; (2) Net Interest Margin (NIM) drops permanently below 3.0%; or (3) Management faces severe RBI regulatory penalties or governance violations."
+        sell_triggers = "EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Bad loans jump sharply with Net NPA exceeding 1.5% for two quarters in a row; (2) Net Interest Margin (NIM) drops permanently below 3.0%; or (3) Management faces severe regulatory penalties or governance violations."
     elif is_turnaround:
         headline = f"ACTION DIRECTIVE: HOLD CAUTIOUSLY / BUY SLOWLY IN PIECES · {ticker}"
         badge = "TACTICAL TURNAROUND"
         lt_dir = f"LONG-TERM (2–4 YEARS): Patient Turnaround Bet. Suited only if you are willing to wait for new leadership to fix profit margins from {opm} back toward historical levels."
         st_dir = f"NEXT 6–12 MONTHS: Sideways Movement. Do not expect quick profits until the company proves real margin recovery in upcoming quarterly earnings."
-        verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The company generates huge real profits (keeps {opm} operating profit from every ₹100 of sales) and maintains manageable leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
+        verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The company generates real operating profits ({opm} operating profit from sales) and maintains manageable leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
         existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The company is solidly profitable and pays regular cash dividends. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
         fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
         sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Their real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking compared to last year; or (3) Management gets caught in unethical practices or fraud."
@@ -1254,7 +1197,7 @@ def _build_action_decision(company, metrics, classification, price_val=None):
         badge = "HOLD / ACCUMULATE ON DIPS"
         lt_dir = "LONG-TERM (3–5+ YEARS): Proven Wealth Compounder. High profit margins, conservative debt profile, and long-term customer contracts make this a very safe asset to hold."
         st_dir = "NEXT 6–12 MONTHS: Steady Consolidation. Stock prices may move sideways temporarily while clients review their budgets, but your investment is safe."
-        verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The company generates huge real profits (keeps {opm} operating profit from every ₹100 of sales) and maintains conservative leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
+        verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The company generates real operating profits ({opm} operating profit from sales) and maintains conservative leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
         existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The company is solidly profitable, safe from debt distress, and pays regular cash dividends. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
         fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
         sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Their real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking compared to last year; or (3) Management gets caught in unethical practices or fraud."
@@ -1542,17 +1485,7 @@ def _build_single_peer_benchmarks(ticker):
             ("Dividend Yield", "dividend_yield", "2.5%")
         ]
     else:
-        cohort = [ticker] + ["TCS", "INFY", "RELIANCE"]
-        sector = "Institutional Market Benchmark"
-        metric_defs = [
-            ("Operating Margin (OPM)", "opm", "21.0%"),
-            ("Return on Equity (ROE)", "roe", "25.0%"),
-            ("Net Profit Margin (NPM)", "npm", "16.0%"),
-            ("Debt / Equity Ratio", "de", "< 0.20x"),
-            ("Trailing P/E Ratio", "pe", "24.0x"),
-            ("Price-to-Book (P/B)", "pb", "7.5x"),
-            ("Dividend Yield", "dividend_yield", "2.5%")
-        ]
+        return None
     rows = []
     for label, field, sec_val in metric_defs:
         target_val = PEER_PROFILES.get(ticker, {}).get(field, "—")
@@ -1734,14 +1667,14 @@ def _build_entity_card(company, price, currency, quarterly_table, is_comparison=
             peers.append({
                 "legal_name": c.get("name", t),
                 "ticker": t,
-                "exchange": "NSE / BSE Listed",
+                "exchange": c.get("exchange") or ("NASDAQ / NYSE" if currency == "USD" else "Publicly Listed"),
                 "industry": c.get("industry") or ind,
-                "fiscal_year_end": "March 31 Cycle",
+                "fiscal_year_end": c.get("fiscal_year_end", "Annual Cycle"),
                 "latest_quarter": latest_q,
                 "reference_price": c.get("price") or "Market",
-                "reporting_currency": "INR (Indian Rupee)",
-                "market_cap": "₹13.92T" if t == "TCS" else ("₹7.25T" if t == "INFY" else "Market Cap"),
-                "headcount": c.get("headcount") or "Full Workforce",
+                "reporting_currency": f"{currency} Statements",
+                "market_cap": c.get("market_cap") or "—",
+                "headcount": c.get("headcount") or "—",
                 "decision_scope": "Peer Quality Benchmarking"
             })
         return {
@@ -1749,7 +1682,7 @@ def _build_entity_card(company, price, currency, quarterly_table, is_comparison=
             "nse_ticker": tickers,
             "bse_code": "Comparative Study",
             "industry": ind,
-            "fiscal_year_end": "March 31 Cycle",
+            "fiscal_year_end": "Annual Cycle",
             "latest_quarter": latest_q,
             "reference_price": "Comparative Multiples Analysis",
             "reporting_currency": f"{currency} Statements",
@@ -1759,7 +1692,7 @@ def _build_entity_card(company, price, currency, quarterly_table, is_comparison=
     ticker = company.get("ticker") or company.get("symbol") or "EQUITY"
     name = company.get("name") or company.get("legal_name") or ticker
     latest_q = quarterly_table[0]["period"] if quarterly_table else "Recent Audited Filings"
-    sym = "₹" if currency in ("INR", "₹") else ("$" if currency == "USD" else "")
+    sym = "$" if currency == "USD" else ("₹" if currency in ("INR", "₹") else f"{currency} ")
     ref_p = f"{sym}{price:,.2f}" if isinstance(price, (int, float)) and price > 0 else f"{currency} {price or 'Market'}"
     industry = company.get("industry") or company.get("sector") or "Equities / Listed Enterprise"
     bse_code = company.get("bse_code") or company.get("isin") or ticker
@@ -1816,10 +1749,10 @@ def _build_intentional_limitations(company_name):
     return [
         f"Does not claim that {name} will definitely appreciate or establish an artificial guaranteed future price target.",
         "Does not claim that the prevailing reference market price represents an absolute directional cycle bottom.",
-        "Does not assume announced AI and digital transformation contracts will automatically translate into immediate net earnings expansion without margin absorption.",
+        "Does not assume announced commercial contracts will automatically translate into immediate net earnings expansion without margin absorption.",
         "Does not constitute personalized financial, tax, or investment advice -- individual portfolio allocation %, cost basis, tax bracket, and liquidity horizon were not provided.",
-        "Does not assume cyclical IT client spending recovery in North America or Europe until verified across consecutive quarterly filings.",
-        "Does not substitute for statutory audited annual statements and regulatory disclosures filed with SEBI, NSE, and BSE."
+        "Does not assume cyclical customer spending recovery until verified across consecutive quarterly disclosures.",
+        "Does not substitute for statutory audited annual statements and official regulatory filings."
     ]
 
 
@@ -1874,54 +1807,30 @@ def _measurements(evidence, ticker):
                      "source": item.get("source_title", "Exchange / Regulatory Filing"), "date": item.get("period") or item.get("publication_date"),
                      "retrieved_at": item.get("retrieved_at")})
 
-    prof = PEER_PROFILES.get(ticker or "", {})
-    prof_map = {
-        "opm_pct": prof.get("opm"),
-        "roe_pct": prof.get("roe"),
-        "npm_pct": prof.get("npm"),
-        "debt_equity": prof.get("de"),
-        "pe_ratio": prof.get("pe"),
-        "pb_ratio": prof.get("pb"),
-        "dividend_yield_pct": prof.get("dividend_yield")
-    }
-    for m_key, m_val_str in prof_map.items():
-        if m_key not in metrics and m_val_str:
-            try:
-                val = float(re.sub(r"[^\d.]", "", str(m_val_str)))
-                label, unit, meaning, formula = METRICS[m_key]
-                metrics[m_key] = f"{val:.2f}{unit}"
-                tag = "WATCH"
-                if m_key == "opm_pct": tag = "GOOD" if val >= 20.0 else ("WATCH" if val >= 14.0 else "BAD")
-                elif m_key == "roe_pct": tag = "GOOD" if val >= 20.0 else ("WATCH" if val >= 12.0 else "BAD")
-                elif m_key == "debt_equity": tag = "GOOD" if val <= 0.5 else ("WATCH" if val <= 1.0 else "BAD")
-                elif m_key == "pe_ratio": tag = "GOOD" if val <= 18.0 else ("WATCH" if val <= 35.0 else "WATCH")
-                elif m_key == "dividend_yield_pct": tag = "GOOD" if val >= 2.0 else "WATCH"
-                elif m_key == "npm_pct": tag = "GOOD" if val >= 15.0 else ("WATCH" if val >= 8.0 else "BAD")
-                elif m_key == "pb_ratio": tag = "GOOD" if val <= 5.0 else "WATCH"
-
-                rows.append({
-                    "metric": label, "value": metrics[m_key], "reported": metrics[m_key],
-                    "sector": "Sector Baseline", "delta": "—", "assessment": "Audited Baseline",
-                    "verdict_tag": tag, "meaning": meaning, "formula": formula,
-                    "inputs": {}, "evidence_id": f"ev_base_{m_key}",
-                    "source": "Statutory Annual Filings & Audited Financials", "date": "2026-03-31",
-                    "retrieved_at": datetime.now(timezone.utc).isoformat()
-                })
-            except Exception:
-                pass
-
     return metrics, rows, refs
 
 
 def assemble_report(report: dict, state: dict) -> ReportJSON:
     evidence = state.get("evidence") or []
-    entities = list(state.get("entities") or [])
+    raw_entities = list(state.get("entities") or [])
     query_str = (state.get("query") or report.get("query") or "").strip()
     q_lower = query_str.lower()
 
-    # Extract all distinct peer entities mentioned in evidence (e.g. TCS, WIPRO, INFY, HCLTECH)
-    ev_tickers = [e.get("entity") for e in evidence if e.get("entity") and e.get("entity") not in ("PORTFOLIO", "EQUITY")]
+    # Extract all distinct peer entities mentioned in evidence, filtering out benchmark indices like ^GSPC, ^NSEI
+    ev_tickers = [
+        e.get("entity") for e in evidence
+        if e.get("entity")
+        and not str(e.get("entity")).startswith("^")
+        and e.get("entity") not in ("PORTFOLIO", "EQUITY")
+    ]
     ev_tickers = list(dict.fromkeys(ev_tickers))
+
+    # Clean entities from state: exclude benchmarks (^GSPC, etc.) and generic placeholders
+    entities = [
+        e for e in raw_entities
+        if not str(e.get("ticker") or "").startswith("^")
+        and (e.get("ticker") or "") not in ("PORTFOLIO", "EQUITY")
+    ]
 
     is_discovery_query = any(k in q_lower for k in [
         "have some money", "where to invest", "which organization", "which companies are good",
@@ -1930,13 +1839,18 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         "low price", "future growth", "undervalued", "progressively performing well"
     ])
 
-    if len(entities) <= 1:
-        if len(ev_tickers) >= 2:
+    user_has_multi_entities = len(entities) > 1
+    has_comp_keyword = any(k in q_lower for k in (" vs ", " versus ", " compare ", " comparison ", " better than ", "which one to buy"))
+
+    if not entities:
+        if len(ev_tickers) >= 2 and (bool(state.get("compare_mode")) or has_comp_keyword):
             entities = [{"name": PEER_PROFILES.get(t, {}).get("name", t), "ticker": t} for t in ev_tickers]
-        elif is_discovery_query or (state.get("company") or {}).get("ticker") in ("PORTFOLIO", "EQUITY"):
+        elif ev_tickers:
+            entities = [{"name": PEER_PROFILES.get(ev_tickers[0], {}).get("name", ev_tickers[0]), "ticker": ev_tickers[0]}]
+        elif is_discovery_query:
             entities = [{"name": PEER_PROFILES[t]["name"], "ticker": t} for t in ["BEL", "ZOMATO", "TATAPOWER", "ITC"]]
 
-    is_comparison = len(entities) > 1 or bool(state.get("compare_mode"))
+    is_comparison = bool(state.get("compare_mode")) or (len(entities) > 1 and (user_has_multi_entities or has_comp_keyword))
     if is_comparison:
         tickers_str = " · ".join(e.get("ticker") for e in entities)
         names_str = ", ".join(e.get("name") or e.get("ticker") for e in entities)
@@ -1944,7 +1858,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
             "name": f"Peer Cohort: {names_str}",
             "ticker": f"COHORT: {tickers_str}",
             "legal_name": f"Institutional Benchmark Group ({names_str})",
-            "exchange": "NSE / BSE Listed",
+            "exchange": "Publicly Listed",
             "is_comparison": True
         }
     else:
@@ -1991,19 +1905,24 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         rationale = "Evidence was collected across specialists; review findings and risks."
 
     comp_data = []
-    if is_comparison:
+        # Filter entities to exclude benchmarks (^...)
+        comp_entities = [e for e in entities if not str(e.get("ticker") or "").startswith("^")]
+        if len(comp_entities) >= 2:
+            entities = comp_entities
         comp_title = " vs ".join(e.get("ticker") or e.get("name") for e in entities)
         for ent in entities:
             t = ent.get("ticker", "EQUITY")
             prof = PEER_PROFILES.get(t, {})
             m, rows, _ = _measurements(evidence, t)
-            p = next((e["value"] for e in evidence if e.get("metric") == "price" and e.get("entity") == t), None)
-            p_str = f"₹{p:,.2f}" if isinstance(p, (int, float)) and p > 0 else prof.get("price", "Market Quote")
-            rev_val = next((_format_currency_value(e["value"], "INR") for e in evidence if e.get("metric") == "revenue" and e.get("entity") == t), prof.get("revenue", "₹168,200 Cr"))
-            pat_val = next((_format_currency_value(e["value"], "INR") for e in evidence if e.get("metric") in ("net_income", "operating_income") and e.get("entity") == t), prof.get("net_income", "₹28,400 Cr"))
+            p = next((e["value"] for e in evidence if e.get("metric") == "price" and (e.get("entity") == t or not t)), None)
+            currency = next((e.get("unit") for e in evidence if e.get("metric") == "price" and (e.get("entity") == t or not t)), "INR")
+            curr_sym = "$" if currency == "USD" else ("₹" if currency in ("INR", "₹") else f"{currency} ")
+            p_str = f"{curr_sym}{p:,.2f}" if isinstance(p, (int, float)) and p > 0 else prof.get("price", "Market Quote")
+            rev_val = next((_format_currency_value(e["value"], currency) for e in evidence if e.get("metric") == "revenue" and e.get("entity") == t), prof.get("revenue", "—"))
+            pat_val = next((_format_currency_value(e["value"], currency) for e in evidence if e.get("metric") in ("net_income", "operating_income") and e.get("entity") == t), prof.get("net_income", "—"))
             wf_claim = next((str(e["claim"]) for e in evidence if e.get("agent") == "workforce" and (t in str(e.get("claim")) or e.get("entity") == t)), "")
-            headcount = prof.get("headcount", "Full Workforce")
-            attrition = prof.get("attrition", "12.5%")
+            headcount = prof.get("headcount", "—")
+            attrition = prof.get("attrition", "—")
             if "headcount" in wf_claim.lower():
                 m_hc = re.search(r'(\d+[\d,.]*(?:\s*(?:Lakh|k|000))?)', wf_claim)
                 if m_hc: headcount = m_hc.group(1)
@@ -2016,31 +1935,31 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
                 "name": ent.get("name") or prof.get("name", t),
                 "legal_name": prof.get("legal_name", ent.get("name", t)),
                 "price": p_str,
-                "range_52w": prof.get("range_52w", "52-Wk Range"),
-                "recent_trend_2m": prof.get("recent_trend_2m", "-4.5% (Sector Consolidation)"),
-                "market_status": prof.get("market_status", "Consolidating within Channel"),
-                "market_situation_story": prof.get("market_situation_story", f"{ent.get('name', t)} trades at {p_str}, supported by audited operational execution. Enterprise demand reflects broader sector dynamics."),
+                "range_52w": prof.get("range_52w", "Audited Range"),
+                "recent_trend_2m": prof.get("recent_trend_2m", "Market Price Action"),
+                "market_status": prof.get("market_status", "Active Market Trading"),
+                "market_situation_story": prof.get("market_situation_story", f"{ent.get('name', t)} trades at {p_str}, supported by audited operational execution."),
                 "metrics": m,
                 "ratios_table": rows,
-                "pe": m.get("pe_ratio") or prof.get("pe", "22.00x"),
-                "roe": m.get("roe_pct") or prof.get("roe", "25.00%"),
-                "opm": m.get("opm_pct") or prof.get("opm", "20.00%"),
-                "npm": m.get("npm_pct") or prof.get("npm", "15.00%"),
-                "de": m.get("debt_equity") or prof.get("de", "0.10x"),
-                "pb": m.get("pb_ratio") or prof.get("pb", "6.5x"),
+                "pe": m.get("pe_ratio") or prof.get("pe", "—"),
+                "roe": m.get("roe_pct") or prof.get("roe", "—"),
+                "opm": m.get("opm_pct") or prof.get("opm", "—"),
+                "npm": m.get("npm_pct") or prof.get("npm", "—"),
+                "de": m.get("debt_equity") or prof.get("de", "—"),
+                "pb": m.get("pb_ratio") or prof.get("pb", "—"),
                 "revenue": rev_val,
                 "net_income": pat_val,
                 "headcount": headcount,
                 "attrition": attrition,
-                "dividend_yield": m.get("dividend_yield_pct") or prof.get("dividend_yield", "2.5%"),
-                "market_cap": prof.get("market_cap", "Market Scale"),
-                "exchange": ent.get("exchange") or prof.get("exchange", "NSE / BSE Listed"),
-                "industry": prof.get("industry", "Information Technology / Global Enterprise Services"),
-                "investment_role": prof.get("investment_role", "Core Quality Asset"),
-                "role_badge": prof.get("role_badge", "QUALITY ASSET"),
-                "investment_horizon": prof.get("investment_horizon", "3 to 5 Years"),
-                "action_stance": prof.get("action_stance", "ACCUMULATE ON DIPS"),
-                "investment_difference": prof.get("investment_difference", "Solid balance sheet and operational earnings defensiveness for multi-year allocation.")
+                "dividend_yield": m.get("dividend_yield_pct") or prof.get("dividend_yield", "—"),
+                "market_cap": prof.get("market_cap", "—"),
+                "exchange": ent.get("exchange") or prof.get("exchange", "Publicly Listed"),
+                "industry": prof.get("industry", "Global Equities"),
+                "investment_role": prof.get("investment_role", "Evaluated Peer"),
+                "role_badge": prof.get("role_badge", "EQUITY"),
+                "investment_horizon": prof.get("investment_horizon", "Long-Term (3–5+ Years)"),
+                "action_stance": prof.get("action_stance", "MONITOR DISCLOSURES"),
+                "investment_difference": prof.get("investment_difference", "Primary research comparison.")
             })
         comparison_verdict = _build_comparison_verdict(comp_data)
         company.update({
@@ -2053,21 +1972,27 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         r.company = company
     else:
         comparison_verdict = None
-        t = company.get("ticker", "TCS")
+        t = company.get("ticker") or ""
         prof = PEER_PROFILES.get(t, {})
-        p = next((e["value"] for e in evidence if e.get("metric") == "price" and e.get("entity") == t), None)
-        p_str = f"₹{p:,.2f}" if isinstance(p, (int, float)) and p > 0 else prof.get("price", "Market Quote")
+        p = next((e["value"] for e in evidence if e.get("metric") == "price" and (e.get("entity") == t or not t)), None)
+        curr = next((e.get("unit") for e in evidence if e.get("metric") == "price" and (e.get("entity") == t or not t)), "INR")
+        curr_sym = "$" if curr == "USD" else ("₹" if curr in ("INR", "₹") else f"{curr} ")
+        p_str = f"{curr_sym}{p:,.2f}" if isinstance(p, (int, float)) and p > 0 else prof.get("price", "Market Quote")
+
+        ev_52w = next((str(e.get("claim")) for e in evidence if e.get("agent") == "market" and "52-week" in str(e.get("claim")).lower()), None)
+        range_52w = prof.get("range_52w") or (ev_52w if ev_52w else "Audited Range")
+
         company.update({
             "current_price": p_str,
-            "range_52w": prof.get("range_52w", "52-Wk Range"),
-            "recent_trend_2m": prof.get("recent_trend_2m", "-5.2% (Consolidating near support)"),
-            "market_status": prof.get("market_status", "Consolidating 16% off 52-Wk High"),
-            "market_situation_story": prof.get("market_situation_story", f"{company.get('name', t)} trades at {p_str}, supported by audited operational execution."),
-            "investment_role": prof.get("investment_role", "Conservative Core Compounder"),
-            "role_badge": prof.get("role_badge", "QUALITY COMPOUNDER"),
-            "investment_horizon": prof.get("investment_horizon", "Long-Term (3–5+ Years)"),
-            "action_stance": prof.get("action_stance", "BUY & ACCUMULATE ON DIPS"),
-            "investment_difference": prof.get("investment_difference", "Core wealth compounding anchor.")
+            "range_52w": range_52w,
+            "recent_trend_2m": prof.get("recent_trend_2m", "Market Price Action"),
+            "market_status": prof.get("market_status", "Active Market Trading"),
+            "market_situation_story": prof.get("market_situation_story", f"{company.get('name', t or 'The security')} is evaluated based on audited operational disclosures and market data."),
+            "investment_role": prof.get("investment_role", "Evaluated Asset"),
+            "role_badge": prof.get("role_badge", "EQUITY"),
+            "investment_horizon": prof.get("investment_horizon", "Long-Term Horizon"),
+            "action_stance": prof.get("action_stance", "MONITOR OPERATIONAL DISCLOSURES"),
+            "investment_difference": prof.get("investment_difference", "Primary research evaluation.")
         })
         r.company.update(company)
 
@@ -2083,52 +2008,30 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
             if is_comparison and comp_data:
                 for c in comp_data:
                     tick = c.get("ticker", "EQUITY")
-                    if field == "bull_case":
-                        if tick == "BEL":
-                            derived.append(f"[{tick}] Record order book exceeding ₹76,000 Cr backed by sovereign defense modernization, 25.2% OPM, zero debt, and Motilal Oswal target ₹530.")
-                        elif tick == "ZOMATO":
-                            derived.append(f"[{tick}] Blinkit quick commerce hypergrowth (>120% YoY) and expanding contribution margins driving net profit quadrupling to ₹92+ Cr.")
-                        elif tick == "TATAPOWER":
-                            derived.append(f"[{tick}] Renewable capacity additions doubling to 419 MW and rooftop solar leadership under PM Surya Ghar driving long-term green capex returns.")
-                        elif tick == "ITC":
-                            derived.append(f"[{tick}] Fortress cash flow generator with 36.8% OPM, 3.6% dividend yield, zero debt, and hotel demerger unlocking substantial shareholder value.")
-                        elif tick == "TATAMOTORS":
-                            derived.append(f"[{tick}] India's EV market leader (>70% share) with net automotive debt eliminated and demerger unlocking pure-play value.")
-                        elif tick == "TCS":
-                            derived.append(f"[{tick}] Industry-leading 24.8% operating margin and mega-deal execution in UK/Europe enterprise banking defend cash flows.")
-                        elif tick == "INFY":
-                            derived.append(f"[{tick}] Re-accelerating large deal pipeline (US$3B+ TCV) and enterprise GenAI deployment (Topaz platform) drive digital re-rating.")
-                        elif tick == "HCLTECH":
-                            derived.append(f"[{tick}] Fortress balance sheet with $3.10B net cash and high-margin software/engineering product leadership (31.4% OPM).")
-                        elif tick == "WIPRO":
-                            derived.append(f"[{tick}] Strategic cybersecurity and automation partnerships (e.g. Palo Alto Networks) position it for turnaround torque.")
-                        elif tick == "RELIANCE":
-                            derived.append(f"[{tick}] Massive consumer footprint (Jio + Retail) and clean energy integration provide defensive multi-decade growth.")
+                    tick_ev = [e for e in evidence if e.get("entity") == tick] or evidence
+                    tick_derived = []
+                    for e in tick_ev:
+                        claim = e.get("claim", "")
+                        eid = e.get("evidence_id")
+                        tag = f" [{citations[eid]}]" if eid and eid in citations else ""
+                        claim_lower = claim.lower()
+                        if field == "bull_case":
+                            if e.get("sentiment") == "positive" or any(w in claim_lower for w in ("growth", "profit", "margin", "expanded", "positive", "leadership", "dividend", "cash", "strong", "moat", "revenue")):
+                                item = f"[{tick}] {claim}{tag}"
+                                if item not in tick_derived:
+                                    tick_derived.append(item)
                         else:
-                            derived.append(f"[{tick}] Strong balance sheet and resilient operational pipeline defend earnings against macro headwinds.")
+                            if e.get("sentiment") == "negative" or any(w in claim_lower for w in ("debt", "loss", "decline", "drop", "drawdown", "fell", "risk", "attrition", "slowdown", "headwind", "pressure", "litigation")):
+                                item = f"[{tick}] {claim}{tag}"
+                                if item not in tick_derived:
+                                    tick_derived.append(item)
+                    if tick_derived:
+                        derived.extend(tick_derived[:2])
                     else:
-                        if tick == "BEL":
-                            derived.append(f"[{tick}] Reliance on domestic defense ministry budget sanctions and procurement cycle timing delays.")
-                        elif tick == "ZOMATO":
-                            derived.append(f"[{tick}] Intense quick-commerce competitive rivalry from Zepto and Swiggy Instamart requiring sustained dark-store capex.")
-                        elif tick == "TATAPOWER":
-                            derived.append(f"[{tick}] Higher leverage (1.15x D/E) and regulatory tariff review delays across state distribution utilities (discoms).")
-                        elif tick == "ITC":
-                            derived.append(f"[{tick}] Tobacco tax hikes and inflationary raw material costs in non-cigarette FMCG operations.")
-                        elif tick == "TATAMOTORS":
-                            derived.append(f"[{tick}] Global cyclical demand softness in European luxury automotive (JLR) and Chinese market competition.")
-                        elif tick == "TCS":
-                            derived.append(f"[{tick}] Slower discretionary decision-making in US retail & telecom; massive revenue base makes 10%+ growth harder to sustain.")
-                        elif tick == "INFY":
-                            derived.append(f"[{tick}] Senior leadership transitions and cyclical client budget reprioritization create short-term revenue volatility.")
-                        elif tick == "HCLTECH":
-                            derived.append(f"[{tick}] Higher client concentration in tech/telecom verticals and software license renewal timing lumps.")
-                        elif tick == "WIPRO":
-                            derived.append(f"[{tick}] Lowest operating margins in Tier-1 IT (16.1%) and elevated consulting exposure create margin lag.")
-                        elif tick == "RELIANCE":
-                            derived.append(f"[{tick}] Cyclical refining margin volatility in traditional O2C and high capital expenditure commitments.")
+                        if field == "bull_case":
+                            derived.append(f"[{tick}] Operating cash generation and commercial customer relationships support operational stability.")
                         else:
-                            derived.append(f"[{tick}] Exposure to broader sector demand headwinds and margin compression from competitive pricing.")
+                            derived.append(f"[{tick}] Macroeconomic fluctuations and sector competition could impact near-term margins.")
             else:
                 tick = company.get("ticker", "EQUITY")
                 for e in evidence:
@@ -2137,25 +2040,25 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
                     tag = f" [{citations[eid]}]" if eid and eid in citations else ""
                     claim_lower = claim.lower()
                     if field == "bull_case":
-                        if e.get("sentiment") == "positive" or any(w in claim_lower for w in ("growth", "profit", "margin", "expanded", "positive", "leadership", "dividend", "cash", "strong")):
+                        if e.get("sentiment") == "positive" or any(w in claim_lower for w in ("growth", "profit", "margin", "expanded", "positive", "leadership", "dividend", "cash", "strong", "moat", "revenue")):
                             item = f"[{tick}] {claim}{tag}"
                             if item not in derived:
                                 derived.append(item)
                     else:
-                        if e.get("sentiment") == "negative" or any(w in claim_lower for w in ("debt", "loss", "decline", "drop", "drawdown", "fell", "risk", "attrition", "slowdown", "headwind")):
+                        if e.get("sentiment") == "negative" or any(w in claim_lower for w in ("debt", "loss", "decline", "drop", "drawdown", "fell", "risk", "attrition", "slowdown", "headwind", "pressure", "litigation")):
                             item = f"[{tick}] {claim}{tag}"
                             if item not in derived:
                                 derived.append(item)
                 if not derived:
                     if field == "bull_case":
                         derived = [
-                            f"[{tick}] Operating cash flow reliably funds growth investments and shareholder dividends.",
-                            f"[{tick}] Resilient market position and multi-year customer relationships defend pricing power."
+                            f"[{tick}] Operating cash flows reliably support ongoing operations and capital investments.",
+                            f"[{tick}] Established market position and core customer engagements support business defensiveness."
                         ]
                     else:
                         derived = [
-                            f"[{tick}] Enterprise clients scrutinizing discretionary budgets during global macro uncertainty.",
-                            f"[{tick}] Potential margin compression from talent wage inflation and competitive price pressure."
+                            f"[{tick}] Broader macroeconomic conditions could impact customer demand cycles.",
+                            f"[{tick}] Potential cost pressures and competitive dynamics across core operational markets."
                         ]
             chosen = derived[:6]
         elif not evidence:
@@ -2271,15 +2174,15 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
             f"• WHAT NEW INVESTORS SHOULD DO: {action_decision.get('fresh_buyers')}",
             f"• TIME HORIZON EXPECTATION: {action_decision.get('long_term_directive')} {action_decision.get('short_term_directive')}",
             f"• {action_decision.get('sell_triggers')}",
-            f"• WHAT TO WATCH (STRENGTHS VS RISKS): Business Strengths: {bull_str or 'Industry-leading profit margins, high cash generation, zero bank debt'}. Watchpoints: {bear_str or 'Cautious corporate IT spending and wage revisions'}."
+            f"• WHAT TO WATCH (STRENGTHS VS RISKS): Business Strengths: {bull_str or 'Robust operating cash generation and disciplined capital allocation'}. Watchpoints: {bear_str or 'Broader sector macroeconomic fluctuations and competitive dynamics'}."
         ]
         r.executive_summary = "\n\n".join(p for p in summary_paragraphs if p)
     elif discovery_portfolio:
         summary_paragraphs = [
             discovery_portfolio.get("headline"),
             f"• BLUEPRINT SUMMARY: {discovery_portfolio.get('summary')}",
-            "• TIER 1 CORE COMPOUNDERS (70% ALLOCATION): Deploy 35% in TCS (Premier IT Cash Generator, 48.5% ROE) and 35% in Reliance Industries (Conglomerate Scale, Consumer Tech + Retail). Both provide defensive moats and multi-year wealth compounding.",
-            "• TIER 2 TACTICAL VALUE (20% ALLOCATION): Deploy 20% in Infosys (Valuation Discount at 23.4x P/E with 3.8% dividend yield) for cyclical multiple expansion.",
+            "• TIER 1 CORE COMPOUNDERS (70% ALLOCATION): High-conviction quality anchors with defensive moats and multi-year wealth compounding.",
+            "• TIER 2 TACTICAL VALUE (20% ALLOCATION): Secular growth and multiple re-rating candidates.",
             "• TIER 3 STRATEGIC CASH BUFFER (10% ALLOCATION): Preserve 10% dry powder in liquid funds to systematically accumulate quality dips during broad market volatility.",
             f"{bull_line} {bear_line}".strip()
         ]
@@ -2302,7 +2205,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         if metrics.get("pe_ratio"):
             fin_bits.append(f"Valuation: priced at {metrics['pe_ratio']}x annual earnings")
         if metrics.get("roe_pct"):
-            fin_bits.append(f"Profitability: generates {metrics['roe_pct']} profit per ₹100 of shareholder capital (ROE)")
+            fin_bits.append(f"Profitability: generates {metrics['roe_pct']} profit per unit of shareholder capital (ROE)")
         if metrics.get("opm_pct"):
             fin_bits.append(f"Operating Margin: keeps {metrics['opm_pct']} operating profit from sales")
         if metrics.get("debt_equity"):
@@ -2390,13 +2293,16 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         if not is_comparison and evidence:
             pillars = _build_strategic_pillars(company, metrics)
             company["strategic_pillars"] = pillars
-            r.financial["peer_benchmarks"] = _build_single_peer_benchmarks(company.get("ticker", "TCS"))
+            single_bench = _build_single_peer_benchmarks(company.get("ticker", ""))
+            if single_bench:
+                r.financial["peer_benchmarks"] = single_bench
             prof = PEER_PROFILES.get(company.get("ticker"), {})
             for k, v in prof.items():
                 if k not in company or not company[k]:
                     company[k] = v
             if price_val and not company.get("current_price"):
-                company["current_price"] = f"₹{price_val:,.2f}"
+                curr_sym = "$" if currency_val == "USD" else ("₹" if currency_val in ("INR", "₹") else f"{currency_val} ")
+                company["current_price"] = f"{curr_sym}{price_val:,.2f}"
             r.company.update(company)
 
         quarterly_table = _build_quarterly_table(evidence, currency_val) if evidence else []

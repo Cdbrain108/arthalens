@@ -149,8 +149,6 @@ def _generate_financial_metrics_chart(report_data: dict, output_dir: str) -> str
         return float(m.group(1)) if m else default
 
     roe = _parse_num(roe_val, _extract_metric(full_text, r"ROE\s*(?:of|is|at|:)?\s*([-+]?\d+(?:\.\d+)?)"))
-    if roe is None:
-        roe = 47.7  # Established institutional baseline for TCS
 
     op_margin = _parse_num(opm_val, _extract_metric(full_text, r"(?:operating\s+margin|OPM)\s*(?:of|is|at|:)?\s*([-+]?\d+(?:\.\d+)?)"))
     net_margin = _parse_num(npm_val, _extract_metric(full_text, r"(?:net\s+margin|profit\s+margin)\s*(?:of|is|at|:)?\s*([-+]?\d+(?:\.\d+)?)"))
