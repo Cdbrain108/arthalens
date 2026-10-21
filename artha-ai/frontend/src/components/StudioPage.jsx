@@ -390,16 +390,31 @@ function StudioChatInputBar({
             type="submit"
             disabled={!hasText || running}
             title={running ? 'Researching…' : 'Start research'}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] transition-all duration-200 ${
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
               hasText && !running
-                ? 'bg-gradient-to-tr from-emerald-400 to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_18px_rgba(52,211,153,0.55)] hover:brightness-115 hover:scale-105 active:scale-95 cursor-pointer border border-emerald-300'
-                : 'bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 cursor-not-allowed opacity-90'
+                ? 'hover:brightness-115 hover:scale-105 active:scale-95'
+                : 'opacity-85'
             }`}
+            style={{
+              background: hasText && !running
+                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                : 'rgba(16, 185, 129, 0.28)',
+              border: hasText && !running ? '2px solid #6ee7b7' : '1.5px solid rgba(16, 185, 129, 0.55)',
+              boxShadow: hasText && !running
+                ? '0 0 20px rgba(16, 185, 129, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                : '0 0 10px rgba(16, 185, 129, 0.25)',
+              color: '#ffffff',
+            }}
           >
             {running ? (
-              <Square size={12} className="animate-pulse text-emerald-300" />
+              <Square size={13} className="animate-pulse text-white fill-white" />
             ) : (
-              <ArrowUp size={16} strokeWidth={2.8} className={hasText ? 'text-slate-950' : 'text-emerald-300'} />
+              <ArrowUp
+                size={18}
+                strokeWidth={3}
+                className="text-white"
+                style={{ stroke: '#ffffff', color: '#ffffff', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}
+              />
             )}
           </button>
         </form>

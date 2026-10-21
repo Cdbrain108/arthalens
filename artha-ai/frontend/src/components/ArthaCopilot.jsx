@@ -786,18 +786,24 @@ export default function ArthaCopilot({
             type="submit"
             disabled={!question.trim() || asking}
             title={asking ? 'Asking Copilot…' : 'Send message to Copilot'}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12.5px] font-bold transition-all duration-200 shadow-md ${
-              question.trim() && !asking
-                ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_18px_rgba(52,211,153,0.55)] hover:brightness-115 hover:scale-105 active:scale-95 cursor-pointer border border-emerald-300'
-                : 'bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-semibold cursor-not-allowed opacity-90'
-            }`}
+            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-extrabold text-white transition-all duration-200 shadow-md cursor-pointer hover:brightness-115 hover:scale-105 active:scale-95"
+            style={{
+              background: question.trim() && !asking
+                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                : 'rgba(16, 185, 129, 0.28)',
+              border: question.trim() && !asking ? '2px solid #6ee7b7' : '1.5px solid rgba(16, 185, 129, 0.55)',
+              boxShadow: question.trim() && !asking
+                ? '0 0 20px rgba(16, 185, 129, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                : '0 0 10px rgba(16, 185, 129, 0.25)',
+              color: '#ffffff',
+            }}
           >
             {asking ? (
-              <Loader2 size={15} className="animate-spin text-emerald-300" />
+              <Loader2 size={16} className="animate-spin text-white" />
             ) : (
-              <Send size={15} className={question.trim() ? 'text-slate-950 font-bold' : 'text-emerald-300'} />
+              <Send size={15} className="text-white" style={{ stroke: '#ffffff', color: '#ffffff', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
             )}
-            <span className="font-bold">Send</span>
+            <span className="font-extrabold text-white" style={{ color: '#ffffff' }}>Send</span>
           </button>
         </form>
       </div>

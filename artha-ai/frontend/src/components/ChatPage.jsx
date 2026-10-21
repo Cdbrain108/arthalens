@@ -403,18 +403,24 @@ export default function ChatPage({
                 <button
                   type="submit"
                   disabled={!followupQuery.trim() || running}
-                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12.5px] font-bold transition-all duration-200 shadow-md ${
-                    followupQuery.trim() && !running
-                      ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-extrabold shadow-[0_4px_16px_rgba(52,211,153,0.5)] hover:brightness-115 hover:scale-105 active:scale-95 cursor-pointer border border-emerald-300'
-                      : 'bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 cursor-not-allowed opacity-90'
-                  }`}
+                  className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-[12.5px] font-extrabold text-white transition-all duration-200 shadow-md cursor-pointer hover:brightness-115 hover:scale-105 active:scale-95"
+                  style={{
+                    background: followupQuery.trim() && !running
+                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                      : 'rgba(16, 185, 129, 0.28)',
+                    border: followupQuery.trim() && !running ? '2px solid #6ee7b7' : '1.5px solid rgba(16, 185, 129, 0.55)',
+                    boxShadow: followupQuery.trim() && !running
+                      ? '0 0 20px rgba(16, 185, 129, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                      : '0 0 10px rgba(16, 185, 129, 0.25)',
+                    color: '#ffffff',
+                  }}
                 >
                   {running ? (
-                    <Loader2 size={14} className="animate-spin text-emerald-300" />
+                    <Loader2 size={15} className="animate-spin text-white" />
                   ) : (
                     <>
-                      <span>Send</span>
-                      <ArrowUpRight size={14} className="transition-transform" />
+                      <span className="font-extrabold text-white">Send</span>
+                      <ArrowUpRight size={15} className="text-white transition-transform" style={{ stroke: '#ffffff' }} />
                     </>
                   )}
                 </button>
