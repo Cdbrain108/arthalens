@@ -802,6 +802,41 @@
   gap: 4px !important;
 }
 
+/* Infinite Running Ticker Marquee */
+.mobile-ticker-marquee {
+  width: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+  padding: 2px 0 !important;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%) !important;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%) !important;
+  touch-action: pan-y !important;
+}
+
+.mobile-ticker-track {
+  display: flex !important;
+  gap: 8px !important;
+  width: max-content !important;
+  animation: mobileTickerRun 24s linear infinite !important;
+  will-change: transform !important;
+}
+
+.mobile-ticker-marquee:hover .mobile-ticker-track,
+.mobile-ticker-marquee:active .mobile-ticker-track,
+.mobile-ticker-track:hover,
+.mobile-ticker-track:active {
+  animation-play-state: paused !important;
+}
+
+@keyframes mobileTickerRun {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
 .mobile-ticker-scroll {
   display: flex !important;
   gap: 6px !important;
@@ -819,7 +854,7 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  padding: 5px 9px !important;
+  padding: 5px 10px !important;
   background: rgba(15, 23, 42, 0.9) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   border-radius: 10px !important;
@@ -879,6 +914,99 @@
 .ticker-tag.amber {
   background: rgba(245, 158, 11, 0.2) !important;
   color: #fbbf24 !important;
+}
+
+/* Sample Actionable Question Bar below Ticker */
+.mobile-sample-prompt-bar {
+  width: 100% !important;
+  margin-top: 4px !important;
+  position: relative !important;
+}
+
+.mobile-sample-prompt-btn {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 6px 10px !important;
+  border-radius: 10px !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+  border: 1px dashed rgba(52, 211, 153, 0.38) !important;
+  color: #e2e8f0 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.mobile-sample-prompt-btn:hover,
+.mobile-sample-prompt-btn:active {
+  background: rgba(16, 185, 129, 0.16) !important;
+  border-color: rgba(52, 211, 153, 0.7) !important;
+  border-style: solid !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25) !important;
+}
+
+.mobile-sample-prompt-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.sample-sparkle-icon {
+  font-size: 11px !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
+}
+
+.sample-prompt-prefix {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #34d399 !important;
+  font-family: ui-monospace, monospace !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  flex-shrink: 0 !important;
+}
+
+.sample-prompt-text {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #f1f5f9 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  animation: promptFadeIn 0.3s ease-out !important;
+}
+
+.mobile-sample-prompt-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  padding: 2px 7px !important;
+  border-radius: 6px !important;
+  background: rgba(16, 185, 129, 0.18) !important;
+  border: 1px solid rgba(52, 211, 153, 0.35) !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  color: #34d399 !important;
+  font-family: ui-monospace, monospace !important;
+  flex-shrink: 0 !important;
+}
+
+@keyframes promptFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .mobile-quick-prompts {

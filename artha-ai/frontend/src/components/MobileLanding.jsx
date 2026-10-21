@@ -68,6 +68,14 @@ const SIMPLE_TAGLINES = [
   'Shows both sides — why to buy and why to be cautious in plain English.',
 ]
 
+const SAMPLE_INQUIRIES = [
+  'Should I buy TCS stocks now?',
+  'Is Reliance safe for a 5-year hold?',
+  'Is NVIDIA overvalued after earnings?',
+  'Compare TCS and Infosys on operating margins',
+  'What are the key risks in Apple AAPL?',
+]
+
 /** Types out each simple explainer phrase, pauses, deletes, and cycles smoothly */
 function useTypewriter(phrases, { typingSpeed = 38, deletingSpeed = 20, pauseDelay = 2200 } = {}) {
   const reduced =
@@ -141,6 +149,8 @@ export default function MobileLanding({
   const progressRef = useRef(null)
   const typedTagline = useTypewriter(SIMPLE_TAGLINES)
 
+  const [sampleQIdx, setSampleQIdx] = useState(0)
+
   useEffect(() => {
     setLocalQuery(query)
   }, [query])
@@ -150,6 +160,14 @@ export default function MobileLanding({
     const timer = setInterval(() => {
       setActiveSpecialist((prev) => (prev + 1) % SPECIALISTS.length)
     }, 2800)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Auto-rotate sample inquiry question below running ticker
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSampleQIdx((prev) => (prev + 1) % SAMPLE_INQUIRIES.length)
+    }, 3200)
     return () => clearInterval(timer)
   }, [])
 
@@ -596,30 +614,55 @@ export default function MobileLanding({
                 </div>
               </button>
 
-              {/* Live Ticker Diligence Track */}
+              {/* Running Ticker Diligence Track */}
               <div className="mobile-ticker-header">
                 <div className="mobile-ticker-header-lbl">
                   <TrendingUp size={11} className="text-emerald-400" />
-                  <span>Quick 1-Tap Stock Research</span>
+                  <span>Live Market Stream</span>
                 </div>
                 <div className="mobile-ticker-badge-live">
                   <span className="live-pulse" />
                   <span>TAP TICKER</span>
                 </div>
               </div>
-              <div className="mobile-ticker-scroll">
-                {MOBILE_TICKERS.map((t) => (
-                  <button
-                    key={t.ticker}
-                    type="button"
-                    onClick={() => onRun?.(t.name)}
-                    className="mobile-ticker-chip group cursor-pointer"
-                  >
-                    <span className="ticker-dot group-hover:scale-125 transition-transform" style={{ backgroundColor: t.color, color: t.color }} />
-                    <span className="ticker-name group-hover:text-emerald-300 transition-colors">{t.name}</span>
-                    <span className={`ticker-tag ${t.tagClass}`}>{t.tag}</span>
-                  </button>
-                ))}
+
+              <div className="mobile-ticker-marquee" title="Touch or hover to pause ticker">
+                <div className="mobile-ticker-track">
+                  {[...MOBILE_TICKERS, ...MOBILE_TICKERS].map((t, idx) => (
+                    <button
+                      key={`${t.ticker}-${idx}`}
+                      type="button"
+                      onClick={() => onRun?.(t.name)}
+                      className="mobile-ticker-chip group cursor-pointer"
+                    >
+                      <span className="ticker-dot group-hover:scale-125 transition-transform" style={{ backgroundColor: t.color, color: t.color }} />
+                      <span className="ticker-name group-hover:text-emerald-300 transition-colors">{t.name}</span>
+                      <span className={`ticker-tag ${t.tagClass}`}>{t.tag}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sample Actionable Question Bar */}
+              <div className="mobile-sample-prompt-bar">
+                <button
+                  type="button"
+                  onClick={() => onRun?.(SAMPLE_INQUIRIES[sampleQIdx])}
+                  className="mobile-sample-prompt-btn group cursor-pointer"
+                  title="Tap to run this sample research inquiry"
+                >
+                  <div className="mobile-sample-prompt-left">
+                    <span className="sample-sparkle-icon">💡</span>
+                    <span className="sample-prompt-prefix">Try:</span>
+                    <span className="sample-prompt-text truncate" key={sampleQIdx}>
+                      "{SAMPLE_INQUIRIES[sampleQIdx]}"
+                    </span>
+                  </div>
+                  <div className="mobile-sample-prompt-badge">
+                    <span>Ask</span>
+                    <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform text-emerald-400" />
+                  </div>
+                </button>
               </div>
 
               {/* Micro footer guarantee */}
