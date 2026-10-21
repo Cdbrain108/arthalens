@@ -111,7 +111,7 @@ function TypewriterMessage({ text = '', shouldAnimate = false, onTypingDone }) {
   )
 }
 
-function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth }) {
+function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, running = false, isDone = false }) {
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
   const [completedTypingIds, setCompletedTypingIds] = useState(() => new Set())
 
@@ -156,8 +156,8 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth }) {
               }}
             />
 
-            {/* Suggestions on the latest assistant turn (fade in after typing completes) */}
-            {isLatestAssistant && hasFinishedTyping && isLoggedIn && Array.isArray(msg.suggestions) && msg.suggestions.length > 0 && (
+            {/* Suggestions on latest assistant turn (only when NOT actively running research and either report is done or initial welcome) */}
+            {isLatestAssistant && hasFinishedTyping && isLoggedIn && !running && (isDone || messages.length <= 1) && Array.isArray(msg.suggestions) && msg.suggestions.length > 0 && (
               <div className="pt-3 border-t border-white/5 space-y-2 animate-fade-in">
                 <p className="text-[11px] font-medium text-[#5f6368] uppercase tracking-wide px-0.5">
                   Suggested Research Actions →
@@ -597,13 +597,16 @@ export default function StudioPage({
   // ─── Conversational Copilot Multi-Turn Messages State ────────────────────
   const [copilotMessages, setCopilotMessages] = useState(() => {
     if (activeQuery) {
+      const isStock = detectQueryType(activeQuery) === 'stock'
       return [
         { id: 'u_init', role: 'user', text: activeQuery },
         {
           id: 'a_init',
           role: 'assistant',
-          text: getCopilotResponse(activeQuery, user),
-          suggestions: getFollowupSuggestions(activeQuery),
+          text: isStock
+            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the **Auditing** tab below.*`
+            : getCopilotResponse(activeQuery, user),
+          suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
         },
       ]
     }
@@ -620,13 +623,16 @@ export default function StudioPage({
   // Synchronize external query transitions into Copilot thread
   useEffect(() => {
     if (activeQuery) {
+      const isStock = detectQueryType(activeQuery) === 'stock'
       setCopilotMessages([
         { id: `u_${Date.now()}`, role: 'user', text: activeQuery },
         {
           id: `a_${Date.now() + 1}`,
           role: 'assistant',
-          text: getCopilotResponse(activeQuery, user),
-          suggestions: getFollowupSuggestions(activeQuery),
+          text: isStock
+            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the **Auditing** tab below.*`
+            : getCopilotResponse(activeQuery, user),
+          suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
         },
       ])
     }
@@ -912,6 +918,8 @@ export default function StudioPage({
                     onAction={handleCopilotAction}
                     user={user}
                     onOpenAuth={onOpenAuth}
+                    running={running}
+                    isDone={isDone}
                   />
                 )}
 
@@ -936,6 +944,8 @@ export default function StudioPage({
                       onAction={handleCopilotAction}
                       user={user}
                       onOpenAuth={onOpenAuth}
+                      running={running}
+                      isDone={isDone}
                     />
                   </div>
                 )}

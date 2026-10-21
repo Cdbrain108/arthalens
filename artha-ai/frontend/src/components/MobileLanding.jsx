@@ -413,11 +413,16 @@ export default function MobileLanding({
             <button
               type="button"
               onClick={onResume}
-              className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300"
-              title={`Logged in as ${user.displayName || user.name || user.email}`}
+              className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[11px] font-bold text-emerald-300 shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer"
+              title={`Signed in as ${user.displayName || user.name || user.email || 'Researcher'} · Tap to return to workspace`}
+              aria-label={`Signed in as ${user.displayName || user.name || user.email || 'Researcher'}`}
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>{(user.displayName || user.name || user.email || 'User').split(' ')[0]}</span>
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <span>{(user.displayName || user.name || user.email || 'A').trim().charAt(0).toUpperCase()}</span>
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 border border-[#0b0f19]" />
             </button>
           )}
           <button

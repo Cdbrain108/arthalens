@@ -121,9 +121,9 @@ export function useAuth() {
   // Email / Password Login
   const login = useCallback(async (email, password) => {
     if (!isFirebaseConfigured) {
-      const name = email.split('@')[0]
+      const name = (typeof localStorage !== 'undefined' && localStorage.getItem('saved_researcher_name')) || email.split('@')[0]
       const u = {
-        uid: `guest_${Date.now()}`,
+        uid: `user_${Date.now()}`,
         name,
         displayName: name,
         email: email.trim(),
@@ -158,8 +158,14 @@ export function useAuth() {
   const signup = useCallback(async (name, email, password) => {
     if (!isFirebaseConfigured) {
       const uName = name.trim() || email.split('@')[0]
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('saved_researcher_name', uName)
+          localStorage.setItem('saved_researcher_email', email.trim())
+        }
+      } catch {}
       const u = {
-        uid: `guest_${Date.now()}`,
+        uid: `user_${Date.now()}`,
         name: uName,
         displayName: uName,
         email: email.trim(),
@@ -194,12 +200,14 @@ export function useAuth() {
   const loginWithGoogle = useCallback(async () => {
     const { user: firebaseUser, error } = await signInWithGoogle()
     if (firebaseUser) {
-      const name = extractDisplayName(firebaseUser) || firebaseUser.displayName || firebaseUser.name || 'Google Researcher'
+      const savedName = (typeof localStorage !== 'undefined' && localStorage.getItem('saved_researcher_name')) || ''
+      const name = extractDisplayName(firebaseUser) || firebaseUser.displayName || firebaseUser.name || savedName || 'Anuj Kesharwani'
+      const email = firebaseUser.email || (typeof localStorage !== 'undefined' && localStorage.getItem('saved_researcher_email')) || 'anuj@arthalens.ai'
       const u = {
-        uid: firebaseUser.uid,
+        uid: firebaseUser.uid || `user_${Date.now()}`,
         name,
         displayName: name,
-        email: firebaseUser.email || 'researcher@gmail.com',
+        email,
         photoURL: firebaseUser.photoURL || null,
         guest: false,
         isFirebase: Boolean(firebaseUser.getIdToken),

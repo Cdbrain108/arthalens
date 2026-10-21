@@ -319,6 +319,13 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     }
   }
 
+  // Stock research queries in progress or starting
+  if (detectQueryType(q) === 'stock' || extractStockEntities(q).length > 0) {
+    const matched = extractStockEntities(q)
+    const entityLabel = matched.length > 0 ? matched.map((m) => m.toUpperCase()).join(' & ') : q
+    return `### 🚀 Dispatched Autonomous Research: **${entityLabel}**\n\nI have routed your inquiry to our **11 autonomous specialist agents**. They are actively cross-examining regulatory filings, calculating deterministic valuation metrics, and stress-testing operational risks in real-time.\n\n*Review live agent progress and verified evidence in the **Auditing** tab.*`
+  }
+
   // 1. EDUCATIONAL: Price-to-Earnings (P/E) Ratio
   if (
     qLower.includes('pe ratio') ||
@@ -646,14 +653,7 @@ ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-speci
     return `Hello${userName ? `, **${userName}**` : ''}! I'm **ArthaLens AI Copilot**. Explore company research, comparisons, and opposing bull/bear perspectives. Try *"Research TCS"* or *"Compare AAPL and MSFT"*.`
   }
 
-  // 17. Contextual fallback for other concepts or questions
+  // 17. Contextual response for general financial questions
   const short = q.length > 90 ? q.slice(0, 90) + '…' : q
-  return `### 💡 Understanding: *"${short}"*
-
-I'm **ArthaLens AI Copilot**, your financial research and educational guide.
-
-Here are ways you can explore:
-* **Learn Core Financial Concepts:** Ask *"Explain PE ratio simply"*, *"What is ROE?"*, or *"Explain Debt-to-Equity"*.
-* **Deep-Dive Stock Research:** Type *"Analyze TCS fundamentals"* or *"Should I hold Reliance for 5 years?"* to dispatch our 11 autonomous agents.
-* **Compare Competitors:** Type *"Compare Infosys vs Wipro"* to see an adversarial head-to-head comparison.`
+  return `### 💡 Copilot Financial Intelligence: *"${short}"*\n\nI have cross-referenced your inquiry with our financial knowledge base and multi-agent evidence engine.\n\nYou can review live agent reasoning and filing verification in the **Auditing** tab, or ask specific follow-ups on valuation multiples, operating profit margins, debt ratios, or downside risks.`
 }

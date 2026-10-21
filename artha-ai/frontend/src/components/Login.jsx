@@ -81,6 +81,12 @@ export default function Login({ onLogin, onCancel }) {
     setLoading(true)
 
     if (mode === 'signup') {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          if (name?.trim()) localStorage.setItem('saved_researcher_name', name.trim())
+          if (email?.trim()) localStorage.setItem('saved_researcher_email', email.trim())
+        }
+      } catch {}
       const { user, error } = await signup(name.trim(), email.trim(), password)
       setLoading(false)
       if (error) {
@@ -91,6 +97,11 @@ export default function Login({ onLogin, onCancel }) {
       }
     } else {
       // signin
+      try {
+        if (typeof localStorage !== 'undefined' && email?.trim()) {
+          localStorage.setItem('saved_researcher_email', email.trim())
+        }
+      } catch {}
       const { user, error } = await login(email.trim(), password)
       setLoading(false)
       if (error) {
