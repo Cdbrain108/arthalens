@@ -137,6 +137,40 @@ export default function App() {
     }
   }, [user?.uid, user?.guest])
 
+  // Restore latest completed research session on page reload when visiting #chat or #report
+  const hasRestoredCompletedSessionRef = useRef(false)
+  useEffect(() => {
+    if (running || job || hasRestoredCompletedSessionRef.current) return
+    if (!['chat', 'report'].includes(currentPage)) return
+    if (!sessions || sessions.length === 0) return
+
+    const latestResearchSession = sessions.find((s) => s.job_id && !s.job_id.startsWith('chat_')) || sessions[0]
+    if (!latestResearchSession) return
+
+    hasRestoredCompletedSessionRef.current = true
+    if (latestResearchSession.query && !query) {
+      setQuery(latestResearchSession.query)
+    }
+
+    if (latestResearchSession.job_id && !latestResearchSession.job_id.startsWith('chat_')) {
+      api
+        .getStatus(latestResearchSession.job_id)
+        .then((snapshot) => {
+          if (snapshot && snapshot.job_id) {
+            restore(snapshot)
+          } else if (latestResearchSession.snapshot) {
+            restore(latestResearchSession.snapshot)
+          }
+        })
+        .catch(() => {
+          if (latestResearchSession.snapshot) {
+            restore(latestResearchSession.snapshot)
+          }
+        })
+    }
+  }, [currentPage, running, job, sessions, query, restore])
+
+
   // Save completed jobs locally and to Firestore under active account
   useEffect(() => {
     if (!job || !isTerminalJob(job)) return

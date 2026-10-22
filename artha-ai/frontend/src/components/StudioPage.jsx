@@ -788,7 +788,6 @@ export default function StudioPage({
   const [followupText, setFollowupText] = useState('')
   const [researchMode, setResearchMode] = useState('beginner')
   const [activeView, setActiveView] = useState('chat') // 'chat' | 'report'
-  const [qaMessages, setQaMessages] = useState([])
   const [completedQaIds, setCompletedQaIds] = useState(() => new Set())
   const [askingReport, setAskingReport] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -798,35 +797,79 @@ export default function StudioPage({
   const chatScrollRef = useRef(null)
   const inputRef = useRef(null)
 
-  const isDone = job?.status === 'succeeded' && Boolean(job?.report)
-  const activeQuery = job?.query || query || ''
-  const canAskReport = isDone && Boolean(job?.job_id) && typeof onAskReport === 'function'
+  const latestResearchSession = sessions?.find((s) => s.job_id && !s.job_id.startsWith('chat_')) || sessions?.[0] || null
+  const effectiveJob = job || latestResearchSession?.snapshot || null
+  const effectiveReport = job?.report || effectiveJob?.report || null
+  const isDone = (job?.status === 'succeeded' && Boolean(job?.report)) ||
+                 (effectiveJob?.status === 'succeeded' && Boolean(effectiveReport))
+  const activeQuery = job?.query || query || effectiveJob?.query || latestResearchSession?.query || ''
+  const currentJobId = job?.job_id || latestResearchSession?.job_id || null
+  const canAskReport = isDone && Boolean(currentJobId) && typeof onAskReport === 'function'
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
-  const currentJobId = job?.job_id || sessions?.find((s) => s.job_id && !s.job_id.startsWith('chat_'))?.job_id || null
   const pdfUrl = currentJobId ? api.pdfUrl(currentJobId) : null
 
-  // Reset Q&A messages on new job
+  // Persistent Q&A messages per research job
+  const [qaMessages, setQaMessages] = useState(() => {
+    if (typeof localStorage === 'undefined' || !currentJobId) return []
+    try {
+      const saved = localStorage.getItem(`artha_qa_${currentJobId}`)
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  // Persist QA messages to localStorage
   useEffect(() => {
+    if (!currentJobId) return
+    try {
+      if (qaMessages.length > 0) {
+        localStorage.setItem(`artha_qa_${currentJobId}`, JSON.stringify(qaMessages))
+      }
+    } catch {}
+  }, [qaMessages, currentJobId])
+
+  // Restore QA messages when currentJobId changes or on reload
+  const lastLoadedJobIdRef = useRef(currentJobId)
+  useEffect(() => {
+    if (lastLoadedJobIdRef.current === currentJobId) return
+    lastLoadedJobIdRef.current = currentJobId
+    if (!currentJobId) {
+      setQaMessages([])
+      setCompletedQaIds(new Set())
+      return
+    }
+    try {
+      const saved = localStorage.getItem(`artha_qa_${currentJobId}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setQaMessages(parsed)
+          setCompletedQaIds(new Set(parsed.map((_, i) => i)))
+          return
+        }
+      }
+    } catch {}
     setQaMessages([])
     setCompletedQaIds(new Set())
-  }, [job?.job_id, job?.report, job?.status])
+  }, [currentJobId])
 
   // Automatically open the report dossier as soon as research finishes generating
   const autoNavigatedRef = useRef(null)
   useEffect(() => {
-    if (isDone && job?.report && autoNavigatedRef.current !== job.job_id) {
-      autoNavigatedRef.current = job.job_id
+    if (isDone && (job?.report || effectiveReport) && autoNavigatedRef.current !== currentJobId) {
+      autoNavigatedRef.current = currentJobId
       setActiveView('report')
     }
-  }, [isDone, job?.report, job?.job_id])
+  }, [isDone, job?.report, effectiveReport, currentJobId])
 
   // Auto-scroll down to the agents reasoning cockpit when research begins executing for the first time
   const hasAutoScrolledAgentsRef = useRef(null)
   const reasoningAnchorRef = useRef(null)
 
   useEffect(() => {
-    if ((running || submitting) && hasAutoScrolledAgentsRef.current !== (job?.job_id || 'started')) {
-      hasAutoScrolledAgentsRef.current = job?.job_id || 'started'
+    if ((running || submitting) && hasAutoScrolledAgentsRef.current !== (currentJobId || 'started')) {
+      hasAutoScrolledAgentsRef.current = currentJobId || 'started'
       const timer = setTimeout(() => {
         reasoningAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 200)
@@ -835,20 +878,21 @@ export default function StudioPage({
     if (!running && !submitting) {
       hasAutoScrolledAgentsRef.current = null
     }
-  }, [running, submitting, job?.job_id])
+  }, [running, submitting, currentJobId])
 
   // Dedicated Copilot welcoming when switching to chat after a report has been generated
   const hasAddedReportGreetingRef = useRef(null)
   const handleSwitchToChat = useCallback(() => {
     setActiveView('chat')
-    if (isDone && job?.report && hasAddedReportGreetingRef.current !== job.job_id) {
-      hasAddedReportGreetingRef.current = job.job_id
-      const queryName = activeQuery || job?.report?.company?.name || job?.entities?.[0]?.name || 'your research'
+    const targetJob = job || effectiveJob
+    if (isDone && (targetJob?.report || effectiveReport) && hasAddedReportGreetingRef.current !== currentJobId) {
+      hasAddedReportGreetingRef.current = currentJobId
+      const queryName = activeQuery || targetJob?.report?.company?.name || targetJob?.entities?.[0]?.name || 'your research'
       const reportGreeting = `As per your query "${queryName}", I have generated an in-depth institutional equity research report. You can review the complete dossier anytime from the Report tab (where interactive in-app preview and PDF download options are available).\n\nIf you want to know more about this report or want to understand it in greater depth, I can help you with specific questions and analysis:`
       setCopilotMessages((prev) => [
         ...prev,
         {
-          id: `report_ready_${job.job_id || Date.now()}`,
+          id: `report_ready_${currentJobId || Date.now()}`,
           role: 'assistant',
           text: reportGreeting,
           suggestions: [
@@ -863,7 +907,7 @@ export default function StudioPage({
     if (!isTouchDevice()) {
       setTimeout(() => inputRef.current?.focus(), 120)
     }
-  }, [isDone, job?.report, job?.job_id, job?.entities, activeQuery])
+  }, [isDone, job, effectiveJob, effectiveReport, currentJobId, activeQuery])
 
   // Focus input on mount + refocus when research finishes (DESKTOP ONLY — never on mobile/touch screens to avoid popping virtual keyboard)
   useEffect(() => {
@@ -967,17 +1011,23 @@ export default function StudioPage({
   useEffect(() => {
     if (activeQuery) {
       const isStock = detectQueryType(activeQuery) === 'stock'
-      setCopilotMessages([
-        { id: `u_${Date.now()}`, role: 'user', text: activeQuery },
-        {
-          id: `a_${Date.now() + 1}`,
-          role: 'assistant',
-          text: isStock
-            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
-            : getCopilotResponse(activeQuery, user),
-          suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
-        },
-      ])
+      setCopilotMessages((prev) => {
+        // If already initialized with this activeQuery, keep existing conversation thread
+        if (prev.length > 1 && prev.some((m) => m.role === 'user' && m.text === activeQuery)) {
+          return prev
+        }
+        return [
+          { id: `u_${Date.now()}`, role: 'user', text: activeQuery },
+          {
+            id: `a_${Date.now() + 1}`,
+            role: 'assistant',
+            text: isStock
+              ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
+              : getCopilotResponse(activeQuery, user),
+            suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
+          },
+        ]
+      })
     }
   }, [activeQuery])
 
@@ -1118,7 +1168,7 @@ export default function StudioPage({
         let followUp = false
 
         try {
-          const response = await onAskReport(job.job_id, q)
+          const response = await onAskReport(currentJobId, q)
           if (response?.answer && !response.answer.includes('not established by the completed report')) {
             answerText = response.answer
             sources = response.sources || []
@@ -1127,11 +1177,12 @@ export default function StudioPage({
         } catch (_) {}
 
         if (!answerText) {
+          const targetJob = job || effectiveJob
           answerText = getCopilotResponse(q, user, {
-            companyName: job?.entities?.[0]?.name || activeQuery,
-            ticker: job?.entities?.[0]?.ticker,
-            reportData: job?.report_json || job?.report,
-            job,
+            companyName: targetJob?.entities?.[0]?.name || activeQuery,
+            ticker: targetJob?.entities?.[0]?.ticker,
+            reportData: targetJob?.report_json || targetJob?.report || effectiveReport,
+            job: targetJob,
           })
         }
 
@@ -1327,7 +1378,7 @@ export default function StudioPage({
               )}
 
               {/* Fresh Workspace Hero (Greeting + Suggested Inquiries) when no messages and idle */}
-              {copilotMessages.length <= 1 && !running && !submitting && !isGenerating && !job && (
+              {copilotMessages.length <= 1 && !running && !submitting && !isGenerating && !job && !effectiveJob && !activeQuery && (
                 <div className="flex flex-col justify-center items-center py-6 sm:py-10 text-center max-w-lg mx-auto w-full space-y-6 studio-fade-up">
                   <div className="relative inline-flex items-center justify-center">
                     <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-emerald-500/30 via-teal-500/20 to-blue-500/20 blur-xl animate-pulse" />
@@ -1393,10 +1444,10 @@ export default function StudioPage({
 
               {/* Live Multi-Agent Reasoning Cockpit / Process Stepper */}
               {/* Always rendered with active animation whenever research is submitting, running, generating, or asking report */}
-              {(running || submitting || isGenerating || askingReport || (job && !isDone) || (isDone && !job?.report)) && (
+              {(running || submitting || isGenerating || askingReport || (job && !isDone) || (isDone && !job?.report && !effectiveReport)) && (
                 <div ref={reasoningAnchorRef} className="scroll-mt-6">
                   <ArthaReasoningBlock
-                    job={job}
+                    job={job || effectiveJob}
                     query={activeQuery}
                     running={running}
                     submitting={submitting}
@@ -1411,9 +1462,9 @@ export default function StudioPage({
               )}
 
               {/* Inline Institutional Report Brief Card (appears directly in chat when research finishes) */}
-              {isDone && job?.report && (
+              {isDone && (job?.report || effectiveReport) && (
                 <InlineReportBriefCard
-                  job={job}
+                  job={job || effectiveJob}
                   pdfUrl={pdfUrl}
                   onViewPdf={() => setShowPdfModal(true)}
                   onOpenReport={() => setActiveView('report')}
@@ -1573,12 +1624,18 @@ export default function StudioPage({
             <button
               type="button"
               onClick={handleSwitchToChat}
-              className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-black px-4 py-2.5 sm:px-5 sm:py-3 shadow-[0_4px_24px_rgba(16,185,129,0.5)] border border-emerald-300/40 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                border: '1.5px solid #6ee7b7',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
+              }}
+              className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xl"
               title="Chat with Artha Copilot about this report"
               aria-label="Chat with Artha Copilot about this report"
             >
-              <Sparkles size={15} className="text-black animate-pulse" />
-              <span>Ask Copilot →</span>
+              <Sparkles size={16} className="text-white animate-pulse" />
+              <span className="text-white font-bold tracking-wide">Chat with Copilot →</span>
             </button>
           </section>
         )}
