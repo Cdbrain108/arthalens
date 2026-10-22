@@ -483,12 +483,21 @@ function StudioTopHeader({
           <span className="hidden lg:inline text-xs">History</span>
         </button>
 
-        {pdfUrl && isStockQuery && (
+        {isStockQuery && (
           <button
             type="button"
             onClick={onViewPdf}
-            className="flex h-8 sm:h-9 items-center gap-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold text-emerald-400 transition hover:bg-emerald-500/25 cursor-pointer active:scale-95"
-            title="View Research Report PDF In-App"
+            disabled={!isDone || running}
+            className={`flex h-8 sm:h-9 items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
+              isDone
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
+                : 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed opacity-50'
+            }`}
+            title={
+              isDone
+                ? 'View Institutional PDF Dossier In-App'
+                : 'PDF dossier compiles upon research completion'
+            }
           >
             <FileText size={13} />
             <span className="hidden sm:inline">PDF</span>
@@ -1105,122 +1114,95 @@ export default function StudioPage({
                 </div>
               )}
 
-              {/* 1. Conversational / Copilot Mode OR Fresh Workspace without active job */}
-              {isConversational || (!job?.selected_agents?.length && !running && !isDone) ? (
-                <div className={`space-y-4 flex flex-col ${copilotMessages.length <= 1 && !running && !submitting && !isGenerating ? 'flex-1 justify-center my-auto' : ''}`}>
-                  {/* Copilot Overview Hero Card */}
-                  {copilotMessages.length <= 1 && !running && !submitting && !isGenerating && (
-                    <div className="flex flex-col justify-center items-center py-6 sm:py-10 text-center max-w-lg mx-auto w-full space-y-6 studio-fade-up">
-                      <div className="relative inline-flex items-center justify-center">
-                        <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-emerald-500/30 via-teal-500/20 to-blue-500/20 blur-xl animate-pulse" />
-                        <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#1e222d] to-[#12151c] shadow-2xl border border-white/15">
-                          <Logo size={32} />
-                        </div>
-                      </div>
-                      <div>
-                        <h2 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
-                          Artha AI Copilot
-                          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400 font-semibold shadow-sm">
-                            Live
-                          </span>
-                        </h2>
-                        <p className="text-[12px] sm:text-[13px] text-slate-400 mt-1.5 leading-relaxed px-4 max-w-md mx-auto">
-                          Autonomous financial intelligence &amp; valuation reasoning. Ask any financial question, compare industry peers, or audit regulatory filings.
-                        </p>
-                      </div>
-
-                      {/* Quick Inquiry Suggestions */}
-                      <div className="w-full space-y-2 pt-1 text-left px-1">
-                        <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider pl-1">
-                          Suggested Financial Inquiries
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {[
-                            { q: 'Compare TCS and Infosys on margins', label: 'TCS vs Infosys Margins', badge: 'Compare' },
-                            { q: 'Explain P/E ratio and DCF multiples', label: 'Explain P/E & DCF', badge: 'Valuation' },
-                            { q: 'Should I hold Reliance for 5 years?', label: 'Reliance 5-Yr Thesis', badge: 'Thesis' },
-                            { q: 'What are the risks in NVIDIA NVDA?', label: 'NVIDIA Risk Audit', badge: 'Risk Audit' }
-                          ].map((item, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => handleCopilotAction(item.q)}
-                              className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/30 p-2.5 text-[11.5px] text-slate-300 hover:text-white transition group cursor-pointer active:scale-[0.98]"
-                            >
-                              <span className="truncate">{item.label}</span>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 group-hover:bg-emerald-500/20 group-hover:text-emerald-300 transition-colors">
-                                  {item.badge}
-                                </span>
-                                <ChevronRight size={13} className="text-slate-500 group-hover:text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+              {/* Fresh Workspace Hero (Greeting + Suggested Inquiries) when no messages and idle */}
+              {copilotMessages.length <= 1 && !running && !submitting && !isGenerating && !job && (
+                <div className="flex flex-col justify-center items-center py-6 sm:py-10 text-center max-w-lg mx-auto w-full space-y-6 studio-fade-up">
+                  <div className="relative inline-flex items-center justify-center">
+                    <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-emerald-500/30 via-teal-500/20 to-blue-500/20 blur-xl animate-pulse" />
+                    <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#1e222d] to-[#12151c] shadow-2xl border border-white/15">
+                      <Logo size={32} />
                     </div>
-                  )}
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+                      Artha AI Copilot
+                      <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400 font-semibold shadow-sm">
+                        Live
+                      </span>
+                    </h2>
+                    <p className="text-[12px] sm:text-[13px] text-slate-400 mt-1.5 leading-relaxed px-4 max-w-md mx-auto">
+                      Autonomous financial intelligence &amp; valuation reasoning. Ask any financial question, compare industry peers, or audit regulatory filings.
+                    </p>
+                  </div>
 
-                  {/* Conversational Copilot Chat Thread */}
-                  {copilotMessages.length > 1 && (
-                    <ConversationalCopilot
-                      messages={copilotMessages}
-                      onAction={handleCopilotAction}
-                      user={user}
-                      onOpenAuth={onOpenAuth}
-                      running={running}
-                      isDone={isDone}
-                    />
-                  )}
-
-                  {/* Active Generation Reasoning Block */}
-                  {isGenerating && (
-                    <ArthaReasoningBlock
-                      query={activeQuery}
-                      isGenerating={true}
-                      isConversational={true}
-                      generationStep={generationStep}
-                    />
-                  )}
-                </div>
-              ) : (
-                /* 2. Stock Multi-Agent Research Stream */
-                <div className="space-y-4">
-                  {/* Conversational Dispatch Message */}
-                  {!isConversational && copilotMessages.length > 1 && (
-                    <div className="space-y-3">
-                      <ConversationalCopilot
-                        messages={copilotMessages.slice(1)}
-                        onAction={handleCopilotAction}
-                        user={user}
-                        onOpenAuth={onOpenAuth}
-                        running={running}
-                        isDone={isDone}
-                      />
+                  {/* Quick Inquiry Suggestions */}
+                  <div className="w-full space-y-2 pt-1 text-left px-1">
+                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider pl-1">
+                      Suggested Financial Inquiries
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        { q: 'Compare TCS and Infosys on margins', label: 'TCS vs Infosys Margins', badge: 'Compare' },
+                        { q: 'Explain P/E ratio and DCF multiples', label: 'Explain P/E & DCF', badge: 'Valuation' },
+                        { q: 'Should I hold Reliance for 5 years?', label: 'Reliance 5-Yr Thesis', badge: 'Thesis' },
+                        { q: 'What are the risks in NVIDIA NVDA?', label: 'NVIDIA Risk Audit', badge: 'Risk Audit' }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleCopilotAction(item.q)}
+                          className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/30 p-2.5 text-[11.5px] text-slate-300 hover:text-white transition group cursor-pointer active:scale-[0.98]"
+                        >
+                          <span className="truncate">{item.label}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 group-hover:bg-emerald-500/20 group-hover:text-emerald-300 transition-colors">
+                              {item.badge}
+                            </span>
+                            <ChevronRight size={13} className="text-slate-500 group-hover:text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  )}
-
-                  {/* Live Multi-Agent Reasoning Cockpit with Single-Line Stepper */}
-                  <ArthaReasoningBlock
-                    job={job}
-                    query={activeQuery}
-                    running={running}
-                    submitting={submitting}
-                    isDone={isDone}
-                    isConversational={false}
-                    askingReport={askingReport}
-                    onViewReport={() => setShowPdfModal(true)}
-                  />
-
-                  {/* 3. Inline Institutional Report Brief Card (appears in chat when research finishes) */}
-                  {isDone && job?.report && (
-                    <InlineReportBriefCard
-                      job={job}
-                      pdfUrl={pdfUrl}
-                      onViewPdf={() => setShowPdfModal(true)}
-                    />
-                  )}
+                  </div>
                 </div>
+              )}
+
+              {/* Conversational Copilot Chat Thread */}
+              {copilotMessages.length > 1 && (
+                <ConversationalCopilot
+                  messages={copilotMessages}
+                  onAction={handleCopilotAction}
+                  user={user}
+                  onOpenAuth={onOpenAuth}
+                  running={running}
+                  isDone={isDone}
+                />
+              )}
+
+              {/* Live Multi-Agent Reasoning Cockpit / Process Stepper */}
+              {/* Always rendered with active animation whenever research is submitting, running, generating, or asking report */}
+              {(running || submitting || isGenerating || askingReport || (job && !isDone) || (isDone && !job?.report)) && (
+                <ArthaReasoningBlock
+                  job={job}
+                  query={activeQuery}
+                  running={running}
+                  submitting={submitting}
+                  isDone={isDone}
+                  isGenerating={isGenerating}
+                  isConversational={isConversational}
+                  generationStep={generationStep}
+                  askingReport={askingReport}
+                  onViewReport={() => setShowPdfModal(true)}
+                />
+              )}
+
+              {/* Inline Institutional Report Brief Card (appears directly in chat when research finishes) */}
+              {isDone && job?.report && (
+                <InlineReportBriefCard
+                  job={job}
+                  pdfUrl={pdfUrl}
+                  onViewPdf={() => setShowPdfModal(true)}
+                />
               )}
 
               {/* Report Q&A messages */}

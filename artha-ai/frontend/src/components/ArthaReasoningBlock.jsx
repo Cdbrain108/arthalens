@@ -162,6 +162,13 @@ export default function ArthaReasoningBlock({
 
   const active = Boolean(running || submitting || isGenerating || askingReport)
 
+  // Auto-expand reasoning block whenever research is active so user sees live progress & animations
+  useEffect(() => {
+    if (active && !isDone) {
+      setExpanded(true)
+    }
+  }, [active, isDone])
+
   // Track live elapsed seconds
   useEffect(() => {
     if (active && !isDone) {
