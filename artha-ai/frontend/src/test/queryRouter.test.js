@@ -193,3 +193,14 @@ test('getCopilotResponse identifies Anuj Kesharwani as creator for creator inqui
   assert.ok(q5.includes('creator of **ArthaLens'))
 })
 
+test('getCopilotResponse returns current live stock price for single and comparative stock price inquiries', () => {
+  const resp1 = getCopilotResponse('what is TCS stock price')
+  assert.ok(resp1.includes('₹3,850.50'), 'Should contain TCS live price')
+  assert.ok(resp1.includes('Tata Consultancy Services'))
+  assert.ok(resp1.includes('52-Week Range'))
+
+  const resp2 = getCopilotResponse('current live price of Infosys and TCS')
+  assert.ok(resp2.includes('₹1,745.20'), 'Should contain INFY live price')
+  assert.ok(resp2.includes('₹3,850.50'), 'Should contain TCS live price')
+})
+

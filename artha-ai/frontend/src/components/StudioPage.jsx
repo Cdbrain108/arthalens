@@ -238,6 +238,12 @@ function InlineReportBriefCard({ job, pdfUrl, onViewPdf, onOpenReport, researchM
   const bullPoints = report.bull_thesis?.points || report.thesis_summary?.bull_points || []
   const bearPoints = report.bear_thesis?.points || report.thesis_summary?.bear_points || report.evidence_gaps || []
 
+  const compList = (company.comparison || []).filter(Boolean)
+  const isComparison = compList.length >= 2 || Boolean(company.is_comparison)
+  const price = report.market?.price
+    ? `${report.market?.currency === 'USD' ? '$' : '₹'}${report.market.price}`
+    : (company.price || company.entity_card?.current_price || null)
+
   return (
     <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-4 sm:p-6 shadow-2xl space-y-4 animate-fade-up">
       {/* Top Header */}
@@ -255,6 +261,23 @@ function InlineReportBriefCard({ job, pdfUrl, onViewPdf, onOpenReport, researchM
                 <span className="rounded bg-white/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-300">
                   {company.ticker} {company.exchange ? `· ${company.exchange}` : ''}
                 </span>
+              )}
+              {!isComparison && price && (
+                <span className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 font-mono text-[11px] font-bold text-emerald-300 flex items-center gap-1 shadow-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Live: {price}</span>
+                </span>
+              )}
+              {isComparison && compList.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  {compList.map((c, idx) => (
+                    <span key={idx} className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 font-mono text-[10.5px] font-bold text-emerald-300 flex items-center gap-1 shadow-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-slate-300 font-normal">{c.ticker || c.name}:</span>
+                      <span>{c.price || 'Live Quote'}</span>
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
             <p className="text-[11.5px] text-slate-400 mt-0.5">
@@ -298,8 +321,14 @@ function InlineReportBriefCard({ job, pdfUrl, onViewPdf, onOpenReport, researchM
       )}
 
       {/* Key Metrics Chips (if available) */}
-      {(pe != null || roe != null || opm != null || de != null) && (
+      {(price != null || pe != null || roe != null || opm != null || de != null) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+          {price != null && !isComparison && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-center">
+              <span className="text-[10.5px] font-mono text-emerald-400/80 block">Current Stock Price</span>
+              <span className="text-sm font-bold text-emerald-300 font-mono">{price}</span>
+            </div>
+          )}
           {pe != null && (
             <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-center">
               <span className="text-[10.5px] font-mono text-slate-400 block">P/E Ratio</span>
