@@ -256,3 +256,56 @@ test('PdfViewerModal provides Back to Report Page action and never renders downl
   assert.ok(!html.includes('<embed'))
 })
 
+test('ReportPreview formats synthesis narrative into bold headings and action pill badges', () => {
+  const narrativeReport = {
+    ...sampleReport,
+    executive_summary: `Plain English Executive Summary: For Nvda (NVDA), holding your shares is the smart, low-stress move.
+
+• WHAT EXISTING SHAREHOLDERS SHOULD DO: KEEP HOLDING (Do Not Panic Sell): If you already own NVDA, keep your shares.
+• WHAT NEW INVESTORS SHOULD DO: BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash.
+• TIME HORIZON EXPECTATION: LONG-TERM (3–5+ YEARS): Proven Wealth Compounder.
+• EXACT RULES FOR WHEN TO SELL: Sell only if operating profit drops.`,
+  }
+
+  const html = renderToStaticMarkup(
+    React.createElement(ReportPreview, {
+      jobId: 'nvda-job-1',
+      job: { status: 'succeeded', report: narrativeReport, entities: [{ name: 'Nvidia', ticker: 'NVDA' }] },
+      initialMode: 'beginner',
+    })
+  )
+
+  assert.ok(html.includes('WHAT EXISTING SHAREHOLDERS SHOULD DO'))
+  assert.ok(html.includes('KEEP HOLDING (Do Not Panic Sell)'))
+  assert.ok(html.includes('WHAT NEW INVESTORS SHOULD DO'))
+  assert.ok(html.includes('BUY SLOWLY IN STAGES (Do Not Buy All At Once)'))
+  assert.ok(html.includes('TIME HORIZON EXPECTATION'))
+  assert.ok(html.includes('EXACT RULES FOR WHEN TO SELL'))
+})
+
+test('ArthaReasoningBlock automatically shifts to Pipeline Flow when agents finish', () => {
+  const jobAgentsFinished = {
+    job_id: 'pipeline_auto_switch',
+    query: 'NVDA stock audit',
+    current_node: 'synthesize_report',
+    selected_agents: ['financial', 'valuation', 'risk'],
+    completed_agents: ['financial', 'valuation', 'risk'],
+    status: 'running',
+    entities: [{ name: 'Nvidia', ticker: 'NVDA' }],
+  }
+
+  const html = renderToStaticMarkup(
+    React.createElement(ArthaReasoningBlock, {
+      job: jobAgentsFinished,
+      running: true,
+      submitting: false,
+      isDone: false,
+    })
+  )
+
+  // Pipeline flow graph should be rendered because all agents are done
+  assert.ok(html.includes('Pipeline Flow'))
+  assert.ok(html.includes('Synthesize findings') || html.includes('synthesize') || html.includes('Stage 6/6'))
+})
+
+

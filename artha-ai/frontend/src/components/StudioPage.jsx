@@ -820,6 +820,23 @@ export default function StudioPage({
     }
   }, [isDone, job?.report, job?.job_id])
 
+  // Auto-scroll down to the agents reasoning cockpit when research begins executing for the first time
+  const hasAutoScrolledAgentsRef = useRef(null)
+  const reasoningAnchorRef = useRef(null)
+
+  useEffect(() => {
+    if ((running || submitting) && hasAutoScrolledAgentsRef.current !== (job?.job_id || 'started')) {
+      hasAutoScrolledAgentsRef.current = job?.job_id || 'started'
+      const timer = setTimeout(() => {
+        reasoningAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+    if (!running && !submitting) {
+      hasAutoScrolledAgentsRef.current = null
+    }
+  }, [running, submitting, job?.job_id])
+
   // Dedicated Copilot welcoming when switching to chat after a report has been generated
   const hasAddedReportGreetingRef = useRef(null)
   const handleSwitchToChat = useCallback(() => {
@@ -1244,18 +1261,20 @@ export default function StudioPage({
               </div>
 
               {/* Directly below: Artha AI Copilot Reasoning Block animation */}
-              <ArthaReasoningBlock
-                job={job}
-                query={activeQuery}
-                running={running}
-                submitting={submitting}
-                isDone={isDone}
-                isGenerating={isGenerating}
-                isConversational={isConversational}
-                generationStep={generationStep}
-                askingReport={askingReport}
-                onViewReport={() => setActiveView('report')}
-              />
+              <div ref={reasoningAnchorRef} className="scroll-mt-6">
+                <ArthaReasoningBlock
+                  job={job}
+                  query={activeQuery}
+                  running={running}
+                  submitting={submitting}
+                  isDone={isDone}
+                  isGenerating={isGenerating}
+                  isConversational={isConversational}
+                  generationStep={generationStep}
+                  askingReport={askingReport}
+                  onViewReport={() => setActiveView('report')}
+                />
+              </div>
 
               {/* Guard against premature report access & live auditing status indicator */}
               <div className="w-full flex items-center justify-between p-3 rounded-xl border border-white/10 bg-[#16181e] text-xs">
@@ -1375,18 +1394,20 @@ export default function StudioPage({
               {/* Live Multi-Agent Reasoning Cockpit / Process Stepper */}
               {/* Always rendered with active animation whenever research is submitting, running, generating, or asking report */}
               {(running || submitting || isGenerating || askingReport || (job && !isDone) || (isDone && !job?.report)) && (
-                <ArthaReasoningBlock
-                  job={job}
-                  query={activeQuery}
-                  running={running}
-                  submitting={submitting}
-                  isDone={isDone}
-                  isGenerating={isGenerating}
-                  isConversational={isConversational}
-                  generationStep={generationStep}
-                  askingReport={askingReport}
-                  onViewReport={() => setActiveView('report')}
-                />
+                <div ref={reasoningAnchorRef} className="scroll-mt-6">
+                  <ArthaReasoningBlock
+                    job={job}
+                    query={activeQuery}
+                    running={running}
+                    submitting={submitting}
+                    isDone={isDone}
+                    isGenerating={isGenerating}
+                    isConversational={isConversational}
+                    generationStep={generationStep}
+                    askingReport={askingReport}
+                    onViewReport={() => setActiveView('report')}
+                  />
+                </div>
               )}
 
               {/* Inline Institutional Report Brief Card (appears directly in chat when research finishes) */}

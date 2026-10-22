@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, Loader2, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url'
 import { api } from '../api/client'
 import Logo from './Logo'
 
-// Configure PDF.js worker using same-origin blob script to prevent cross-origin SecurityError
+// Configure PDF.js worker using local Vite asset URL to avoid cross-origin SecurityError
 if (typeof window !== 'undefined') {
   try {
-    const workerCode = `importScripts('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');`
-    const blob = new Blob([workerCode], { type: 'application/javascript' })
-    pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob)
+    pdfjsLib.GlobalWorkerOptions.workerSrc = typeof pdfjsWorker === 'string'
+      ? pdfjsWorker
+      : new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString()
   } catch {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
   }
 }
 
@@ -354,48 +354,12 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
               </div>
             </div>
           ) : useNativeEmbed || (!pdfDoc && rawBlobUrl) ? (
-            <div className="w-full flex flex-col items-center justify-center p-6 sm:p-10 text-center my-auto max-w-xl mx-auto space-y-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-xl">
-                <FileText size={28} />
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-white">
-                  Institutional Evidence Dossier Ready
-                </h3>
-                <p className="mt-1.5 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Your research report and regulatory filing audit are complete. You can view the full interactive report directly in-app or download the PDF file.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSwitchToReport?.()
-                    onClose?.()
-                  }}
-                  className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold shadow-lg transition hover:brightness-110 active:scale-95 cursor-pointer"
-                  style={{ backgroundColor: '#34d399', color: '#04120c' }}
-                >
-                  <FileText size={15} />
-                  <span>Open Interactive Report</span>
-                </button>
-                <a
-                  href={rawBlobUrl}
-                  download={`arthalens_research_${cleanJobId}.pdf`}
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 hover:bg-white/15 px-4 py-2.5 text-xs font-semibold text-white transition active:scale-95 cursor-pointer"
-                >
-                  <Download size={15} />
-                  <span>Download PDF Dossier</span>
-                </a>
-                <a
-                  href={rawBlobUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3.5 py-2.5 text-xs font-medium text-slate-300 hover:text-white transition cursor-pointer"
-                >
-                  <span>Open in Tab ↗</span>
-                </a>
-              </div>
+            <div className="w-full flex-1 flex flex-col items-center justify-start p-1 sm:p-3 w-full h-full max-w-5xl mx-auto space-y-2 animate-fade-in">
+              <iframe
+                src={`${rawBlobUrl}#toolbar=0&navpanes=0&view=FitH`}
+                className="w-full h-[76vh] sm:h-[82vh] rounded-xl border border-white/10 bg-white shadow-2xl"
+                title="Institutional Research PDF Dossier"
+              />
             </div>
           ) : pdfDoc ? (
             <div className="w-full flex flex-col items-center max-w-4xl">

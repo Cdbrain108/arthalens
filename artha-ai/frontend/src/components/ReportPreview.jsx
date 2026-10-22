@@ -275,6 +275,176 @@ function EvidenceList({ items, sources, bullet, bulletClass, emptyText }) {
   )
 }
 
+/** Structured institutional synthesis narrative with prominent bold headings and action pills. */
+function SynthesisNarrativeBlock({ text, sources }) {
+  if (!text) return null
+
+  const rawLines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  const introBlocks = []
+  const bulletCards = []
+
+  rawLines.forEach((line) => {
+    const isBullet = line.startsWith('•') || line.startsWith('*') || line.startsWith('-')
+    if (isBullet) {
+      const clean = line.replace(/^[•*-]\s*/, '').trim()
+      const firstColon = clean.indexOf(':')
+      if (firstColon !== -1) {
+        const headerTitle = clean.substring(0, firstColon).trim()
+        const remainder = clean.substring(firstColon + 1).trim()
+        const secondColon = remainder.indexOf(':')
+        let pill = ''
+        let body = remainder
+        if (secondColon !== -1 && secondColon < 65) {
+          pill = remainder.substring(0, secondColon).trim()
+          body = remainder.substring(secondColon + 1).trim()
+        }
+        bulletCards.push({ headerTitle, pill, body, raw: clean })
+      } else {
+        bulletCards.push({ headerTitle: '', pill: '', body: clean, raw: clean })
+      }
+    } else {
+      introBlocks.push(line)
+    }
+  })
+
+  if (bulletCards.length === 0) {
+    return (
+      <div className="whitespace-pre-line text-[13px] leading-relaxed text-[#e2e8f0]">
+        <CitedText text={text} sources={sources} />
+      </div>
+    )
+  }
+
+  const getStyleForTitle = (title = '') => {
+    const t = title.toUpperCase()
+    if (t.includes('EXISTING') || t.includes('SHAREHOLDER') || t.includes('HOLD')) {
+      return {
+        border: 'border-emerald-500/35',
+        bg: 'bg-emerald-500/[0.05]',
+        dot: 'bg-emerald-400',
+        badgeBorder: 'border-emerald-500/40',
+        badgeBg: 'bg-emerald-500/20',
+        badgeText: 'text-emerald-300',
+        titleColor: 'text-emerald-400',
+      }
+    }
+    if (t.includes('NEW INVESTOR') || t.includes('BUY') || t.includes('STAGES')) {
+      return {
+        border: 'border-teal-500/35',
+        bg: 'bg-teal-500/[0.05]',
+        dot: 'bg-teal-400',
+        badgeBorder: 'border-teal-500/40',
+        badgeBg: 'bg-teal-500/20',
+        badgeText: 'text-teal-300',
+        titleColor: 'text-teal-300',
+      }
+    }
+    if (t.includes('HORIZON') || t.includes('TIME') || t.includes('LONG-TERM')) {
+      return {
+        border: 'border-indigo-500/35',
+        bg: 'bg-indigo-500/[0.05]',
+        dot: 'bg-indigo-400',
+        badgeBorder: 'border-indigo-500/40',
+        badgeBg: 'bg-indigo-500/20',
+        badgeText: 'text-indigo-300',
+        titleColor: 'text-indigo-300',
+      }
+    }
+    if (t.includes('SELL') || t.includes('RULES FOR WHEN') || t.includes('EXIT')) {
+      return {
+        border: 'border-rose-500/35',
+        bg: 'bg-rose-500/[0.05]',
+        dot: 'bg-rose-400',
+        badgeBorder: 'border-rose-500/40',
+        badgeBg: 'bg-rose-500/20',
+        badgeText: 'text-rose-300',
+        titleColor: 'text-rose-400',
+      }
+    }
+    if (t.includes('WATCH') || t.includes('STRENGTH') || t.includes('RISK')) {
+      return {
+        border: 'border-amber-500/35',
+        bg: 'bg-amber-500/[0.05]',
+        dot: 'bg-amber-400',
+        badgeBorder: 'border-amber-500/40',
+        badgeBg: 'bg-amber-500/20',
+        badgeText: 'text-amber-300',
+        titleColor: 'text-amber-300',
+      }
+    }
+    return {
+      border: 'border-white/10',
+      bg: 'bg-white/[0.02]',
+      dot: 'bg-slate-400',
+      badgeBorder: 'border-white/15',
+      badgeBg: 'bg-white/10',
+      badgeText: 'text-slate-300',
+      titleColor: 'text-white',
+    }
+  }
+
+  return (
+    <div className="space-y-3.5 text-left">
+      {introBlocks.length > 0 && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 shadow-sm">
+          {introBlocks.map((intro, idx) => {
+            const hasPrefix = intro.startsWith('Plain English Executive Summary:')
+            const content = hasPrefix ? intro.replace('Plain English Executive Summary:', '').trim() : intro
+            return (
+              <div key={idx} className="space-y-1.5">
+                {hasPrefix && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-400/20 text-emerald-300 text-xs font-bold">
+                      ✓
+                    </span>
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                      Plain English Executive Summary
+                    </span>
+                  </div>
+                )}
+                <p className="text-[13px] sm:text-[13.5px] leading-relaxed text-[#f1f3f4] font-normal">
+                  <CitedText text={content} sources={sources} />
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3">
+        {bulletCards.map((card, idx) => {
+          const style = getStyleForTitle(card.headerTitle)
+          return (
+            <div
+              key={idx}
+              className={`rounded-xl border ${style.border} ${style.bg} p-4 text-left transition-all hover:bg-white/[0.04] shadow-sm`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
+                  <h4 className={`text-[12.5px] sm:text-[13px] font-extrabold uppercase tracking-wider ${style.titleColor}`}>
+                    {card.headerTitle}
+                  </h4>
+                </div>
+                {card.pill && (
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-[10px] sm:text-[10.5px] font-bold uppercase tracking-wider border ${style.badgeBorder} ${style.badgeBg} ${style.badgeText}`}
+                  >
+                    {card.pill}
+                  </span>
+                )}
+              </div>
+              <div className="text-[12.5px] sm:text-[13px] leading-relaxed text-[#cbd5e1]">
+                <CitedText text={card.body} sources={sources} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /* --- Main component -------------------------------------------------------- */
 
 export default function ReportPreview({
@@ -935,14 +1105,15 @@ export default function ReportPreview({
       )}
 
       {/* Institutional Synthesis Narrative */}
-      <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-[13px] leading-relaxed text-[#cbd5e1]">
-        <div className="mb-2 flex items-center justify-between text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#8ab4f8]">
-          <span>Autonomous Research Synthesis</span>
-          <span className="text-[#9aa0a6] font-normal lowercase">{verifiedSources ?? 0} verified citations</span>
+      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5 text-[13px] leading-relaxed text-[#cbd5e1] shadow-lg">
+        <div className="mb-3.5 flex items-center justify-between text-[11px] font-mono font-bold uppercase tracking-wider text-[#8ab4f8] border-b border-white/5 pb-2.5">
+          <span className="flex items-center gap-2">
+            <Sparkles size={14} className="text-emerald-400" />
+            <span>Autonomous Research Synthesis</span>
+          </span>
+          <span className="text-[#9aa0a6] font-normal lowercase font-mono">{verifiedSources ?? 0} verified citations</span>
         </div>
-        <div className="whitespace-pre-line text-[#e2e8f0]">
-          <CitedText text={executiveBriefing} sources={sources} />
-        </div>
+        <SynthesisNarrativeBlock text={executiveBriefing} sources={sources} />
       </div>
 
       {/* 4-Pillar Strategic Snapshot Matrix with Human-Friendly Headers */}

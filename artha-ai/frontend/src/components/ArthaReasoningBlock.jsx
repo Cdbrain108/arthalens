@@ -188,6 +188,38 @@ export default function ArthaReasoningBlock({
     }
   }, [isDone, elapsedSeconds])
 
+  // Crucial: In conversational mode, zero agents are dispatched; in planning or running, show specialists!
+  const selectedAgentKeys = isConversationalMode
+    ? []
+    : (job?.selected_agents && job.selected_agents.length > 0)
+    ? job.selected_agents
+    : ['financial', 'valuation', 'risk', 'market', 'document', 'news']
+
+  // Auto-shift tab to Pipeline Flow once all specialist agents finish
+  const hasAutoSwitchedToPipeline = useRef(false)
+  const allAgentsDone = Boolean(
+    !isConversationalMode &&
+    (
+      (job?.completed_agents && selectedAgentKeys.length > 0 && job.completed_agents.length >= selectedAgentKeys.length) ||
+      ['validate_evidence', 'challenge_thesis', 'synthesize_report', 'build_report', 'generate_pdf', 'done'].includes(job?.current_node)
+    )
+  )
+
+  useEffect(() => {
+    if (allAgentsDone && !hasAutoSwitchedToPipeline.current) {
+      hasAutoSwitchedToPipeline.current = true
+      setReasoningView('pipeline')
+    }
+  }, [allAgentsDone])
+
+  // Reset auto-switch flag if a new job starts
+  useEffect(() => {
+    if (submitting || (job && job.current_node === 'analyze_query')) {
+      hasAutoSwitchedToPipeline.current = false
+      setReasoningView('specialists')
+    }
+  }, [submitting, job?.job_id])
+
   const shownSeconds = finalSecondsRef.current ?? elapsedSeconds
 
   // Format seconds as MM:SS
@@ -204,13 +236,6 @@ export default function ArthaReasoningBlock({
     : entity?.ticker
     ? `${entity.ticker} (${entity.name || ''})`
     : entity?.name || activeQuery || 'Stock Query'
-
-  // Crucial: In conversational mode, zero agents are dispatched; in planning or running, show specialists!
-  const selectedAgentKeys = isConversationalMode
-    ? []
-    : (job?.selected_agents && job.selected_agents.length > 0)
-    ? job.selected_agents
-    : ['financial', 'valuation', 'risk', 'market', 'document', 'news']
 
   // Determine stage headline and progress percentage
   let stageTitle = 'Auditing valuation multiples, balance sheets & SEC filings...'
