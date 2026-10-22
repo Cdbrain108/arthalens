@@ -18,8 +18,8 @@
     background: #ffffff;
     margin: 0;
     padding: 0;
-    font-size: 7.25pt;
-    line-height: 1.30;
+    font-size: 10pt;
+    line-height: 1.42;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -422,26 +422,26 @@
   .sec-num-badge {
     background: #0f172a;
     color: #ffffff;
-    font-size: 6.0pt;
+    font-size: 8pt;
     font-weight: 800;
     padding: 1px 4px;
     border-radius: 2px;
   }
   .sec-title-text {
-    font-size: 7.8pt;
+    font-size: 11.5pt;
     font-weight: 800;
     color: #0f172a;
     text-transform: uppercase;
     letter-spacing: 0.3px;
   }
   .sec-sub-tag {
-    font-size: 6.0pt;
+    font-size: 8pt;
     font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
   }
   .sub-sec-desc {
-    font-size: 6.2pt;
+    font-size: 8.5pt;
     color: #475569;
     margin-bottom: 4px;
     font-style: italic;
@@ -451,7 +451,7 @@
   .data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 6.6pt;
+    font-size: 8.5pt;
     margin-bottom: 4px;
   }
   .data-table th {
@@ -459,14 +459,14 @@
     color: #ffffff;
     font-weight: 800;
     text-transform: uppercase;
-    font-size: 6.0pt;
+    font-size: 8pt;
     letter-spacing: 0.3px;
-    padding: 2.5px 4px;
+    padding: 3px 5px;
     border: 1px solid #0f172a;
     text-align: left;
   }
   .data-table td {
-    padding: 2.5px 4px;
+    padding: 3px 5px;
     border: 1px solid #cbd5e1;
     vertical-align: middle;
   }
@@ -474,10 +474,10 @@
     background: #f8fafc;
   }
 
-  .tag-green { background: #dcfce7; color: #15803d; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 5.8pt; display: inline-block; }
-  .tag-red { background: #fee2e2; color: #b91c1c; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 5.8pt; display: inline-block; }
-  .tag-blue { background: #dbeafe; color: #1d4ed8; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 5.8pt; display: inline-block; }
-  .tag-amber { background: #fef3c7; color: #b45309; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 5.8pt; display: inline-block; }
+  .tag-green { background: #dcfce7; color: #15803d; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 7.5pt; display: inline-block; }
+  .tag-red { background: #fee2e2; color: #b91c1c; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 7.5pt; display: inline-block; }
+  .tag-blue { background: #dbeafe; color: #1d4ed8; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 7.5pt; display: inline-block; }
+  .tag-amber { background: #fef3c7; color: #b45309; font-weight: 700; padding: 1px 3px; border-radius: 2px; font-size: 7.5pt; display: inline-block; }
 
   /* Reading Guides */
   .reading-guide {
@@ -1806,7 +1806,7 @@
   </thead>
   <tbody>
     {% if report.sources %}
-      {% for s in report.sources[:15] %}
+      {% for s in report.sources %}
         <tr>
           <td style="text-align: center; font-weight: 800; color: #2563eb;">[{{ s.n }}]</td>
           <td>
@@ -1819,7 +1819,7 @@
               <div style="font-size: 5.0pt; color: #64748b;">{{ s.claim[:70] }}{% if s.claim|length > 70 %}...{% endif %}</div>
             {% endif %}
           </td>
-          <td style="text-align: center; color: #64748b;">{{ s.publication_date or '2026-10-10' }}</td>
+          <td style="text-align: center; color: #64748b;">{{ s.publication_date or 'Date unavailable' }}</td>
           <td>
             {% if s.url %}
               <a href="{{ s.url }}" style="color: #0284c7; text-decoration: none;">{{ s.url[:55] }}{% if s.url|length > 55 %}...{% endif %}</a>

@@ -39,11 +39,7 @@ def _finding_text(value):
 def _citation_index(evidence):
     sources, by_id, seen = [], {}, {}
     for item in evidence:
-        pub_date = item.get("publication_date")
-        if not pub_date or (isinstance(pub_date, str) and pub_date.startswith("2024")):
-            pub_date = "2026-10-10" if not pub_date else pub_date.replace("2024", "2026")
-        elif isinstance(pub_date, str) and pub_date.startswith("2023"):
-            pub_date = pub_date.replace("2023", "2025")
+        pub_date = item.get("publication_date") or None
         agent = item.get("agent") or "financial"
         source_title = item.get("source_title") or "Exchange / Regulatory Filing"
         url = item.get("source_url") or ""
@@ -876,25 +872,25 @@ def _build_quarterly_table(evidence, currency="INR", entity=None):
     for i, date in enumerate(sorted_dates[:4]):
         d_vals = by_date[date]
         rev = d_vals.get("revenue")
-        pat = d_vals.get("net_income") or d_vals.get("operating_income")
-        if pat is None and rev:
-            pat = rev * 0.188
-        yoy_str = "—"
+        pat = d_vals.get("net_income")
+        if pat is None and d_vals.get("operating_income") is not None:
+            pat = d_vals.get("operating_income")
+        growth_str = "—"
         if i + 4 < len(sorted_dates):
             prev_rev = by_date[sorted_dates[i + 4]].get("revenue")
-            if rev and prev_rev and prev_rev > 0:
+            if rev is not None and prev_rev and prev_rev > 0:
                 growth = (rev / prev_rev - 1) * 100
-                yoy_str = f"{growth:+.1f}% YoY"
+                growth_str = f"{growth:+.1f}% YoY"
         elif i + 1 < len(sorted_dates):
             prev_rev = by_date[sorted_dates[i + 1]].get("revenue")
-            if rev and prev_rev and prev_rev > 0:
+            if rev is not None and prev_rev and prev_rev > 0:
                 growth = (rev / prev_rev - 1) * 100
-                yoy_str = f"{growth:+.1f}% QoQ"
+                growth_str = f"{growth:+.1f}% QoQ"
         rows.append({
             "period": _fiscal_quarter_label(date),
             "revenue": _format_currency_value(rev, currency) if rev is not None else "Not reported",
             "net_profit": _format_currency_value(pat, currency) if pat is not None else "Not reported",
-            "yoy_growth": yoy_str,
+            "yoy_growth": growth_str,
         })
     return rows
 
@@ -2001,7 +1997,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         if isinstance(items, str):
             items = [items]
         safe = [t for t in items if _safe_prose(t, evidence)]
-        chosen = safe if safe else items
+        chosen = safe
         if not chosen and evidence:
             derived = []
             if is_comparison and comp_data:
@@ -2335,7 +2331,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
     if isinstance(change_items, str):
         change_items = [change_items]
     safe_change = [t for t in change_items if _safe_prose(t, evidence)]
-    chosen_change = safe_change if safe_change else change_items
+    chosen_change = safe_change
     if not chosen_change:
         chosen_change = [
             "Material acceleration or deceleration in quarterly constant-currency revenue growth.",

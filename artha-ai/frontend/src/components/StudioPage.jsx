@@ -1536,7 +1536,7 @@ export default function StudioPage({
         </section>
         ) : (
           <section className="studio-report-pane flex flex-1 flex-col bg-[#14161b] overflow-y-auto w-full p-3 sm:p-6 scroll-slim">
-            <div className="w-full max-w-5xl mx-auto space-y-4">
+            <div className="w-full max-w-5xl mx-auto space-y-4 pb-28 sm:pb-32">
               <ReportPreview
                 jobId={currentJobId}
                 job={job}

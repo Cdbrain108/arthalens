@@ -1320,7 +1320,7 @@ export default function ReportPreview({
             <span>What&rsquo;s working</span>
           </h4>
           <EvidenceList
-            items={bullItems.map(stripCitations)}
+            items={bullItems}
             sources={sources}
             bullet="•"
             bulletClass="text-[#34a853]"
@@ -1333,7 +1333,7 @@ export default function ReportPreview({
             <span>What to watch</span>
           </h4>
           <EvidenceList
-            items={bearItems.map(stripCitations)}
+            items={bearItems}
             sources={sources}
             bullet="•"
             bulletClass="text-[#ea4335]"
@@ -1587,7 +1587,7 @@ export default function ReportPreview({
             <span>What&rsquo;s working</span>
           </h4>
           <EvidenceList
-            items={bullItems.map(stripCitations)}
+            items={bullItems}
             sources={sources}
             bullet="•"
             bulletClass="text-[#34a853]"
@@ -1601,7 +1601,7 @@ export default function ReportPreview({
             <span>What to watch</span>
           </h4>
           <EvidenceList
-            items={bearItems.map(stripCitations)}
+            items={bearItems}
             sources={sources}
             bullet="•"
             bulletClass="text-[#ea4335]"

@@ -58,14 +58,17 @@ function PdfPageItem({ pdfDoc, pageNum, scale = 1.0 }) {
   }, [pdfDoc, pageNum, scale])
 
   return (
-    <div className="flex flex-col items-center mb-6 last:mb-2 w-full">
-      <div className="relative shadow-2xl rounded-lg overflow-hidden border border-white/10 bg-white max-w-full">
+    <div className="flex flex-col items-center mb-6 last:mb-2 w-full overflow-x-auto scroll-slim">
+      <div
+        className="relative shadow-2xl rounded-lg overflow-hidden border border-white/10 bg-white transition-all"
+        style={scale > 1.0 ? { width: `${scale * 100}%`, minWidth: `${scale * 100}%` } : { maxWidth: '100%' }}
+      >
         {rendering && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs">
             <Loader2 size={24} className="animate-spin text-emerald-400" />
           </div>
         )}
-        <canvas ref={canvasRef} className="max-w-full h-auto block" />
+        <canvas ref={canvasRef} className="w-full h-auto block" />
       </div>
       <div className="mt-2 text-center text-[11px] font-mono text-slate-400">
         Page {pageNum} of {pdfDoc.numPages}

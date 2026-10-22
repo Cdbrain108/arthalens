@@ -73,7 +73,7 @@ function ArthaTypewriter({ text = '', shouldAnimate = false }) {
 
 function synthesizeReportAnswer(q, reportData, companyName, ticker, user) {
   const qLower = q.toLowerCase()
-  const metrics = reportData?.metrics || {}
+  const metrics = reportData?.financial?.metrics || reportData?.metrics || {}
   const bullCase = reportData?.bull_case || []
   const bearCase = reportData?.bear_case || []
   const quarterly = reportData?.quarterly_table || []
@@ -620,10 +620,10 @@ export default function ArthaCopilot({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11.5px]">
                       <div className="bg-black/30 rounded p-2 border border-white/10">
-                        <strong className="text-emerald-400">Existing Shareholders:</strong> {ad.existing_holders}
+                        <strong className="text-emerald-400">If you already own shares:</strong> {ad.existing_holders}
                       </div>
                       <div className="bg-black/30 rounded p-2 border border-white/10">
-                        <strong className="text-blue-400">New Capital Deployment:</strong> {ad.fresh_buyers}
+                        <strong className="text-blue-400">If you are considering buying:</strong> {ad.fresh_buyers}
                       </div>
                     </div>
                     <div className="text-[11px] text-slate-300">
@@ -643,10 +643,10 @@ export default function ArthaCopilot({
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px]">
-                  {/* Bull Drivers */}
+                  {/* Key Strengths & Growth Drivers */}
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
                     <div className="flex items-center gap-1.5 font-semibold text-emerald-400 mb-1.5">
-                      <TrendingUp size={13} /> Bullish Catalysts & Moat
+                      <TrendingUp size={13} /> Key Strengths &amp; Growth Drivers
                     </div>
                     {bullPoints.length > 0 ? (
                       <ul className="space-y-1 text-slate-300">
@@ -662,10 +662,10 @@ export default function ArthaCopilot({
                     )}
                   </div>
 
-                  {/* Bear Risks */}
+                  {/* Main Business Risks */}
                   <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3">
                     <div className="flex items-center gap-1.5 font-semibold text-rose-400 mb-1.5">
-                      <TrendingDown size={13} /> Bearish Headwinds & Valuation Risks
+                      <TrendingDown size={13} /> Main Business Risks &amp; Headwinds
                     </div>
                     {bearPoints.length > 0 ? (
                       <ul className="space-y-1 text-slate-300">
@@ -681,6 +681,20 @@ export default function ArthaCopilot({
                     )}
                   </div>
                 </div>
+
+                {/* Evidence Gaps / Missing Information (Explicitly separated from business risks) */}
+                {reportData?.evidence_gaps && reportData.evidence_gaps.length > 0 && (
+                  <div className="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 p-3 text-[11.5px] text-amber-200/90 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-semibold text-amber-300 text-xs">
+                      <AlertTriangle size={13} /> What this report could not confirm (Evidence Limits)
+                    </div>
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-300 text-[11px] leading-relaxed">
+                      {reportData.evidence_gaps.slice(0, 3).map((gap, i) => (
+                        <li key={i}>{gap}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
