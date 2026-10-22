@@ -458,47 +458,95 @@ function StudioTopHeader({
         </div>
       </div>
 
-      {/* Center: Sleek View Mode Switcher: Copilot Chat vs Report Dossier */}
+      {/* Center: Sleek View Mode Switcher styled with the Reasoning Block aesthetic */}
       <div className="flex items-center justify-center min-w-0 flex-1 px-1 sm:px-2 text-center">
-        {running ? (
-          <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 text-[11px] sm:text-xs font-semibold text-emerald-300 animate-pulse shadow-sm">
-            <Sparkles size={13} className="text-emerald-400 animate-spin" style={{ animationDuration: '4s' }} />
-            <span>Synthesizing Multi-Agent Research…</span>
-          </div>
-        ) : (
-          <div className="inline-flex items-center rounded-xl bg-white/5 border border-white/10 p-0.5 shadow-inner">
-            <button
-              type="button"
-              onClick={() => setActiveView?.('chat')}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
-                activeView === 'chat'
-                  ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <Sparkles size={13} className={activeView === 'chat' ? 'text-black' : 'text-emerald-400'} />
-              <span>Chat</span>
-            </button>
+        <div className="inline-flex items-center rounded-2xl bg-gradient-to-tr from-[#161f1a]/95 via-[#131720]/95 to-[#11141b]/95 border border-emerald-500/35 p-1 shadow-[0_4px_24px_rgba(0,0,0,0.65)] backdrop-blur-md transition-all duration-300">
+          {/* ── Chat Button ── */}
+          <button
+            type="button"
+            onClick={() => {
+              if (running || submitting) return
+              setActiveView?.('chat')
+            }}
+            disabled={running || submitting}
+            className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer ${
+              running || submitting
+                ? 'opacity-40 cursor-not-allowed text-slate-400'
+                : activeView === 'chat'
+                ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-black font-bold shadow-[0_0_16px_rgba(52,211,153,0.45)]'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
+            }`}
+            title={
+              running || submitting
+                ? 'Multi-agent research synthesis in progress...'
+                : 'Switch to Copilot Chat'
+            }
+          >
+            <Sparkles
+              size={13}
+              className={
+                activeView === 'chat' && !running && !submitting
+                  ? 'text-black'
+                  : 'text-emerald-400'
+              }
+            />
+            <span>Chat</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveView?.('report')}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
-                activeView === 'report'
-                  ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <FileText size={13} className={activeView === 'report' ? 'text-black' : 'text-emerald-400'} />
-              <span>Report</span>
-              <span className={`text-[9.5px] px-1 py-0.2 rounded font-mono uppercase font-bold ${
-                activeView === 'report' ? 'bg-black/20 text-black' : 'bg-emerald-500/20 text-emerald-300'
-              }`}>
+          {/* ── Report Button (Reasoning Block Theme & Real-time Live Highlight while generating) ── */}
+          <button
+            type="button"
+            onClick={() => setActiveView?.('report')}
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-300 cursor-pointer relative ${
+              running || submitting
+                ? 'bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 border border-emerald-400/80 text-emerald-300 ring-1 ring-emerald-400/50 shadow-[0_0_22px_rgba(16,185,129,0.5)] animate-pulse'
+                : activeView === 'report'
+                ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-black font-bold shadow-[0_0_16px_rgba(52,211,153,0.45)]'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
+            }`}
+            title={
+              running || submitting
+                ? 'Multi-agent report compilation underway · Live Auditing'
+                : 'View In-Depth Equity Research Report'
+            }
+          >
+            {running || submitting ? (
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+              </span>
+            ) : (
+              <FileText
+                size={13}
+                className={
+                  activeView === 'report'
+                    ? 'text-black'
+                    : 'text-emerald-400'
+                }
+              />
+            )}
+
+            <span>Report</span>
+
+            {/* Mode / Compilation Badge */}
+            {running || submitting ? (
+              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-200 font-bold uppercase tracking-wider animate-pulse">
+                <Sparkles size={9} className="animate-spin text-emerald-300" style={{ animationDuration: '3s' }} />
+                <span>Generating...</span>
+              </span>
+            ) : (
+              <span
+                className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-mono uppercase font-bold tracking-wider transition-colors ${
+                  activeView === 'report'
+                    ? 'bg-black/25 text-black'
+                    : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                }`}
+              >
                 {researchMode}
               </span>
-            </button>
-          </div>
-        )}
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Right: Actions */}
@@ -1141,6 +1189,7 @@ export default function StudioPage({
         onBackToStart={handleGuardedBack}
         onNewResearch={handleGuardedNewResearch}
         running={running}
+        submitting={submitting}
         pdfUrl={pdfUrl}
         user={user}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
@@ -1150,7 +1199,13 @@ export default function StudioPage({
         onShare={handleShare}
         isDone={isDone}
         activeView={activeView}
-        setActiveView={setActiveView}
+        setActiveView={(view) => {
+          if (view === 'chat') {
+            handleSwitchToChat()
+          } else {
+            setActiveView(view)
+          }
+        }}
         hasReport={Boolean(job?.report)}
       />
 

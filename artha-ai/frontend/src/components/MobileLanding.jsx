@@ -579,13 +579,12 @@ export default function MobileLanding({
           </div>
         )}
 
-        {/* Prominent Generated Report Ready Banner */}
-        {job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report) && (
+        {/* Prominent Generated Report Ready Banner with Go Back to Report & Ask */}
+        {((job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report)) || (sessions && sessions.length > 0 && sessions.some((s) => s.status === 'succeeded' || s.report))) && (
           <div
-            onClick={onResume}
-            className="w-full flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-3.5 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl cursor-pointer active:scale-98 transition mb-3 text-left"
+            className="w-full flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-3.5 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl mb-3 text-left"
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
                 <Sparkles size={16} />
               </div>
@@ -594,13 +593,27 @@ export default function MobileLanding({
                   Your Research Report is Ready!
                 </p>
                 <p className="text-[11px] text-emerald-300 truncate">
-                  Institutional synthesis completed for {job.query || 'your stock'}
+                  Synthesis ready for {job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'your stock'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0 rounded-lg bg-emerald-500 py-1 px-2.5 text-[11px] font-bold text-slate-950 shadow-sm">
-              <span>View Report</span>
-              <ArrowRight size={13} />
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onResume}
+                className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-emerald-500 py-1.5 px-2.5 text-[11px] font-bold text-slate-950 shadow-sm active:scale-95 transition"
+              >
+                <FileText size={12} />
+                <span className="truncate">Go back to report &ldquo;{job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'Report'}&rdquo;</span>
+              </button>
+              <button
+                type="button"
+                onClick={onResume}
+                className="flex items-center justify-center gap-1 rounded-lg border border-white/20 bg-white/10 py-1.5 px-2.5 text-[11px] font-semibold text-white active:scale-95 transition"
+              >
+                <Sparkles size={12} className="text-emerald-400" />
+                <span>Ask</span>
+              </button>
             </div>
           </div>
         )}

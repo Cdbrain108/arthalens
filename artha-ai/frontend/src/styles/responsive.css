@@ -134,7 +134,8 @@ h1, h2, h3, h4, p, li, dd, dt, td, th, summary {
 }
 
 .studio-left-pane,
-.studio-report-pane {
+.studio-report-pane,
+.studio-synthesis-pane {
   flex: 1 1 auto;
   width: 100%;
   max-width: 100%;
