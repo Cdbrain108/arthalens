@@ -52,9 +52,17 @@ function safeParse(raw) {
   }
 }
 
-export function loadSessions() {
+export function getStorageKey(userId = null) {
+  if (userId && !String(userId).startsWith('guest_')) {
+    return `stock_research_sessions_user_${userId}`
+  }
+  return 'stock_research_sessions_guest'
+}
+
+export function loadSessions(userId = null) {
   try {
-    const raw = localStorage.getItem(LOCAL_KEY)
+    const key = getStorageKey(userId)
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null
     if (!raw) return []
     return safeParse(raw).filter((s) => s && (s.job_id || s.query))
   } catch {
@@ -62,9 +70,12 @@ export function loadSessions() {
   }
 }
 
-function persist(list) {
+function persist(list, userId = null) {
   try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(list.slice(0, MAX_SESSIONS)))
+    const key = getStorageKey(userId)
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify(list.slice(0, MAX_SESSIONS)))
+    }
   } catch {
     /* private mode */
   }
@@ -73,7 +84,7 @@ function persist(list) {
 // Upsert a finished or running job snapshot.
 // If userId is provided, also syncs to Cloud Firestore.
 export function saveSession(job, extra = {}, userId = null) {
-  if (!job && !extra.query) return loadSessions()
+  if (!job && !extra.query) return loadSessions(userId)
   const jobId = job?.job_id || extra.job_id || `chat_${Date.now()}`
   const now = new Date().toISOString()
 
@@ -95,14 +106,14 @@ export function saveSession(job, extra = {}, userId = null) {
     createdAt: extra.createdAt || now,
   }
 
-  const prev = loadSessions()
+  const prev = loadSessions(userId)
   const without = prev.filter((s) => s.job_id !== jobId)
   const existing = prev.find((s) => s.job_id === jobId)
   if (existing?.createdAt) entry.createdAt = existing.createdAt
   if (existing?.storagePdfUrl && !entry.storagePdfUrl) entry.storagePdfUrl = existing.storagePdfUrl
 
   const next = [entry, ...without].slice(0, MAX_SESSIONS)
-  persist(next)
+  persist(next, userId)
 
   // Persist to Cloud Firestore if user is authenticated
   if (userId && !String(userId).startsWith('guest_')) {
@@ -117,8 +128,8 @@ export function saveSession(job, extra = {}, userId = null) {
 // Pure conversational chat message save
 export function saveChatQuery(query, userId = null) {
   const q = (query || '').trim()
-  if (!q) return loadSessions()
-  const prev = loadSessions()
+  if (!q) return loadSessions(userId)
+  const prev = loadSessions(userId)
   if (prev[0]?.query === q) return prev
   return saveSession(
     null,
@@ -132,8 +143,8 @@ export function saveChatQuery(query, userId = null) {
 }
 
 export function deleteSession(jobId, userId = null) {
-  const next = loadSessions().filter((s) => s.job_id !== jobId)
-  persist(next)
+  const next = loadSessions(userId).filter((s) => s.job_id !== jobId)
+  persist(next, userId)
 
   if (userId && !String(userId).startsWith('guest_')) {
     firestoreDeleteConversation(userId, jobId).catch((err) => {
@@ -144,25 +155,29 @@ export function deleteSession(jobId, userId = null) {
   return next
 }
 
-export function clearSessions() {
+export function clearSessions(userId = null) {
   try {
-    localStorage.removeItem(LOCAL_KEY)
+    const key = getStorageKey(userId)
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key)
+    }
   } catch {}
   return []
 }
 
 // Load remote sessions from Cloud Firestore and merge with local
 export async function loadUserSessions(userId) {
-  const local = loadSessions()
   if (!userId || String(userId).startsWith('guest_')) {
-    return local
+    return loadSessions(null)
   }
+
+  const local = loadSessions(userId)
 
   try {
     const { conversations, error } = await firestoreGetUserConversations(userId, MAX_SESSIONS)
     if (error || !conversations) return local
 
-    return mergeSessions(local, conversations)
+    return mergeSessions(local, conversations, userId)
   } catch (err) {
     console.warn('Could not load user sessions from Firestore:', err)
     return local
@@ -170,7 +185,7 @@ export async function loadUserSessions(userId) {
 }
 
 // Merge remote sessions with local sessions by job_id
-export function mergeSessions(localList = [], remoteList = []) {
+export function mergeSessions(localList = [], remoteList = [], userId = null) {
   const byId = new Map()
   for (const s of localList) if (s?.job_id) byId.set(s.job_id, s)
   for (const r of remoteList) {
@@ -197,7 +212,7 @@ export function mergeSessions(localList = [], remoteList = []) {
     .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
     .slice(0, MAX_SESSIONS)
 
-  persist(merged)
+  persist(merged, userId)
   return merged
 }
 

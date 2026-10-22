@@ -232,3 +232,27 @@ test('Login modal renders clean authentication options', () => {
 
   assert.ok(html.includes('ArthaLens') || html.includes('Sign In') || html.includes('Google'))
 })
+
+test('Account-specific session storage strictly partitions reports by userId', async () => {
+  const { getStorageKey } = await import('../storage/chatSessions.js')
+  assert.equal(getStorageKey('user_alpha'), 'stock_research_sessions_user_user_alpha')
+  assert.equal(getStorageKey('user_beta'), 'stock_research_sessions_user_user_beta')
+  assert.equal(getStorageKey(null), 'stock_research_sessions_guest')
+  assert.equal(getStorageKey('guest_123'), 'stock_research_sessions_guest')
+})
+
+test('PdfViewerModal provides Back to Report Page action and never renders download-triggering object or embed tags', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(PdfViewerModal, {
+      jobId: 'tcs-job-1',
+      pdfUrl: 'https://example.com/report.pdf',
+      onClose: () => {},
+      onSwitchToReport: () => {},
+    })
+  )
+
+  assert.ok(html.includes('Back to Report Page'))
+  assert.ok(!html.includes('<object'))
+  assert.ok(!html.includes('<embed'))
+})
+

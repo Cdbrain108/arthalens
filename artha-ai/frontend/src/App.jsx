@@ -119,46 +119,34 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [running])
 
-  // When authenticated user changes, load remote Firestore conversations
+  // When authenticated user changes, load their account-specific sessions
   useEffect(() => {
     let cancelled = false
-    if (user?.uid && !user.guest) {
-      loadUserSessions(user.uid).then((loaded) => {
+    const userId = user?.uid && !user.guest ? user.uid : null
+    if (userId) {
+      loadUserSessions(userId).then((loaded) => {
         if (!cancelled && Array.isArray(loaded)) {
           setSessions(loaded)
         }
       })
+    } else {
+      setSessions(loadSessions(null))
     }
     return () => {
       cancelled = true
     }
   }, [user?.uid, user?.guest])
 
-  // Fetch backend history on startup
-  useEffect(() => {
-    let cancelled = false
-    api
-      .getHistory()
-      .then((remote) => {
-        if (!cancelled && Array.isArray(remote) && remote.length) {
-          setSessions((previous) => mergeSessions(previous, remote))
-        }
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  // Save completed jobs locally and to Firestore
+  // Save completed jobs locally and to Firestore under active account
   useEffect(() => {
     if (!job || !isTerminalJob(job)) return
     const key = `${job.job_id}:${job.status}`
     if (savedJobRef.current !== key) {
       savedJobRef.current = key
-      setSessions(saveSession(job, {}, user?.uid))
+      const userId = user?.uid && !user.guest ? user.uid : null
+      setSessions(saveSession(job, {}, userId))
     }
-  }, [job, user?.uid])
+  }, [job, user?.uid, user?.guest])
 
   const handleStartResearch = useCallback(
     (value) => {
@@ -221,9 +209,10 @@ export default function App() {
 
   const handleDeleteSession = useCallback(
     (jobId) => {
-      setSessions(deleteSession(jobId, user?.uid))
+      const userId = user?.uid && !user.guest ? user.uid : null
+      setSessions(deleteSession(jobId, userId))
     },
-    [user?.uid]
+    [user?.uid, user?.guest]
   )
 
   const handleLoginSuccess = useCallback(

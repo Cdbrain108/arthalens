@@ -856,6 +856,10 @@ export default function ArthaCopilot({
           jobId={jobId}
           pdfUrl={pdfUrl}
           onClose={() => setShowPdfModal(false)}
+          onSwitchToReport={() => {
+            setShowPdfModal(false)
+            onBackToReport?.()
+          }}
         />
       )}
     </div>

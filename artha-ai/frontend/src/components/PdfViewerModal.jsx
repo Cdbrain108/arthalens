@@ -4,10 +4,16 @@ import * as pdfjsLib from 'pdfjs-dist'
 import { api } from '../api/client'
 import Logo from './Logo'
 
-// Configure PDF.js worker using official CDN matching pdfjs-dist version 3.11.174
+// Configure PDF.js worker using same-origin blob script to prevent cross-origin SecurityError
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  try {
+    const workerCode = `importScripts('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');`
+    const blob = new Blob([workerCode], { type: 'application/javascript' })
+    pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob)
+  } catch {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  }
 }
 
 function PdfPageItem({ pdfDoc, pageNum, scale = 1.0 }) {
@@ -145,7 +151,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
             setLoading(false)
           }
         } catch (pdfErr) {
-          console.warn('PDF.js canvas rendering fallback to native embed:', pdfErr)
+          console.warn('PDF.js canvas rendering fallback to in-app view:', pdfErr)
           if (active) {
             setUseNativeEmbed(true)
             setLoading(false)
@@ -211,18 +217,19 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {onSwitchToReport && (
-              <button
-                type="button"
-                onClick={onSwitchToReport}
-                className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer"
-                title="Switch directly to the in-app interactive report"
-              >
-                <FileText size={12} />
-                <span className="hidden sm:inline">Interactive Report</span>
-                <span className="sm:hidden">Report</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                onSwitchToReport?.()
+                onClose?.()
+              }}
+              className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+              style={{ backgroundColor: '#34d399', color: '#04120c' }}
+              title="Return to the in-app interactive report"
+            >
+              <FileText size={13} />
+              <span>Back to Report Page</span>
+            </button>
 
             {pdfDoc && !useNativeEmbed && (
               <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-slate-300">
@@ -257,16 +264,6 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
 
             {rawBlobUrl && (
               <>
-                <button
-                  type="button"
-                  onClick={() => setUseNativeEmbed((v) => !v)}
-                  className="hidden md:inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
-                  title="Toggle between Canvas & Native viewer"
-                >
-                  <RotateCcw size={12} />
-                  <span>{useNativeEmbed ? 'Canvas Mode' : 'Native View'}</span>
-                </button>
-
                 <a
                   href={rawBlobUrl}
                   target="_blank"
@@ -326,16 +323,18 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
                   : error}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-                {onSwitchToReport && (
-                  <button
-                    type="button"
-                    onClick={onSwitchToReport}
-                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2.5 text-xs font-bold text-black shadow-lg shadow-emerald-500/25 hover:brightness-110 cursor-pointer active:scale-95"
-                  >
-                    <FileText size={14} />
-                    <span>Open In-App Report Dossier</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose?.()
+                    onSwitchToReport?.()
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2.5 text-xs font-bold text-black shadow-lg shadow-emerald-500/25 hover:brightness-110 cursor-pointer active:scale-95"
+                  style={{ backgroundColor: '#34d399', color: '#04120c' }}
+                >
+                  <FileText size={14} />
+                  <span>Open Interactive Report</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setRetryCount((c) => c + 1)}
@@ -355,37 +354,48 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
               </div>
             </div>
           ) : useNativeEmbed || (!pdfDoc && rawBlobUrl) ? (
-            <div className="w-full h-full flex flex-col flex-1 min-h-[560px]">
-              <object
-                data={rawBlobUrl}
-                type="application/pdf"
-                className="w-full flex-1 min-h-[560px] rounded-xl border border-white/10 bg-[#16181e]"
-              >
-                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-300 gap-3 my-auto">
-                  <FileText size={36} className="text-emerald-400" />
-                  <p className="font-semibold text-sm">Institutional PDF Dossier Ready</p>
-                  <p className="text-xs text-slate-400 max-w-sm">
-                    Your device web engine handles PDFs directly via download or dedicated viewer.
-                  </p>
-                  <div className="flex gap-2.5 mt-2">
-                    <a
-                      href={rawBlobUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-bold text-xs shadow-md hover:brightness-110"
-                    >
-                      Open in New Tab
-                    </a>
-                    <a
-                      href={rawBlobUrl}
-                      download={`arthalens_research_${cleanJobId}.pdf`}
-                      className="px-4 py-2 rounded-xl bg-white/10 border border-white/15 text-white font-medium text-xs hover:bg-white/15"
-                    >
-                      Download PDF
-                    </a>
-                  </div>
-                </div>
-              </object>
+            <div className="w-full flex flex-col items-center justify-center p-6 sm:p-10 text-center my-auto max-w-xl mx-auto space-y-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-xl">
+                <FileText size={28} />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-white">
+                  Institutional Evidence Dossier Ready
+                </h3>
+                <p className="mt-1.5 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Your research report and regulatory filing audit are complete. You can view the full interactive report directly in-app or download the PDF file.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSwitchToReport?.()
+                    onClose?.()
+                  }}
+                  className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold shadow-lg transition hover:brightness-110 active:scale-95 cursor-pointer"
+                  style={{ backgroundColor: '#34d399', color: '#04120c' }}
+                >
+                  <FileText size={15} />
+                  <span>Open Interactive Report</span>
+                </button>
+                <a
+                  href={rawBlobUrl}
+                  download={`arthalens_research_${cleanJobId}.pdf`}
+                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 hover:bg-white/15 px-4 py-2.5 text-xs font-semibold text-white transition active:scale-95 cursor-pointer"
+                >
+                  <Download size={15} />
+                  <span>Download PDF Dossier</span>
+                </a>
+                <a
+                  href={rawBlobUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3.5 py-2.5 text-xs font-medium text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  <span>Open in Tab ↗</span>
+                </a>
+              </div>
             </div>
           ) : pdfDoc ? (
             <div className="w-full flex flex-col items-center max-w-4xl">

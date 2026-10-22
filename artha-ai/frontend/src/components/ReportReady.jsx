@@ -153,6 +153,10 @@ export default function ReportReady({ job, onReset, user }) {
           jobId={jobId}
           pdfUrl={pdf?.url}
           onClose={() => setShowPdfModal(false)}
+          onSwitchToReport={() => {
+            setShowPdfModal(false)
+            setShowPreview(true)
+          }}
         />
       )}
     </div>

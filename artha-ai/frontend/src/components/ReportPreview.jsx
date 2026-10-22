@@ -2940,6 +2940,7 @@ export default function ReportPreview({
           jobId={jobId}
           pdfUrl={resolvedPdfUrl}
           onClose={() => setShowPdfViewer(false)}
+          onSwitchToReport={() => setShowPdfViewer(false)}
         />
       )}
     </div>
