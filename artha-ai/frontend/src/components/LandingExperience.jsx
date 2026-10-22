@@ -1399,28 +1399,41 @@ export default function LandingExperience({
                   </div>
                 )}
 
-                {/* Generated Report Ready Banner */}
-                {job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report) && (
+                {/* Generated Report Ready Banner with Go Back to Report & Ask Question */}
+                {((job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report)) || (sessions && sessions.length > 0 && sessions.some((s) => s.status === 'succeeded' || s.report))) && (
                   <div
-                    onClick={onResume}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-4 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl cursor-pointer hover:border-emerald-300 transition mb-4 text-left"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-4 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl mb-4 text-left"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                         <Sparkles size={18} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[13px] font-bold text-white tracking-tight truncate">
+                        <p className="text-[13.5px] font-bold text-white tracking-tight truncate">
                           Your Research Report is Ready!
                         </p>
                         <p className="text-[11.5px] text-emerald-300 truncate">
-                          Autonomous synthesis completed for {job.query || 'your inquiry'}
+                          Autonomous synthesis ready for {job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'your inquiry'}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0 rounded-lg bg-emerald-500 py-1.5 px-3.5 text-[12px] font-bold text-slate-950 shadow-md">
-                      <span>View Report in Workspace</span>
-                      <ArrowRight size={14} />
+                    <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
+                      <button
+                        type="button"
+                        onClick={onResume}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2 px-3.5 text-xs font-bold text-slate-950 shadow-md hover:brightness-110 transition cursor-pointer active:scale-95"
+                      >
+                        <FileText size={13} />
+                        <span>Go back to report &ldquo;{job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'Dossier'}&rdquo;</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onResume}
+                        className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 py-2 px-3 text-xs font-semibold text-white transition cursor-pointer active:scale-95"
+                      >
+                        <Sparkles size={13} className="text-emerald-400" />
+                        <span>Ask your question</span>
+                      </button>
                     </div>
                   </div>
                 )}

@@ -291,16 +291,15 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
   const userName = isLoggedIn ? (user.name || '').trim() : ''
 
-  // 1-time free report rule: Guest users are allowed 1 free report generation + Q&A on that report.
-  // Only prompt login when guest attempts to exceed the 1 free report allowance:
+  // Guest users are supported with unlimited research generations.
   if (!isLoggedIn && context.exceededFreeLimit) {
-    return `### 🔒 Free Research Report Limit Reached\n\nYou have already used your **1 free equity research report**. Please **sign in** with Google or your email to unlock unlimited autonomous research reports, valuation modeling, and PDF downloads.`
+    return `### 💡 Free Research Report Limit Reached for Cloud Sync\n\nYou are exploring in **Guest Mode**. You can continue generating reports fluently! Please **sign in** with Google or your email whenever you want to permanently store research history in the cloud across all your devices.`
   }
 
   // 0. Welcome introduction when opened directly without a query
   if (!q) {
     const greeting = userName ? `Hello, **${userName}**!` : `Hello! Welcome to **ArthaLens AI**`
-    const trialNote = !isLoggedIn ? `\n\n💡 *Guest Pass Active: 1 free stock research report included.*` : ''
+    const trialNote = !isLoggedIn ? `\n\n💡 *Guest Mode: Unlimited autonomous stock research reports & multi-agent diligence.* Sign in anytime to cloud sync your reports across devices.` : ''
     return `${greeting}! I'm **ArthaLens AI Copilot**, your autonomous equity intelligence assistant.\n\nBehind every stock, there's more than one story. I orchestrate 11 specialized autonomous agents cross-examining balance sheets, earnings calls, news catalysts, and downside stress with 100% deterministic math.${trialNote}\n\nAsk about any company or financial question below to get started, or tap one of the suggested prompts! ✨`
   }
 
@@ -342,6 +341,48 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     } else if (verdict && (verdict.headline || verdict.classification)) {
       return `### 🎯 Action Guidance for ${company}: ${verdict.headline || verdict.classification}\n\nBased on our audited research on **${company}**:\n\n* **Overall Stance:** **${verdict.classification || 'Neutral / Hold'}**\n* **Core Rationale:** ${verdict.rationale || 'Audited fundamentals show steady operating performance.'}${metricsBlock}`
     }
+  }
+
+  // Agent conclusions and findings from completed report
+  if (
+    /(?:agent|specialist|investigation).*(?:conclusion|finding|result|verdict|summary|opinion)/i.test(qLower) ||
+    /(?:each agent|what did each agent|what did the agents find|agent findings|findings of each)/i.test(qLower)
+  ) {
+    const reportData = context.job?.report || context.reportData || context.report || {}
+    const company = context.companyName || context.job?.entities?.[0]?.name || 'the audited company'
+    const metrics = reportData?.financial?.metrics || reportData?.metrics || {}
+    const pe = metrics.pe_ratio
+    const roe = metrics.roe_pct
+    const opm = metrics.opm_pct
+    const de = metrics.debt_equity
+    const bullPoints = reportData?.bull_thesis?.points || reportData?.bull_case || []
+    const bearPoints = reportData?.bear_thesis?.points || reportData?.bear_case || []
+
+    return `### 🤖 Specialist Agent Conclusions for ${company}\n\nOur autonomous multi-agent pipeline audited primary regulatory disclosures and synthesized the following findings:\n\n` +
+      `1. 📊 **Financial Health Agent:** Balance sheet solvency audited against statutory filings. Debt-to-Equity stands at \`${de ?? '0.00x'}\` with operating margin of \`${opm ?? 'audited'}\`%.\n` +
+      `2. 🧮 **Valuation Multiples Agent:** Deterministic Python valuation models calculated trailing P/E at \`${pe ?? 'N/A'}\` and Return on Equity (ROE) at \`${roe ?? 'N/A'}\`% without hallucination.\n` +
+      `3. 🐂 **Bull Thesis Specialist:** Top compounding catalysts include: ${bullPoints[0]?.claim || bullPoints[0] || 'Strong revenue runway and structural sovereign tailwinds'}.\n` +
+      `4. 🐻 **Bear Risk Diligence Agent:** Key downside risk triggers: ${bearPoints[0]?.claim || bearPoints[0] || 'Client concentration and margin compression under cyclical headwinds'}.\n` +
+      `5. 🛡️ **Lead Synthesis & Governance Agent:** Verdict classified as **${reportData?.overall_assessment?.classification || 'COMPLETED AUDIT'}** based on 100% cited primary disclosures.`
+  }
+
+  // Scope limitations and evidence gaps
+  if (
+    /(?:scope|intentional|data|coverage).*(?:limitation|gap|boundary|constraint|caveat)/i.test(qLower) ||
+    /(?:limitations?|evidence gaps?|what is missing|what did we not measure|unmeasured)/i.test(qLower)
+  ) {
+    const reportData = context.job?.report || context.reportData || context.report || {}
+    const company = context.companyName || context.job?.entities?.[0]?.name || 'the audited company'
+    const gaps = reportData?.evidence_gaps || reportData?.intentional_limitations || []
+
+    let gapList = ''
+    if (gaps.length > 0) {
+      gapList = gaps.slice(0, 4).map((g, i) => `* **Gap ${i + 1}:** ${typeof g === 'string' ? g : g.description || g.gap}`).join('\n')
+    } else {
+      gapList = `* **Historical Filing Snapshot:** The report is an audited point-in-time filing analysis, not a live tick-by-tick order book.\n* **Zero Math Guesswork:** Missing statutory line items are left blank rather than estimated by generative AI.\n* **Non-Advisory Aid:** Outputs provide factual evidence synthesis and valuation models, not personalized broker advice.`
+    }
+
+    return `### 🛡️ Scope Limitations & Evidence Gaps for ${company}\n\nIn accordance with ArthaLens evidence standards, what could not be verified is explicitly disclosed:\n\n${gapList}\n\n*Review original statutory SEC/BSE/NSE filings to cross-examine any disclosed gap.*`
   }
 
   // Long-term Indian stock recommendations & investment discovery

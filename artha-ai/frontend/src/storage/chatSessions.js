@@ -38,10 +38,9 @@ export function recordGuestReportUsage() {
   }
 }
 
-export function canGuestGenerateReport(user) {
-  const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
-  if (isLoggedIn) return true
-  return getGuestReportCount() < GUEST_ALLOWED_REPORTS
+export function canGuestGenerateReport(_user) {
+  // Unlimited generations for all users — never block guests from research runs
+  return true
 }
 
 function safeParse(raw) {

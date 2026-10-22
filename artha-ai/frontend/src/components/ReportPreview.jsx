@@ -1137,7 +1137,7 @@ export default function ReportPreview({
             className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-1.5 font-sans text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/25 transition shadow-sm cursor-pointer"
           >
             <Sparkles size={14} className="text-emerald-400" />
-            <span>Ask More About Report</span>
+            <span>Chat with Copilot</span>
           </button>
         )}
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   ArrowLeft,
   Sparkles,
@@ -460,38 +460,45 @@ function StudioTopHeader({
 
       {/* Center: Sleek View Mode Switcher: Copilot Chat vs Report Dossier */}
       <div className="flex items-center justify-center min-w-0 flex-1 px-1 sm:px-2 text-center">
-        <div className="inline-flex items-center rounded-xl bg-white/5 border border-white/10 p-0.5 shadow-inner">
-          <button
-            type="button"
-            onClick={() => setActiveView?.('chat')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
-              activeView === 'chat'
-                ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <Sparkles size={13} className={activeView === 'chat' ? 'text-black' : 'text-emerald-400'} />
-            <span>Chat</span>
-          </button>
+        {running ? (
+          <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 text-[11px] sm:text-xs font-semibold text-emerald-300 animate-pulse shadow-sm">
+            <Sparkles size={13} className="text-emerald-400 animate-spin" style={{ animationDuration: '4s' }} />
+            <span>Synthesizing Multi-Agent Research…</span>
+          </div>
+        ) : (
+          <div className="inline-flex items-center rounded-xl bg-white/5 border border-white/10 p-0.5 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setActiveView?.('chat')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
+                activeView === 'chat'
+                  ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Sparkles size={13} className={activeView === 'chat' ? 'text-black' : 'text-emerald-400'} />
+              <span>Chat</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveView?.('report')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
-              activeView === 'report'
-                ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <FileText size={13} className={activeView === 'report' ? 'text-black' : 'text-emerald-400'} />
-            <span>Report</span>
-            <span className={`text-[9.5px] px-1 py-0.2 rounded font-mono uppercase font-bold ${
-              activeView === 'report' ? 'bg-black/20 text-black' : 'bg-emerald-500/20 text-emerald-300'
-            }`}>
-              {researchMode}
-            </span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setActiveView?.('report')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
+                activeView === 'report'
+                  ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <FileText size={13} className={activeView === 'report' ? 'text-black' : 'text-emerald-400'} />
+              <span>Report</span>
+              <span className={`text-[9.5px] px-1 py-0.2 rounded font-mono uppercase font-bold ${
+                activeView === 'report' ? 'bg-black/20 text-black' : 'bg-emerald-500/20 text-emerald-300'
+              }`}>
+                {researchMode}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right: Actions */}
@@ -754,6 +761,43 @@ export default function StudioPage({
     setQaMessages([])
     setCompletedQaIds(new Set())
   }, [job?.job_id, job?.report, job?.status])
+
+  // Automatically open the report dossier as soon as research finishes generating
+  const autoNavigatedRef = useRef(null)
+  useEffect(() => {
+    if (isDone && job?.report && autoNavigatedRef.current !== job.job_id) {
+      autoNavigatedRef.current = job.job_id
+      setActiveView('report')
+    }
+  }, [isDone, job?.report, job?.job_id])
+
+  // Dedicated Copilot welcoming when switching to chat after a report has been generated
+  const hasAddedReportGreetingRef = useRef(null)
+  const handleSwitchToChat = useCallback(() => {
+    setActiveView('chat')
+    if (isDone && job?.report && hasAddedReportGreetingRef.current !== job.job_id) {
+      hasAddedReportGreetingRef.current = job.job_id
+      const queryName = activeQuery || job?.report?.company?.name || job?.entities?.[0]?.name || 'your research'
+      const reportGreeting = `As per your query "${queryName}", I have generated an in-depth institutional equity research report. You can review the complete dossier anytime from the Report tab (where interactive in-app preview and PDF download options are available).\n\nIf you want to know more about this report or want to understand it in greater depth, I can help you with specific questions and analysis:`
+      setCopilotMessages((prev) => [
+        ...prev,
+        {
+          id: `report_ready_${job.job_id || Date.now()}`,
+          role: 'assistant',
+          text: reportGreeting,
+          suggestions: [
+            { label: 'What is the valuation verdict & P/E multiple?', type: 'action' },
+            { label: 'What are the core bull catalysts?', type: 'action' },
+            { label: 'What are the top downside risk triggers?', type: 'action' },
+            { label: 'Show agent conclusions and scope limitations', type: 'action' },
+          ],
+        },
+      ])
+    }
+    if (!isTouchDevice()) {
+      setTimeout(() => inputRef.current?.focus(), 120)
+    }
+  }, [isDone, job?.report, job?.job_id, job?.entities, activeQuery])
 
   // Focus input on mount + refocus when research finishes (DESKTOP ONLY — never on mobile/touch screens to avoid popping virtual keyboard)
   useEffect(() => {
@@ -1116,7 +1160,67 @@ export default function StudioPage({
         data-running={String(running || submitting)}
         data-active-view={activeView}
       >
-        {activeView === 'chat' ? (
+        {/* ══ Dedicated Synthesis View: while research is compiling, show combined animation cockpit ══ */}
+        {running || submitting ? (
+          <section className="studio-synthesis-pane flex flex-1 flex-col bg-[#14161b] overflow-y-auto w-full p-3 sm:p-6 scroll-slim">
+            <div className="w-full max-w-4xl mx-auto space-y-5 animate-fade-in my-auto py-4">
+              {/* Top Hero: Synthesizing banner animation */}
+              <div className="flex flex-col items-center justify-center p-6 sm:p-8 text-center rounded-2xl border border-emerald-500/30 bg-[#1a1d24] shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative overflow-hidden">
+                <div className="absolute -inset-10 bg-gradient-to-tr from-emerald-500/10 via-teal-500/5 to-transparent blur-2xl pointer-events-none" />
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 mb-3.5 shadow-lg shadow-emerald-500/20">
+                  <Sparkles size={28} className="animate-spin text-emerald-400" style={{ animationDuration: '6s' }} />
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-mono font-semibold text-emerald-300 uppercase tracking-wider mb-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Stage: {job?.current_node ? job.current_node.replace(/_/g, ' ').toUpperCase() : 'MANAGEMENT AGENT'}</span>
+                </div>
+                <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight">
+                  Synthesizing Equity Research Report
+                </h2>
+                <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
+                  Parallel specialist agents are auditing regulatory filings, calculating financial metrics, and stress-testing evidence.
+                </p>
+                <div className="mt-4 flex items-center gap-3 text-[11px] font-mono text-slate-400">
+                  <span>Real-time multi-agent execution</span>
+                  <span>·</span>
+                  <span>100% cited evidence</span>
+                </div>
+              </div>
+
+              {/* Directly below: Artha AI Copilot Reasoning Block animation */}
+              <ArthaReasoningBlock
+                job={job}
+                query={activeQuery}
+                running={running}
+                submitting={submitting}
+                isDone={isDone}
+                isGenerating={isGenerating}
+                isConversational={isConversational}
+                generationStep={generationStep}
+                askingReport={askingReport}
+                onViewReport={() => setActiveView('report')}
+              />
+
+              {/* Guard against premature report access & live auditing status indicator */}
+              <div className="w-full flex items-center justify-between p-3 rounded-xl border border-white/10 bg-[#16181e] text-xs">
+                <div className="flex items-center gap-2 text-emerald-400 font-medium truncate">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  <span className="truncate">Auditing... 11 specialists analyzing filings</span>
+                </div>
+                <button
+                  type="button"
+                  disabled
+                  className="text-[11px] font-mono text-slate-500 shrink-0 cursor-not-allowed opacity-70"
+                >
+                  Auditing...
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : activeView === 'chat' ? (
           <section
             className="studio-left-pane flex flex-1 flex-col bg-[#14161b] overflow-hidden w-full"
           >
@@ -1385,22 +1489,18 @@ export default function StudioPage({
                 initialMode={researchMode}
                 onModeChange={setResearchMode}
                 onStartResearch={onStartResearch}
-                onAskMoreAboutReport={() => {
-                  setActiveView('chat')
-                  setTimeout(() => inputRef.current?.focus(), 120)
-                }}
+                onAskMoreAboutReport={handleSwitchToChat}
               />
             </div>
-            {/* Floating action button on mobile to quickly jump back to chat */}
+            {/* Floating action button on PC and mobile to quickly jump back to chat */}
             <button
               type="button"
-              onClick={() => {
-                setActiveView('chat')
-                setTimeout(() => inputRef.current?.focus(), 150)
-              }}
-              className="sm:hidden fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-black px-4 py-2.5 shadow-[0_4px_24px_rgba(16,185,129,0.5)] border border-emerald-300/40 text-xs font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              onClick={handleSwitchToChat}
+              className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-black px-4 py-2.5 sm:px-5 sm:py-3 shadow-[0_4px_24px_rgba(16,185,129,0.5)] border border-emerald-300/40 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              title="Chat with Artha Copilot about this report"
+              aria-label="Chat with Artha Copilot about this report"
             >
-              <Sparkles size={14} className="text-black animate-pulse" />
+              <Sparkles size={15} className="text-black animate-pulse" />
               <span>Ask Copilot →</span>
             </button>
           </section>
@@ -1418,6 +1518,11 @@ export default function StudioPage({
           jobId={currentJobId}
           pdfUrl={pdfUrl}
           onClose={() => setShowPdfModal(false)}
+          onSwitchToReport={() => {
+            setShowPdfModal(false)
+            setActiveView('report')
+          }}
+          hasReport={Boolean(job?.report)}
         />
       )}
 

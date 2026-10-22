@@ -74,7 +74,7 @@ function PdfPageItem({ pdfDoc, pageNum, scale = 1.0 }) {
   )
 }
 
-export default function PdfViewerModal({ jobId, pdfUrl, onClose }) {
+export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToReport, hasReport = true }) {
   const [pdfDoc, setPdfDoc] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -208,6 +208,19 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose }) {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {onSwitchToReport && (
+              <button
+                type="button"
+                onClick={onSwitchToReport}
+                className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer"
+                title="Switch directly to the in-app interactive report"
+              >
+                <FileText size={12} />
+                <span className="hidden sm:inline">Interactive Report</span>
+                <span className="sm:hidden">Report</span>
+              </button>
+            )}
+
             {pdfDoc && !useNativeEmbed && (
               <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-slate-300">
                 <button
@@ -297,35 +310,45 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose }) {
               </p>
             </div>
           ) : error && !rawBlobUrl ? (
-            <div role="alert" className="my-auto flex flex-col items-center justify-center gap-3 py-10 text-center max-w-md px-4">
+            <div role="alert" className="my-auto flex flex-col items-center justify-center gap-3.5 py-10 text-center max-w-md px-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-lg">
                 <FileText size={24} />
               </div>
-              <p className="text-[15px] font-bold text-white">Institutional PDF Dossier</p>
+              <p className="text-[15px] font-bold text-white">Institutional Research Dossier</p>
               <p className="text-[12px] text-slate-300 leading-relaxed max-w-sm">
                 {error.includes('No PDF dossier is available')
-                  ? 'Your institutional research dossier is ready to compile from verified evidence.'
+                  ? 'Your institutional research dossier is ready to view.'
+                  : error.includes('backend did not return a PDF')
+                  ? 'The static PDF file compilation is pending, but your full interactive research dossier is ready to view right now.'
                   : error}
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                {onSwitchToReport && (
+                  <button
+                    type="button"
+                    onClick={onSwitchToReport}
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2.5 text-xs font-bold text-black shadow-lg shadow-emerald-500/25 hover:brightness-110 cursor-pointer active:scale-95"
+                  >
+                    <FileText size={14} />
+                    <span>Open In-App Report Dossier</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setRetryCount((c) => c + 1)}
-                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-xs font-bold text-black shadow-md hover:brightness-110 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 cursor-pointer"
                 >
                   <RotateCcw size={13} />
-                  <span>Retry In-App View</span>
+                  <span>Retry PDF</span>
                 </button>
-                {jobId && !jobId.startsWith('chat_') && (
-                  <a
-                    href={api.pdfUrl(jobId)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 cursor-pointer"
-                  >
-                    <span>Open Direct Link ↗</span>
-                  </a>
-                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-transparent px-3 py-2 text-xs font-medium text-slate-400 hover:text-white cursor-pointer"
+                >
+                  <X size={13} />
+                  <span>Close</span>
+                </button>
               </div>
             </div>
           ) : useNativeEmbed || (!pdfDoc && rawBlobUrl) ? (
