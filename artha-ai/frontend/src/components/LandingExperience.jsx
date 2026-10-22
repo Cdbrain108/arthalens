@@ -890,6 +890,8 @@ export default function LandingExperience({
   const inputRef = useRef(null)
   const typed = useTypewriter(TYPEWRITER_PHRASES)
 
+  const [reportBannerDismissed, setReportBannerDismissed] = useState(false)
+
   // Dossier Live Ticker Preview State with Synchronized Progress & Value Filling
   const [dossierIndex, setDossierIndex] = useState(0)
   const [dossierAnimating, setDossierAnimating] = useState(false)
@@ -1399,21 +1401,24 @@ export default function LandingExperience({
                   </div>
                 )}
 
-                {/* Generated Report Ready Banner with Go Back to Report & Ask Question */}
-                {((job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report)) || (sessions && sessions.length > 0 && sessions.some((s) => s.status === 'succeeded' || s.report))) && (
+                {/* Generated Report Ready Banner with View Report & Ask Question */}
+                {!reportBannerDismissed && job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report) && (
                   <div
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-4 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl mb-4 text-left"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#0d2820]/95 via-[#0a1f19]/95 to-[#081713]/95 border border-emerald-500/40 p-3.5 sm:p-4 shadow-[0_4px_24px_rgba(16,185,129,0.25)] backdrop-blur-xl mb-4 text-left"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                         <Sparkles size={18} />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-[13.5px] font-bold text-white tracking-tight truncate">
                           Your Research Report is Ready!
                         </p>
                         <p className="text-[11.5px] text-emerald-300 truncate">
-                          Autonomous synthesis ready for {job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'your inquiry'}
+                          Autonomous dossier ready for{' '}
+                          <span className="font-semibold text-white">
+                            {job?.report?.company?.name || job?.entities?.[0]?.name || (job?.query ? (job.query.length > 36 ? job.query.slice(0, 36) + '...' : job.query) : 'your inquiry')}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -1421,10 +1426,11 @@ export default function LandingExperience({
                       <button
                         type="button"
                         onClick={onResume}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-2 px-3.5 text-xs font-bold text-slate-950 shadow-md hover:brightness-110 transition cursor-pointer active:scale-95"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl py-2 px-3.5 text-xs font-bold shadow-md hover:brightness-110 transition cursor-pointer active:scale-95"
+                        style={{ backgroundColor: '#34d399', color: '#04120c' }}
                       >
                         <FileText size={13} />
-                        <span>Go back to report &ldquo;{job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'Dossier'}&rdquo;</span>
+                        <span>View Report</span>
                       </button>
                       <button
                         type="button"
@@ -1432,7 +1438,16 @@ export default function LandingExperience({
                         className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 py-2 px-3 text-xs font-semibold text-white transition cursor-pointer active:scale-95"
                       >
                         <Sparkles size={13} className="text-emerald-400" />
-                        <span>Ask your question</span>
+                        <span>Ask Copilot</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReportBannerDismissed(true)}
+                        className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                        title="Dismiss banner"
+                        aria-label="Dismiss banner"
+                      >
+                        <X size={15} />
                       </button>
                     </div>
                   </div>

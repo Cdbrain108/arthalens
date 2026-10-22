@@ -410,6 +410,7 @@ function StudioTopHeader({
   onBackToStart,
   onNewResearch,
   running,
+  submitting = false,
   pdfUrl,
   user,
   onToggleSidebar,

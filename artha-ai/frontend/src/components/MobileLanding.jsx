@@ -151,6 +151,7 @@ export default function MobileLanding({
   const typedTagline = useTypewriter(SIMPLE_TAGLINES)
 
   const [sampleQIdx, setSampleQIdx] = useState(0)
+  const [reportBannerDismissed, setReportBannerDismissed] = useState(false)
 
   useEffect(() => {
     setLocalQuery(query)
@@ -579,40 +580,55 @@ export default function MobileLanding({
           </div>
         )}
 
-        {/* Prominent Generated Report Ready Banner with Go Back to Report & Ask */}
-        {((job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report)) || (sessions && sessions.length > 0 && sessions.some((s) => s.status === 'succeeded' || s.report))) && (
+        {/* Prominent Generated Report Ready Banner with View Report & Ask */}
+        {!reportBannerDismissed && job && !running && !submitting && job.status === 'succeeded' && Boolean(job.report) && (
           <div
-            className="w-full flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-emerald-900/60 via-[#102b23] to-teal-950/60 border border-emerald-400/60 p-3.5 shadow-[0_4px_24px_rgba(16,185,129,0.35)] backdrop-blur-xl mb-3 text-left"
+            className="w-full flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-[#0d2820]/95 via-[#0a1f19]/95 to-[#081713]/95 border border-emerald-500/40 p-3 shadow-[0_4px_24px_rgba(16,185,129,0.25)] backdrop-blur-xl mb-3 text-left"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
-                <Sparkles size={16} />
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                  <Sparkles size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12.5px] font-bold text-white tracking-tight truncate">
+                    Your Research Report is Ready!
+                  </p>
+                  <p className="text-[11px] text-emerald-300 truncate">
+                    Synthesis ready for{' '}
+                    <span className="font-semibold text-white">
+                      {job?.report?.company?.name || job?.entities?.[0]?.name || (job?.query ? (job.query.length > 24 ? job.query.slice(0, 24) + '...' : job.query) : 'your inquiry')}
+                    </span>
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[12.5px] font-bold text-white tracking-tight truncate">
-                  Your Research Report is Ready!
-                </p>
-                <p className="text-[11px] text-emerald-300 truncate">
-                  Synthesis ready for {job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'your stock'}
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setReportBannerDismissed(true)}
+                className="p-1 text-slate-400 hover:text-white rounded-md hover:bg-white/10 transition cursor-pointer"
+                title="Dismiss banner"
+                aria-label="Dismiss banner"
+              >
+                <X size={15} />
+              </button>
             </div>
             <div className="flex items-center gap-2 pt-1">
               <button
                 type="button"
                 onClick={onResume}
-                className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-emerald-500 py-1.5 px-2.5 text-[11px] font-bold text-slate-950 shadow-sm active:scale-95 transition"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-bold shadow-sm active:scale-95 transition cursor-pointer"
+                style={{ backgroundColor: '#34d399', color: '#04120c' }}
               >
-                <FileText size={12} />
-                <span className="truncate">Go back to report &ldquo;{job?.report?.company?.name || job?.entities?.[0]?.name || job?.query || sessions?.[0]?.query || 'Report'}&rdquo;</span>
+                <FileText size={13} />
+                <span>View Report</span>
               </button>
               <button
                 type="button"
                 onClick={onResume}
-                className="flex items-center justify-center gap-1 rounded-lg border border-white/20 bg-white/10 py-1.5 px-2.5 text-[11px] font-semibold text-white active:scale-95 transition"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 py-2 px-3 text-xs font-semibold text-white active:scale-95 transition cursor-pointer"
               >
-                <Sparkles size={12} className="text-emerald-400" />
-                <span>Ask</span>
+                <Sparkles size={13} className="text-emerald-400" />
+                <span>Ask Copilot</span>
               </button>
             </div>
           </div>
