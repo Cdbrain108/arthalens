@@ -130,64 +130,20 @@ h1, h2, h3, h4, p, li, dd, dt, td, th, summary {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
-}
-@media (min-width: 768px) {
-  .studio-split {
-    flex-direction: row;
-  }
+  width: 100%;
 }
 
-.studio-left-pane,
-.studio-right-pane {
+.studio-left-pane {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
   min-width: 0;
   min-height: 0;
+  border-right: none !important;
 }
 
-/* Phone: one pane at a time, chosen by the bottom switcher */
-@media (max-width: 767px) {
-  .studio-left-pane,
-  .studio-right-pane {
-    width: 100%;
-    max-width: 100%;
-    flex: 1 1 auto;
-  }
-  .studio-left-pane[data-active='false'],
-  .studio-right-pane[data-active='false'],
-  .studio-left-pane:not([data-active='true']),
-  .studio-right-pane:not([data-active='true']) {
-    display: none !important;
-  }
-  /* On mobile chat pane, split has zero bottom padding so composer docks to bottom */
-  .studio-split {
-    padding-bottom: 0;
-  }
-  .studio-split[data-pane='report'] {
-    padding-bottom: calc(var(--studio-tabs-h) + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-/* Tablet and up: both panes visible, left pane grows with the viewport */
-@media (min-width: 768px) {
-  .studio-left-pane {
-    flex: 0 0 380px;
-    width: 380px;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  .studio-right-pane {
-    flex: 1 1 auto;
-  }
-}
-@media (min-width: 1024px) {
-  .studio-left-pane {
-    flex-basis: 440px;
-    width: 440px;
-  }
-}
-@media (min-width: 1536px) {
-  .studio-left-pane {
-    flex-basis: 500px;
-    width: 500px;
-  }
+.studio-right-pane {
+  display: none !important;
 }
 
 /* Bottom pane switcher — phones only, above the home indicator */

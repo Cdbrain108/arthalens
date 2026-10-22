@@ -217,6 +217,178 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
   )
 }
 
+function InlineReportBriefCard({ job, pdfUrl, onViewPdf }) {
+  const report = job?.report
+  if (!report) return null
+
+  const oa = report.overall_assessment || {}
+  const company = report.company || {}
+  const classification = String(oa.classification || 'ASSESSED').toUpperCase()
+  const isPositive = classification.includes('BUY') || classification.includes('POSITIVE')
+  const isNegative = classification.includes('SELL') || classification.includes('NEGATIVE') || classification.includes('AVOID')
+
+  // Financial health / metrics summary if present
+  const metrics = company.metrics || report.metrics || {}
+  const pe = oa.pe_ratio ?? metrics.pe_ratio ?? metrics.pe
+  const roe = oa.roe_pct ?? metrics.roe_pct ?? metrics.roe
+  const opm = oa.opm_pct ?? metrics.opm_pct ?? metrics.opm
+  const de = oa.debt_equity ?? metrics.debt_equity ?? metrics.de
+
+  // Bull & Bear points
+  const bullPoints = report.bull_thesis?.points || report.thesis_summary?.bull_points || []
+  const bearPoints = report.bear_thesis?.points || report.thesis_summary?.bear_points || report.evidence_gaps || []
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-4 sm:p-6 shadow-2xl space-y-4 animate-fade-up">
+      {/* Top Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-md">
+            <FileText size={22} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base sm:text-lg font-bold text-white truncate">
+                {company.name || 'Institutional Research Brief'}
+              </h3>
+              {company.ticker && (
+                <span className="rounded bg-white/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-300">
+                  {company.ticker} {company.exchange ? `· ${company.exchange}` : ''}
+                </span>
+              )}
+            </div>
+            <p className="text-[11.5px] text-slate-400 mt-0.5">
+              Multi-Agent Evidence Audit · 100% Citation Grounded
+            </p>
+          </div>
+        </div>
+
+        {/* Verdict Badge */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold font-mono tracking-wide ${
+              isPositive
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                : isNegative
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.25)]'
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+            }`}
+          >
+            <span className="h-2 w-2 rounded-full bg-current" />
+            {classification}
+          </span>
+        </div>
+      </div>
+
+      {/* Executive Summary */}
+      {report.executive_summary && (
+        <div className="text-[13px] leading-relaxed text-slate-200 bg-white/[0.02] border border-white/5 rounded-xl p-3.5">
+          <p>{report.executive_summary}</p>
+        </div>
+      )}
+
+      {/* Rationale */}
+      {oa.rationale && (
+        <div className="text-xs text-slate-300 leading-relaxed space-y-1">
+          <span className="font-semibold text-emerald-400 block font-mono text-[10.5px] uppercase tracking-wider">
+            Synthesis Rationale
+          </span>
+          <p>{oa.rationale}</p>
+        </div>
+      )}
+
+      {/* Key Metrics Chips (if available) */}
+      {(pe != null || roe != null || opm != null || de != null) && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+          {pe != null && (
+            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-center">
+              <span className="text-[10.5px] font-mono text-slate-400 block">P/E Ratio</span>
+              <span className="text-sm font-bold text-white font-mono">{pe}x</span>
+            </div>
+          )}
+          {roe != null && (
+            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-center">
+              <span className="text-[10.5px] font-mono text-slate-400 block">ROE</span>
+              <span className="text-sm font-bold text-emerald-400 font-mono">{roe}%</span>
+            </div>
+          )}
+          {opm != null && (
+            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-center">
+              <span className="text-[10.5px] font-mono text-slate-400 block">Operating Margin</span>
+              <span className="text-sm font-bold text-teal-300 font-mono">{opm}%</span>
+            </div>
+          )}
+          {de != null && (
+            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-center">
+              <span className="text-[10.5px] font-mono text-slate-400 block">Debt / Equity</span>
+              <span className="text-sm font-bold text-slate-200 font-mono">{de}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bull & Bear Dual-Thesis Mini Row */}
+      {(bullPoints.length > 0 || bearPoints.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          {bullPoints.length > 0 && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-left">
+              <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold mb-1.5">
+                <TrendingUp size={13} />
+                <span>Bull Catalysts</span>
+              </div>
+              <ul className="space-y-1 text-[11.5px] text-slate-300 list-disc list-inside">
+                {bullPoints.slice(0, 2).map((pt, i) => (
+                  <li key={i} className="truncate">{typeof pt === 'string' ? pt : pt.claim || pt.point}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {bearPoints.length > 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-left">
+              <div className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold mb-1.5">
+                <AlertTriangle size={13} />
+                <span>Downside Risks</span>
+              </div>
+              <ul className="space-y-1 text-[11.5px] text-slate-300 list-disc list-inside">
+                {bearPoints.slice(0, 2).map((pt, i) => (
+                  <li key={i} className="truncate">{typeof pt === 'string' ? pt : pt.claim || pt.point}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onViewPdf}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black px-3.5 py-2 text-xs font-bold transition shadow-md cursor-pointer active:scale-95"
+          >
+            <Maximize2 size={13} />
+            <span>Open Institutional PDF Dossier</span>
+          </button>
+          {pdfUrl && (
+            <a
+              href={pdfUrl}
+              download={`ArthaLens_${company.ticker || 'Research'}.pdf`}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 px-3 py-2 text-xs font-medium text-white transition cursor-pointer"
+            >
+              <Download size={13} />
+              <span className="hidden sm:inline">Download PDF</span>
+            </a>
+          )}
+        </div>
+        <span className="text-[11px] font-mono text-slate-400">
+          Ask questions about this report below ↓
+        </span>
+      </div>
+    </div>
+  )
+}
+
 // ─── Stable Top Header (defined outside to preserve input focus) ──────────────
 function StudioTopHeader({
   activeQuery,
@@ -236,8 +408,6 @@ function StudioTopHeader({
   onViewPdf,
   onShare,
   isDone,
-  mobilePane,
-  onToggleMobilePane,
 }) {
   const resolved = (entities || []).map((e) => e.name || e.ticker).filter(Boolean)
   const workspaceTitle = isConversational
@@ -275,7 +445,7 @@ function StudioTopHeader({
         </div>
       </div>
 
-      {/* Center: Perfectly Centered Sleek Indicator Pill (Argus-style) */}
+      {/* Center: Perfectly Centered Sleek Indicator Pill */}
       <div className="flex items-center justify-center min-w-0 flex-1 px-1 sm:px-2 text-center">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-[#16181e]/90 px-2.5 py-1 max-w-[155px] sm:max-w-[320px] shadow-[0_2px_12px_rgba(0,0,0,0.4)] backdrop-blur-md">
           <Logo size={14} className="shrink-0" />
@@ -288,29 +458,8 @@ function StudioTopHeader({
         </div>
       </div>
 
-      {/* Right: Actions (Clean cluster, zero collision on mobile) */}
+      {/* Right: Actions */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-        {isDone && (
-          <button
-            type="button"
-            onClick={onToggleMobilePane}
-            className="sm:hidden flex h-8 items-center gap-1 rounded-xl border border-emerald-500/40 bg-emerald-500/20 px-2.5 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/30 active:scale-95 cursor-pointer shadow-sm"
-            title={mobilePane === 'chat' ? 'Switch to Research Report Dossier' : 'Switch to Artha AI Copilot'}
-          >
-            {mobilePane === 'chat' ? (
-              <>
-                <FileText size={12} className="text-emerald-400" />
-                <span>Report</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={12} className="text-emerald-400" />
-                <span>Copilot</span>
-              </>
-            )}
-          </button>
-        )}
-
         <button
           type="button"
           onClick={onNewResearch}
@@ -338,11 +487,11 @@ function StudioTopHeader({
           <button
             type="button"
             onClick={onViewPdf}
-            className="hidden sm:flex h-8 sm:h-9 items-center gap-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-400 transition hover:bg-emerald-500/25 cursor-pointer active:scale-95"
+            className="flex h-8 sm:h-9 items-center gap-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold text-emerald-400 transition hover:bg-emerald-500/25 cursor-pointer active:scale-95"
             title="View Research Report PDF In-App"
           >
             <FileText size={13} />
-            <span className="hidden lg:inline">PDF</span>
+            <span className="hidden sm:inline">PDF</span>
           </button>
         )}
 
@@ -919,556 +1068,297 @@ export default function StudioPage({
         onViewPdf={() => setShowPdfModal(true)}
         onShare={handleShare}
         isDone={isDone}
-        mobilePane={mobilePane}
-        onToggleMobilePane={() => setMobilePane((prev) => (prev === 'chat' ? 'report' : 'chat'))}
       />
 
-      {/* 2-column split workspace (stacks into tabs on mobile) */}
+      {/* ══ Full-Width Unified Copilot Chatbox Workspace ══ */}
       <div
         className="studio-split flex flex-1 overflow-hidden"
         data-running={String(running || submitting)}
-        data-pane={mobilePane}
       >
-
-        {/* ══ LEFT COLUMN: Chat & Agent Stream ══ */}
-        {/* Width, border and the mobile show/hide of `data-active` are owned by
-            responsive.css — Tailwind width utilities here fought with it. */}
         <section
-          data-active={String(mobilePane === 'chat')}
-          className="studio-left-pane flex flex-col bg-[#181a1f] overflow-hidden"
+          className="studio-left-pane flex flex-1 flex-col bg-[#14161b] overflow-hidden w-full"
         >
-          <div className="flex-1 flex flex-col overflow-y-auto p-4 sm:p-5 space-y-4 scroll-slim scroll-smooth">
-
-            {error && (
-              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-left shadow-lg animate-fade-up">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5">
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
-                    <div>
-                      <h4 className="text-[13px] font-semibold text-rose-200">Research pipeline unreachable</h4>
-                      <p className="mt-1 text-[11.5px] leading-relaxed text-rose-300/80">
-                        {error}
-                      </p>
+          <div className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-6 space-y-4 scroll-slim scroll-smooth">
+            <div className="w-full max-w-4xl mx-auto flex flex-col flex-1 space-y-4">
+              {error && (
+                <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-left shadow-lg animate-fade-up">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
+                      <div>
+                        <h4 className="text-[13px] font-semibold text-rose-200">Research pipeline unreachable</h4>
+                        <p className="mt-1 text-[11.5px] leading-relaxed text-rose-300/80">
+                          {error}
+                        </p>
+                      </div>
                     </div>
+                    {activeQuery && (
+                      <button
+                        type="button"
+                        onClick={() => onStartResearch(activeQuery)}
+                        className="rounded-lg bg-rose-500/20 hover:bg-rose-500/30 px-2.5 py-1 text-[11px] font-medium text-rose-200 transition shrink-0"
+                      >
+                        Retry
+                      </button>
+                    )}
                   </div>
-                  {activeQuery && (
-                    <button
-                      type="button"
-                      onClick={() => onStartResearch(activeQuery)}
-                      className="rounded-lg bg-rose-500/20 hover:bg-rose-500/30 px-2.5 py-1 text-[11px] font-medium text-rose-200 transition shrink-0"
-                    >
-                      Retry
-                    </button>
-                  )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* 1. Conversational / Copilot Mode OR Fresh Workspace without active job */}
-            {isConversational || (!job?.selected_agents?.length && !running && !isDone) ? (
-              <div className={`space-y-4 flex flex-col ${copilotMessages.length <= 1 && !running && !submitting && !isGenerating ? 'flex-1 justify-center my-auto' : ''}`}>
-                {/* Copilot Overview Hero Card */}
-                {copilotMessages.length <= 1 && !running && !submitting && !isGenerating && (
-                  <div className="flex flex-col justify-center items-center py-6 sm:py-10 text-center max-w-lg mx-auto w-full space-y-6 studio-fade-up">
-                    <div className="relative inline-flex items-center justify-center">
-                      <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-emerald-500/30 via-teal-500/20 to-blue-500/20 blur-xl animate-pulse" />
-                      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#1e222d] to-[#12151c] shadow-2xl border border-white/15">
-                        <Logo size={32} />
+              {/* 1. Conversational / Copilot Mode OR Fresh Workspace without active job */}
+              {isConversational || (!job?.selected_agents?.length && !running && !isDone) ? (
+                <div className={`space-y-4 flex flex-col ${copilotMessages.length <= 1 && !running && !submitting && !isGenerating ? 'flex-1 justify-center my-auto' : ''}`}>
+                  {/* Copilot Overview Hero Card */}
+                  {copilotMessages.length <= 1 && !running && !submitting && !isGenerating && (
+                    <div className="flex flex-col justify-center items-center py-6 sm:py-10 text-center max-w-lg mx-auto w-full space-y-6 studio-fade-up">
+                      <div className="relative inline-flex items-center justify-center">
+                        <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-emerald-500/30 via-teal-500/20 to-blue-500/20 blur-xl animate-pulse" />
+                        <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#1e222d] to-[#12151c] shadow-2xl border border-white/15">
+                          <Logo size={32} />
+                        </div>
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+                          Artha AI Copilot
+                          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400 font-semibold shadow-sm">
+                            Live
+                          </span>
+                        </h2>
+                        <p className="text-[12px] sm:text-[13px] text-slate-400 mt-1.5 leading-relaxed px-4 max-w-md mx-auto">
+                          Autonomous financial intelligence &amp; valuation reasoning. Ask any financial question, compare industry peers, or audit regulatory filings.
+                        </p>
+                      </div>
+
+                      {/* Quick Inquiry Suggestions */}
+                      <div className="w-full space-y-2 pt-1 text-left px-1">
+                        <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider pl-1">
+                          Suggested Financial Inquiries
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {[
+                            { q: 'Compare TCS and Infosys on margins', label: 'TCS vs Infosys Margins', badge: 'Compare' },
+                            { q: 'Explain P/E ratio and DCF multiples', label: 'Explain P/E & DCF', badge: 'Valuation' },
+                            { q: 'Should I hold Reliance for 5 years?', label: 'Reliance 5-Yr Thesis', badge: 'Thesis' },
+                            { q: 'What are the risks in NVIDIA NVDA?', label: 'NVIDIA Risk Audit', badge: 'Risk Audit' }
+                          ].map((item, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleCopilotAction(item.q)}
+                              className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/30 p-2.5 text-[11.5px] text-slate-300 hover:text-white transition group cursor-pointer active:scale-[0.98]"
+                            >
+                              <span className="truncate">{item.label}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 group-hover:bg-emerald-500/20 group-hover:text-emerald-300 transition-colors">
+                                  {item.badge}
+                                </span>
+                                <ChevronRight size={13} className="text-slate-500 group-hover:text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <h2 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
-                        Artha AI Copilot
-                        <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400 font-semibold shadow-sm">
-                          Live
-                        </span>
-                      </h2>
-                      <p className="text-[12px] sm:text-[13px] text-slate-400 mt-1.5 leading-relaxed px-4 max-w-md mx-auto">
-                        Autonomous financial intelligence &amp; valuation reasoning. Ask any financial question, compare industry peers, or audit regulatory filings.
-                      </p>
-                    </div>
+                  )}
 
-                    {/* Quick Inquiry Suggestions */}
-                    <div className="w-full space-y-2 pt-1 text-left px-1">
-                      <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider pl-1">
-                        Suggested Financial Inquiries
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {[
-                          { q: 'Compare TCS and Infosys on margins', label: 'TCS vs Infosys Margins', badge: 'Compare' },
-                          { q: 'Explain P/E ratio and DCF multiples', label: 'Explain P/E & DCF', badge: 'Valuation' },
-                          { q: 'Should I hold Reliance for 5 years?', label: 'Reliance 5-Yr Thesis', badge: 'Thesis' },
-                          { q: 'What are the risks in NVIDIA NVDA?', label: 'NVIDIA Risk Audit', badge: 'Risk Audit' }
-                        ].map((item, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => handleCopilotAction(item.q)}
-                            className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/30 p-2.5 text-[11.5px] text-slate-300 hover:text-white transition group cursor-pointer active:scale-[0.98]"
-                          >
-                            <span className="truncate">{item.label}</span>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 group-hover:bg-emerald-500/20 group-hover:text-emerald-300 transition-colors">
-                                {item.badge}
-                              </span>
-                              <ChevronRight size={13} className="text-slate-500 group-hover:text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Conversational Copilot Chat Thread */}
-                {copilotMessages.length > 1 && (
-                  <ConversationalCopilot
-                    messages={copilotMessages}
-                    onAction={handleCopilotAction}
-                    user={user}
-                    onOpenAuth={onOpenAuth}
-                    running={running}
-                    isDone={isDone}
-                  />
-                )}
-
-                {/* Active Generation Reasoning Block */}
-                {isGenerating && (
-                  <ArthaReasoningBlock
-                    query={activeQuery}
-                    isGenerating={true}
-                    isConversational={true}
-                    generationStep={generationStep}
-                  />
-                )}
-              </div>
-            ) : (
-              /* 2. Stock Multi-Agent Research Stream */
-              <div className="space-y-4">
-                {/* 1. Conversational Dispatch Message (Copilot announces dispatch first) */}
-                {!isConversational && copilotMessages.length > 1 && (
-                  <div className="space-y-3">
+                  {/* Conversational Copilot Chat Thread */}
+                  {copilotMessages.length > 1 && (
                     <ConversationalCopilot
-                      messages={copilotMessages.slice(1)}
+                      messages={copilotMessages}
                       onAction={handleCopilotAction}
                       user={user}
                       onOpenAuth={onOpenAuth}
                       running={running}
                       isDone={isDone}
                     />
-                  </div>
-                )}
+                  )}
 
-                {/* 2. Live Multi-Agent Reasoning Cockpit (The execution stream below) */}
-                <ArthaReasoningBlock
-                  job={job}
-                  query={activeQuery}
-                  running={running}
-                  submitting={submitting}
-                  isDone={isDone}
-                  isConversational={false}
-                  askingReport={askingReport}
-                  onViewReport={() => {
-                    setViewMode('report')
-                    setMobilePane('report')
-                  }}
-                />
-              </div>
-            )}
-
-            {/* 4. Report Q&A messages */}
-            {qaMessages.length > 0 && (
-              <div className="space-y-3 animate-fade-up" aria-live="polite">
-                {qaMessages.map((message, index) => {
-                  const isUser = message.role === 'user'
-                  const isLatestAssistant = !isUser && index === qaMessages.length - 1
-                  const shouldAnimate = isLatestAssistant && !completedQaIds.has(index)
-
-                  return (
-                    <div
-                      key={`${message.role}-${index}`}
-                      className={isUser
-                        ? 'ml-8 rounded-2xl rounded-tr-sm border border-emerald-500/30 bg-gradient-to-r from-emerald-500/15 to-emerald-600/20 px-4 py-2.5 text-[13px] leading-relaxed text-[#f1f3f4] shadow-md'
-                        : 'mr-3 rounded-2xl rounded-tl-sm border border-white/10 bg-[#1e2026] p-4 text-[13px] leading-relaxed text-[#d2d6dc] shadow-md'}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        {!isUser && (
-                          <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
-                            <Sparkles size={12} />
-                          </div>
-                        )}
-                        <span className="block font-mono text-[10.5px] uppercase tracking-wider text-emerald-400 font-semibold">
-                          {isUser ? 'You' : 'Artha Copilot'}
-                        </span>
-                        {!isUser && shouldAnimate && (
-                          <span className="flex gap-1 ml-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[13px] leading-relaxed text-[#d2d6dc]">
-                        {isUser ? (
-                          <p>{message.text}</p>
-                        ) : (
-                          <TypewriterMessage
-                            text={message.text}
-                            shouldAnimate={shouldAnimate}
-                            onTypingDone={() => {
-                              setCompletedQaIds((prev) => new Set(prev).add(index))
-                            }}
-                          />
-                        )}
-                      </div>
-                      {message.followUp && (
-                        <p className="mt-2 border-t border-white/10 pt-2 text-[11px] text-[#fbbc04]">
-                          This asks for information outside the completed report; a fresh research run is needed for a current answer.
-                        </p>
-                      )}
-                      {message.sources?.length > 0 && (
-                        <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
-                          {message.sources.slice(0, 4).map((source, sourceIndex) => (
-                            <a
-                              key={`${source.title || 'source'}-${sourceIndex}`}
-                              href={source.url || undefined}
-                              target={source.url ? '_blank' : undefined}
-                              rel={source.url ? 'noreferrer' : undefined}
-                              className="max-w-full truncate rounded-md bg-white/5 px-2 py-1 font-mono text-[10px] text-emerald-400 hover:text-white"
-                            >
-                              {source.title || 'Source'}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Thinking / Auditing card during Report Q&A */}
-            {askingReport && (
-              <div className="mr-3 rounded-2xl border border-emerald-500/30 bg-[#1e2026] p-4 shadow-lg animate-fade-up">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
-                    <Sparkles size={13} className="animate-spin" />
-                  </div>
-                  <span className="text-[12px] font-bold text-white">Artha AI Copilot</span>
-                  <span className="flex gap-1 ml-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </span>
+                  {/* Active Generation Reasoning Block */}
+                  {isGenerating && (
+                    <ArthaReasoningBlock
+                      query={activeQuery}
+                      isGenerating={true}
+                      isConversational={true}
+                      generationStep={generationStep}
+                    />
+                  )}
                 </div>
-                <p className="text-[12px] text-slate-300">Auditing report evidence &amp; calculating verified answer...</p>
-                <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-400 animate-pulse" style={{ width: '75%' }} />
-                </div>
-              </div>
-            )}
-
-            <div ref={chatScrollRef} />
-          </div>
-
-          {/* Studio Chat Input Bar — visible when idle/done; replaced by slim status strip during running so reasoning cards have full screen height on mobile */}
-          {!running && !submitting ? (
-            <div className="flex flex-col border-t border-white/10 bg-[#181a1f]/95 backdrop-blur-xl">
-              <StudioChatInputBar
-                value={followupText}
-                onValueChange={setFollowupText}
-                onSubmit={handleSubmit}
-                running={running || askingReport || isGenerating}
-                inputRef={inputRef}
-                placeholder={
-                  isDone
-                    ? 'Ask about this report (e.g. PE, risks, horizon)...'
-                    : 'Ask about any stock or financial concept...'
-                }
-              />
-            </div>
-          ) : (
-            <div className="studio-running-status-bar flex items-center justify-between px-3.5 py-2 border-t border-white/10 bg-[#14161b]/95 text-xs text-slate-400 shrink-0">
-              <div className="flex items-center gap-2 text-emerald-400 font-medium truncate">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span className="truncate">Auditing... 11 specialists analyzing filings</span>
-              </div>
-              <button
-                type="button"
-                disabled
-                className="text-[11px] font-mono text-slate-500 shrink-0 cursor-not-allowed opacity-70"
-              >
-                Auditing...
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* ══ RIGHT COLUMN: Preview / Artha Copilot ══ */}
-        <section
-          id="studio-report-pane"
-          data-active={String(mobilePane === 'report')}
-          className="studio-right-pane flex flex-1 flex-col bg-[#131518] overflow-hidden"
-        >
-          {/* Right Pane Tab Bar — clean, uncluttered report views */}
-          <div className="studio-pane-tabs flex h-11 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#181a1f] px-3 sm:px-6">
-            <div
-              className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scroll-slim"
-              role="group"
-              aria-label="Report views"
-              tabIndex={0}
-            >
-              <button
-                type="button"
-                onClick={() => setRightTab('preview')}
-                aria-pressed={rightTab === 'preview'}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition cursor-pointer ${
-                  rightTab === 'preview'
-                    ? 'bg-white/15 text-white shadow-sm border border-white/20'
-                    : 'text-[#9aa0a6] hover:text-white'
-                }`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-[#4285f4]" />
-                <span>Report Preview</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRightTab('pdf')}
-                aria-pressed={rightTab === 'pdf'}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1 text-[12px] font-medium transition cursor-pointer ${
-                  rightTab === 'pdf'
-                    ? 'bg-emerald-500/25 text-emerald-300 shadow-sm border border-emerald-500/40'
-                    : 'text-[#9aa0a6] hover:text-white'
-                }`}
-              >
-                <FileText size={13} className="text-emerald-400" />
-                <span>In-App PDF Dossier</span>
-              </button>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-3 text-[#9aa0a6]">
-              <span className="hidden lg:inline text-[11px] font-mono text-[#bdc1c6]">
-                {isDone ? 'Evidence audit complete' : running ? 'Synthesizing...' : job ? 'Report ready' : 'Awaiting research'}
-              </span>
-              <button
-                type="button"
-                className="hidden sm:block hover:text-white transition p-1"
-                title="Fullscreen"
-                aria-label="Fullscreen"
-              >
-                <Maximize2 size={14} />
-              </button>
-            </div>
-          </div>
-
-
-              {/* Right Pane Body */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-8 scroll-slim scroll-smooth">
-                {rightTab === 'pdf' ? (
-                  isDone && pdfUrl ? (
-                    <div className="w-full h-full flex flex-col rounded-2xl overflow-hidden border border-white/10 bg-[#0d0e12] min-h-[680px]">
-                      <div className="flex items-center justify-between p-3.5 border-b border-white/10 bg-[#181a1f]">
-                        <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-emerald-400" />
-                          <span className="text-[13px] font-bold text-white">Institutional PDF Dossier Preview</span>
-                          <span className="rounded bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-300">
-                            In-App View
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setShowPdfModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 text-slate-200 border border-white/15 text-xs font-semibold hover:bg-white/15 transition cursor-pointer"
-                            title="Open full interactive PDF dossier modal"
-                          >
-                            <Maximize2 size={13} />
-                            <span>In-App Viewer</span>
-                          </button>
-                          <a
-                            href={pdfUrl}
-                            download={`ArthaLens_${activeQuery || 'Research'}.pdf`}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition cursor-pointer"
-                          >
-                            <Download size={13} />
-                            <span className="hidden sm:inline">Download</span>
-                          </a>
-                        </div>
-                      </div>
-                      <div className="w-full flex-1 min-h-[620px] bg-[#1e2026] relative">
-                        <object
-                          data={pdfUrl}
-                          type="application/pdf"
-                          className="w-full h-full min-h-[620px] border-none"
-                        >
-                          <div className="flex flex-col items-center justify-center p-8 text-center text-slate-300 gap-3 min-h-[460px] my-auto">
-                            <FileText size={38} className="text-emerald-400" />
-                            <p className="font-semibold text-base text-white">Institutional PDF Dossier Ready</p>
-                            <p className="text-xs text-slate-400 max-w-sm">
-                              Preview the complete high-resolution research brief directly in our interactive in-app viewer.
-                            </p>
-                            <div className="flex gap-2.5 mt-2">
-                              <button
-                                type="button"
-                                onClick={() => setShowPdfModal(true)}
-                                className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-bold text-xs shadow-md hover:brightness-110 cursor-pointer"
-                              >
-                                Open Interactive Dossier
-                              </button>
-                              <a
-                                href={pdfUrl}
-                                download={`ArthaLens_${activeQuery || 'Research'}.pdf`}
-                                className="px-4 py-2 rounded-xl bg-white/10 border border-white/15 text-white font-medium text-xs hover:bg-white/15 cursor-pointer"
-                              >
-                                Download PDF
-                              </a>
-                            </div>
-                          </div>
-                        </object>
-                      </div>
+              ) : (
+                /* 2. Stock Multi-Agent Research Stream */
+                <div className="space-y-4">
+                  {/* Conversational Dispatch Message */}
+                  {!isConversational && copilotMessages.length > 1 && (
+                    <div className="space-y-3">
+                      <ConversationalCopilot
+                        messages={copilotMessages.slice(1)}
+                        onAction={handleCopilotAction}
+                        user={user}
+                        onOpenAuth={onOpenAuth}
+                        running={running}
+                        isDone={isDone}
+                      />
                     </div>
-                  ) : (
-                    <div className="my-auto flex flex-col items-center justify-center min-h-[460px] text-center max-w-lg mx-auto animate-fade-up">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400 mb-5 shadow-lg border border-emerald-500/25">
-                        <FileText size={30} />
-                      </div>
-                      <h3 className="text-xl font-bold text-white tracking-tight">Institutional PDF Dossier</h3>
-                      <p className="mt-2 text-[13px] text-[#9aa0a6] leading-relaxed">
-                        {running
-                          ? 'Auditing specialist evidence and generating institutional PDF dossier with source citations...'
-                          : 'Launch research on any company to generate and preview the institutional PDF dossier with dual-thesis analysis.'}
-                      </p>
-                      {!running && (
-                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
-                          {[
-                            { label: 'Reliance 5-Year Thesis', query: 'Should I hold Reliance for 5 years?' },
-                            { label: 'TCS vs Infosys Multiples', query: 'Compare TCS and Infosys on valuation & margins' },
-                          ].map((item, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => onStartResearch(item.query)}
-                              className="rounded-xl border border-white/10 bg-[#1e2026] p-3 text-left text-[12px] font-medium text-[#bdc1c6] transition hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-white"
-                            >
-                              {item.label} →
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                ) : rightTab === 'graph' ? (
-                  job ? (
-                    <div className="my-auto flex flex-col items-center justify-center min-h-[500px]">
-                      <ResearchProcessGraph job={job} running={running || !isDone} isDone={isDone} />
-                    </div>
-                  ) : (
-                    <div className="my-auto flex flex-col items-center justify-center min-h-[460px] text-center max-w-lg mx-auto animate-fade-up">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#4285f4]/15 text-[#8ab4f8] mb-5 shadow-lg border border-[#4285f4]/25">
-                        <Layers size={30} />
-                      </div>
-                      <h3 className="text-xl font-bold text-white tracking-tight">Autonomous Multi-Agent Graph</h3>
-                      <p className="mt-2 text-[13px] text-[#9aa0a6] leading-relaxed">
-                        Visual topology of the 11 parallel specialist agents dispatched across fundamental health, valuation, technical momentum, and evidence auditing.
-                      </p>
-                    </div>
-                  )
-                ) : rightTab === 'preview' ? (
-                  <div className="max-w-4xl mx-auto">
-                    <ReportPreview
-                      jobId={job?.job_id}
+                  )}
+
+                  {/* Live Multi-Agent Reasoning Cockpit with Single-Line Stepper */}
+                  <ArthaReasoningBlock
+                    job={job}
+                    query={activeQuery}
+                    running={running}
+                    submitting={submitting}
+                    isDone={isDone}
+                    isConversational={false}
+                    askingReport={askingReport}
+                    onViewReport={() => setShowPdfModal(true)}
+                  />
+
+                  {/* 3. Inline Institutional Report Brief Card (appears in chat when research finishes) */}
+                  {isDone && job?.report && (
+                    <InlineReportBriefCard
                       job={job}
                       pdfUrl={pdfUrl}
-                      initialMode={researchMode}
-                      onModeChange={setResearchMode}
-                      onStartResearch={onStartResearch}
-                      onAskMoreAboutReport={() => setViewMode('copilot')}
+                      onViewPdf={() => setShowPdfModal(true)}
                     />
-                  </div>
-                ) : (
-              <div className="max-w-3xl mx-auto rounded-2xl border border-white/10 bg-[#1e2026] p-6 text-left font-mono text-[12px] text-[#bdc1c6] space-y-4">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <span className="font-bold text-white">Pipeline Execution State</span>
-                  <span className="text-[#8ab4f8]">{job?.job_id}</span>
-                </div>
-                <pre className="overflow-x-auto text-[11px] text-[#8ab4f8] bg-black/40 p-4 rounded-xl">
-                  {/* Real job state only. This panel reads as a debug dump, so a
-                      hardcoded value here is more misleading than anywhere else:
-                      it used to inject quality_score '8/9' and grounding '66.7%'
-                      alongside the genuine fields. Scores live on the report. */}
-                  {JSON.stringify(
-                    {
-                      job_id: job?.job_id ?? null,
-                      query: activeQuery,
-                      status: job?.status ?? null,
-                      current_node: job?.current_node || null,
-                      intent: job?.intent || null,
-                      entities: job?.entities ?? [],
-                      selected_agents: job?.selected_agents ?? [],
-                      completed_agents: job?.completed_agents ?? [],
-                      failed_agents: job?.failed_agents ?? [],
-                      errors: job?.errors ?? []
-                    },
-                    null,
-                    2
                   )}
-                </pre>
-                <p className="text-[10.5px] text-[#9aa0a6]">
-                  Quality score and evidence grounding are measured during validation and are shown
-                  on the report, not here.
-                </p>
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* Report Q&A messages */}
+              {qaMessages.length > 0 && (
+                <div className="space-y-3 animate-fade-up" aria-live="polite">
+                  {qaMessages.map((message, index) => {
+                    const isUser = message.role === 'user'
+                    const isLatestAssistant = !isUser && index === qaMessages.length - 1
+                    const shouldAnimate = isLatestAssistant && !completedQaIds.has(index)
+
+                    return (
+                      <div
+                        key={`${message.role}-${index}`}
+                        className={isUser
+                          ? 'ml-8 rounded-2xl rounded-tr-sm border border-emerald-500/30 bg-gradient-to-r from-emerald-500/15 to-emerald-600/20 px-4 py-2.5 text-[13px] leading-relaxed text-[#f1f3f4] shadow-md'
+                          : 'mr-3 rounded-2xl rounded-tl-sm border border-white/10 bg-[#1e2026] p-4 text-[13px] leading-relaxed text-[#d2d6dc] shadow-md'}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          {!isUser && (
+                            <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                              <Sparkles size={12} />
+                            </div>
+                          )}
+                          <span className="block font-mono text-[10.5px] uppercase tracking-wider text-emerald-400 font-semibold">
+                            {isUser ? 'You' : 'Artha Copilot'}
+                          </span>
+                          {!isUser && shouldAnimate && (
+                            <span className="flex gap-1 ml-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                              <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[13px] leading-relaxed text-[#d2d6dc]">
+                          {isUser ? (
+                            <p>{message.text}</p>
+                          ) : (
+                            <TypewriterMessage
+                              text={message.text}
+                              shouldAnimate={shouldAnimate}
+                              onTypingDone={() => {
+                                setCompletedQaIds((prev) => new Set(prev).add(index))
+                              }}
+                            />
+                          )}
+                        </div>
+                        {message.followUp && (
+                          <p className="mt-2 border-t border-white/10 pt-2 text-[11px] text-[#fbbc04]">
+                            This asks for information outside the completed report; a fresh research run is needed for a current answer.
+                          </p>
+                        )}
+                        {message.sources?.length > 0 && (
+                          <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
+                            {message.sources.slice(0, 4).map((source, sourceIndex) => (
+                              <a
+                                key={`${source.title || 'source'}-${sourceIndex}`}
+                                href={source.url || undefined}
+                                target={source.url ? '_blank' : undefined}
+                                rel={source.url ? 'noreferrer' : undefined}
+                                className="max-w-full truncate rounded-md bg-white/5 px-2 py-1 font-mono text-[10px] text-emerald-400 hover:text-white"
+                              >
+                                {source.title || 'Source'}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Thinking / Auditing card during Report Q&A */}
+              {askingReport && (
+                <div className="mr-3 rounded-2xl border border-emerald-500/30 bg-[#1e2026] p-4 shadow-lg animate-fade-up">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+                      <Sparkles size={13} className="animate-spin" />
+                    </div>
+                    <span className="text-[12px] font-bold text-white">Artha AI Copilot</span>
+                    <span className="flex gap-1 ml-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-slate-300">Auditing report evidence &amp; calculating verified answer...</p>
+                  <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-400 animate-pulse" style={{ width: '75%' }} />
+                  </div>
+                </div>
+              )}
+
+              <div ref={chatScrollRef} />
+            </div>
           </div>
 
-          {/* Floating Action Button on mobile: Ask a Question -> jumps straight into chat */}
-          {mobilePane === 'report' && (
-            <button
-              type="button"
-              onClick={() => {
-                setMobilePane('chat')
-                setTimeout(() => inputRef.current?.focus(), 150)
-              }}
-              className="sm:hidden fixed bottom-16 right-4 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white px-4 py-2.5 shadow-[0_4px_24px_rgba(245,158,11,0.5)] border border-amber-300/40 text-xs font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              <Sparkles size={14} className="text-amber-200 animate-pulse" />
-              <span>Ask a Question →</span>
-            </button>
+          {/* Studio Chat Input Bar */}
+          {!running && !submitting ? (
+            <div className="flex flex-col border-t border-white/10 bg-[#16181e]/95 backdrop-blur-xl shrink-0 z-10">
+              <div className="w-full max-w-4xl mx-auto px-2 sm:px-6">
+                <StudioChatInputBar
+                  value={followupText}
+                  onValueChange={setFollowupText}
+                  onSubmit={handleSubmit}
+                  running={running || askingReport || isGenerating}
+                  inputRef={inputRef}
+                  placeholder={
+                    isDone
+                      ? 'Ask about this report (e.g. PE, risks, horizon)...'
+                      : 'Ask about any stock or financial concept...'
+                  }
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="studio-running-status-bar flex items-center justify-between px-4 py-2.5 border-t border-white/10 bg-[#14161b]/95 text-xs text-slate-400 shrink-0 z-10">
+              <div className="w-full max-w-4xl mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-400 font-medium truncate">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  <span className="truncate">Auditing... 11 specialists analyzing filings</span>
+                </div>
+                <button
+                  type="button"
+                  disabled
+                  className="text-[11px] font-mono text-slate-500 shrink-0 cursor-not-allowed opacity-70"
+                >
+                  Auditing...
+                </button>
+              </div>
+            </div>
           )}
         </section>
       </div>
-
-      {/* Mobile-only pane switcher: rendered ONLY in report view when report is generated, never under chat composer */}
-      {isDone && mobilePane === 'report' && (
-        <div className="studio-mobile-tabs" role="group" aria-label="Workspace views">
-          <button
-            type="button"
-            aria-pressed={mobilePane === 'chat'}
-            onClick={() => setMobilePane('chat')}
-            className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
-              mobilePane === 'chat' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
-            }`}
-          >
-            <Sparkles size={15} className={mobilePane === 'chat' ? 'text-emerald-400' : 'text-slate-400'} />
-            <span>Artha Copilot</span>
-          </button>
-          <button
-            type="button"
-            aria-pressed={mobilePane === 'report'}
-            onClick={() => setMobilePane('report')}
-            className={`flex items-center justify-center gap-1.5 font-medium transition-all cursor-pointer ${
-              mobilePane === 'report' ? 'text-emerald-400 font-semibold' : 'text-slate-400'
-            }`}
-            title="View completed research report"
-          >
-            <FileText size={15} className={mobilePane === 'report' ? 'text-emerald-400' : 'text-slate-400'} />
-            <span>Report Dossier</span>
-          </button>
-        </div>
-      )}
 
       {toast && (
         <div className="studio-toast" role="status" aria-live="polite">
