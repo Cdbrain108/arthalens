@@ -117,7 +117,7 @@ export function isOutOfScopeQuery(query = '') {
   if (isMeta) return false
 
   if (/^(?:my name is|i am|i'm|im|call me)\s+[a-zA-Z]/i.test(s)) return false
-  if (/(creater|creator|created|who made|who built|who developed)/i.test(s)) return false
+  if (/(creater|creator|created|who made|who built|who developed|who designed|built you|made you|architect|developer|founder|maker|author|behind this|behind you|creator of)/i.test(s)) return false
   if (/(?:different agents|what are the agents|what each will do|each agent|all agents|11 agents|list agents|explain agents|specialist agents|about the agents|what do the agents do|how many agents|agent list|who are the agents)/i.test(s)) return false
   if (/(?:what work are we doing|what are we doing|what are we working on|current work|what work is going on|what project is this|what is artha ai|what is arthalens|how does this work|basics of artha|everything basics|what do we do)/i.test(s)) return false
   if (/(?:who am i|my profile|user profile|my account|my details)/i.test(s)) return false
@@ -688,9 +688,9 @@ ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-speci
     return `Nice to meet you, **${display}!** I'm **Artha AI Copilot**, an evidence-first financial research platform. Ask about any financial concept or compare two stock tickers to get started.`
   }
 
-  // 9. Creator / maker
-  if (/(creater|creator|created|who made|who built|who developed|built you|made you|developed you|your founder|your maker|your developer|your team|your company|your owner|behind you)/.test(qLower)) {
-    return `I'm **Artha AI Copilot**, an autonomous equity research engine developed with 11 specialist agents, primary regulatory filings, and deterministic financial math. Try *"Analyze TCS fundamentals"*.`
+  // 9. Creator / maker / founder / architect
+  if (/(creater|creator|created|who made|who built|who developed|who designed|built you|made you|developed you|designed you|your founder|your maker|your developer|your architect|your author|your team|your company|your owner|behind you|behind this|creator of|maker of|built this)/i.test(qLower)) {
+    return `**ArthaLens (Artha AI)** was conceptualized, architected, and built by **Anuj Kesharwani** (@Cdbrain108).\n\nIt is an autonomous, evidence-first multi-agent equity intelligence engine powered by 11 specialist agents, deterministic Python AST math, and verified statutory filing audits to eliminate financial hallucinations and broker bias.\n\nReady to analyze a company or thesis? Try asking *"Analyze TCS fundamentals"* or *"What are the risks in Reliance?"*.`
   }
 
   // 10. Identity

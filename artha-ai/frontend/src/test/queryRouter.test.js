@@ -171,3 +171,14 @@ test('getCopilotResponse delivers comprehensive Indian blue-chip analysis for lo
   assert.ok(suggestions.some((s) => s.label.includes('Reliance') && s.type === 'stock'))
 })
 
+test('getCopilotResponse identifies Anuj Kesharwani as creator for creator inquiries', () => {
+  const q1 = getCopilotResponse('who made you')
+  assert.ok(q1.includes('Anuj Kesharwani'))
+
+  const q2 = getCopilotResponse('no i mean creator of that project?')
+  assert.ok(q2.includes('Anuj Kesharwani'))
+
+  const q3 = getCopilotResponse('who is the architect and developer behind this?')
+  assert.ok(q3.includes('Anuj Kesharwani'))
+})
+
