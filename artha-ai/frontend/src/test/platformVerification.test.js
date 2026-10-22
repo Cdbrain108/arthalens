@@ -12,6 +12,7 @@ import ArthaCopilot from '../components/ArthaCopilot'
 import Sidebar from '../components/Sidebar'
 import Login from '../components/Login'
 import PdfViewerModal from '../components/PdfViewerModal'
+import { getCopilotResponse } from '../utils/queryRouter'
 
 const mockUser = {
   uid: 'usr_verified_777',
@@ -306,6 +307,52 @@ test('ArthaReasoningBlock automatically shifts to Pipeline Flow when agents fini
   // Pipeline flow graph should be rendered because all agents are done
   assert.ok(html.includes('Pipeline Flow'))
   assert.ok(html.includes('Synthesize findings') || html.includes('synthesize') || html.includes('Stage 6/6'))
+})
+
+test('Copilot answers comparison margin, P/E, and downside risks from completed report', () => {
+  const comparisonReport = {
+    company: {
+      name: 'TCS vs Infosys',
+      is_comparison: true,
+      comparison: [
+        { name: 'Tata Consultancy Services', ticker: 'TCS', opm: '26.0%', npm: '19.5%', pe: '28.4x' },
+        { name: 'Infosys', ticker: 'INFY', opm: '21.5%', npm: '16.2%', pe: '24.1x' },
+      ],
+      comparison_verdict: {
+        winner_name: 'Tata Consultancy Services',
+        winner_ticker: 'TCS',
+        winner_reason: 'Highest structural operating profit margins (26%) and premium scale',
+        value_name: 'Infosys',
+        value_ticker: 'INFY',
+        value_reason: 'Tactical valuation discount with higher dividend yield',
+        hold_vs_sell_guidance: 'Hold both core IT leaders; accumulate TCS for low-volatility compound returns and INFY for multiple recovery',
+      },
+    },
+  }
+
+  // 1. Margin inquiry
+  const marginResp = getCopilotResponse('Which company has higher operating margins (OPM)?', null, {
+    reportData: comparisonReport,
+  })
+  assert.ok(marginResp.includes('Operating Margin (OPM) & Net Margin Comparison'))
+  assert.ok(marginResp.includes('Tata Consultancy Services'))
+  assert.ok(marginResp.includes('26.0%'))
+  assert.ok(marginResp.includes('21.5%'))
+
+  // 2. P/E valuation multiples inquiry
+  const peResp = getCopilotResponse('Compare P/E valuation multiples & verdict', null, {
+    reportData: comparisonReport,
+  })
+  assert.ok(peResp.includes('Valuation Multiple & P/E Comparison'))
+  assert.ok(peResp.includes('28.4x'))
+  assert.ok(peResp.includes('24.1x'))
+
+  // 3. Downside risk watchpoints
+  const riskResp = getCopilotResponse('What are the key downside risk watchpoints?', null, {
+    reportData: comparisonReport,
+  })
+  assert.ok(riskResp.includes('Key Downside Risk Watchpoints'))
+  assert.ok(riskResp.includes('BFSI'))
 })
 
 

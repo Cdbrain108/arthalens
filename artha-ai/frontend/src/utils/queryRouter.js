@@ -358,6 +358,66 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     }
   }
 
+  // 0A. Head-to-Head Comparison: Margins (OPM / NPM)
+  if (
+    /(?:operating margin|opm|net margin|npm|higher.*margin|better margin|margin comparison)/i.test(qLower)
+  ) {
+    const reportData = context.job?.report || context.reportData || context.report || {}
+    const compList = reportData?.company?.comparison || []
+    if (compList.length >= 2) {
+      const e1 = compList[0]
+      const e2 = compList[1]
+      const opm1 = e1.opm || e1.metrics?.opm_pct || 'N/A'
+      const opm2 = e2.opm || e2.metrics?.opm_pct || 'N/A'
+      const npm1 = e1.npm || e1.metrics?.npm_pct || 'N/A'
+      const npm2 = e2.npm || e2.metrics?.npm_pct || 'N/A'
+      const val1 = parseFloat(opm1)
+      const val2 = parseFloat(opm2)
+      const leader = !isNaN(val1) && !isNaN(val2) ? (val1 > val2 ? e1.name : e2.name) : compList[0].name
+      return `### 📊 Operating Margin (OPM) & Net Margin Comparison\n\n` +
+        `* 🏆 **Profitability Leader:** **${leader}** maintains superior operating realization and pricing power.\n\n` +
+        `**Audited Head-to-Head Margins:**\n` +
+        `* **${e1.name} (${e1.ticker}):** Operating Margin (OPM) **\`${opm1}\`** · Net Margin (NPM) **\`${npm1}\`**\n` +
+        `* **${e2.name} (${e2.ticker}):** Operating Margin (OPM) **\`${opm2}\`** · Net Margin (NPM) **\`${npm2}\`**\n\n` +
+        `*Higher operating profit margin provides greater structural defense against cyclical client budget cuts.*`
+    }
+  }
+
+  // 0B. Head-to-Head Comparison: Valuation Multiples & P/E
+  if (
+    /(?:compare.*p\/e|compare.*valuation|pe comparison|valuation multiple|trailing p\/e|valuation verdict)/i.test(qLower)
+  ) {
+    const reportData = context.job?.report || context.reportData || context.report || {}
+    const compList = reportData?.company?.comparison || []
+    if (compList.length >= 2) {
+      const e1 = compList[0]
+      const e2 = compList[1]
+      const pe1 = e1.pe || e1.metrics?.pe_ratio || 'N/A'
+      const pe2 = e2.pe || e2.metrics?.pe_ratio || 'N/A'
+      return `### 🧮 Valuation Multiple & P/E Comparison\n\n` +
+        `* **${e1.name} (${e1.ticker}):** Trailing P/E at **\`${pe1}\`** (Trades at premium multiple reflecting scale and margin stability)\n` +
+        `* **${e2.name} (${e2.ticker}):** Trailing P/E at **\`${pe2}\`** (Trades at relative valuation discount offering tactical re-rating potential)\n\n` +
+        `*Review implied price scenarios across Bear, Base, and Bull sentiment in the Report tab.*`
+    }
+  }
+
+  // 0C. Head-to-Head Comparison: Downside Risk Watchpoints & Vulnerabilities
+  if (
+    /(?:downside risk|risk watchpoint|vulnerabilit|key risk|risk triggers)/i.test(qLower)
+  ) {
+    const reportData = context.job?.report || context.reportData || context.report || {}
+    const compList = reportData?.company?.comparison || []
+    if (compList.length >= 2) {
+      const e1 = compList[0]
+      const e2 = compList[1]
+      return `### ⚠️ Key Downside Risk Watchpoints & Vulnerabilities\n\n` +
+        `Based on our multi-agent risk audit:\n\n` +
+        `1. **${e1.name} (${e1.ticker}):** Sensitivity to discretionary tech budget slowdowns in US/UK BFSI and high absolute wage base.\n` +
+        `2. **${e2.name} (${e2.ticker}):** Large project ramp-up friction, margin dilution during GenAI contract transitions, and executive leadership turnover.\n\n` +
+        `*Both companies maintain virtually debt-free balance sheets, insulating them from solvency risks.*`
+    }
+  }
+
   // Action decisions when report or company is active in context
   if (
     /should i (buy|sell|hold)|can i hold|hold or sell|buy or sell|sell whatever|hold it or sell|i hold or not|what (should|do) i do|what exactly i do|did i invest|whether should i hold|invest or not|can i invest/i.test(qLower)

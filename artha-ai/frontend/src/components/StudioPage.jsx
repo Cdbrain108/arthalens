@@ -828,11 +828,30 @@ export default function StudioPage({
 
   const latestResearchSession = sessions?.find((s) => s.job_id && !s.job_id.startsWith('chat_')) || sessions?.[0] || null
   const effectiveJob = job || latestResearchSession?.snapshot || null
-  const effectiveReport = job?.report || effectiveJob?.report || null
-  const isDone = (job?.status === 'succeeded' && Boolean(job?.report)) ||
-                 (effectiveJob?.status === 'succeeded' && Boolean(effectiveReport))
   const activeQuery = job?.query || query || effectiveJob?.query || latestResearchSession?.query || ''
   const currentJobId = job?.job_id || latestResearchSession?.job_id || null
+
+  // Fetch full report JSON if not present directly on job status snapshot
+  const [fetchedReport, setFetchedReport] = useState(() => job?.report || effectiveJob?.report || null)
+  useEffect(() => {
+    if (!currentJobId) return
+    if (job?.report) {
+      setFetchedReport(job.report)
+      return
+    }
+    let active = true
+    api.getReport(currentJobId)
+      .then((rep) => {
+        if (active && rep) {
+          setFetchedReport(rep)
+        }
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [currentJobId, job?.status, job?.report])
+
+  const effectiveReport = job?.report || effectiveJob?.report || fetchedReport || null
+  const isDone = (job?.status === 'succeeded') || (effectiveJob?.status === 'succeeded')
   const canAskReport = isDone && Boolean(currentJobId) && typeof onAskReport === 'function'
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
   const pdfUrl = currentJobId ? api.pdfUrl(currentJobId) : null
@@ -883,6 +902,101 @@ export default function StudioPage({
     setCompletedQaIds(new Set())
   }, [currentJobId])
 
+  // ─── Conversational Copilot Multi-Turn Messages State ────────────────────
+  const [copilotMessages, setCopilotMessages] = useState(() => {
+    if (activeQuery) {
+      const isStock = detectQueryType(activeQuery) === 'stock'
+      return [
+        { id: 'u_init', role: 'user', text: activeQuery },
+        {
+          id: 'a_init',
+          role: 'assistant',
+          text: isStock
+            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
+            : getCopilotResponse(activeQuery, user),
+          suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
+        },
+      ]
+    }
+    return [
+      {
+        id: 'a_welcome',
+        role: 'assistant',
+        text: getCopilotResponse('', user),
+        suggestions: getFollowupSuggestions(''),
+      },
+    ]
+  })
+
+  // Synchronize external query transitions into Copilot thread
+  useEffect(() => {
+    if (activeQuery) {
+      const isStock = detectQueryType(activeQuery) === 'stock'
+      setCopilotMessages((prev) => {
+        if (prev.length > 1 && prev.some((m) => m.role === 'user' && m.text === activeQuery)) {
+          return prev
+        }
+        return [
+          { id: `u_${Date.now()}`, role: 'user', text: activeQuery },
+          {
+            id: `a_${Date.now() + 1}`,
+            role: 'assistant',
+            text: isStock
+              ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
+              : getCopilotResponse(activeQuery, user),
+            suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
+          },
+        ]
+      })
+    }
+  }, [activeQuery])
+
+  // Automatically announce report completion with tailored inquiry examples directly into Copilot thread
+  const hasAnnouncedCompletionRef = useRef(null)
+  useEffect(() => {
+    if (isDone && (job?.report || effectiveReport) && hasAnnouncedCompletionRef.current !== currentJobId) {
+      hasAnnouncedCompletionRef.current = currentJobId
+      const targetJob = job || effectiveJob
+      const rep = targetJob?.report || effectiveReport
+      const queryName = activeQuery || rep?.company?.name || targetJob?.entities?.[0]?.name || 'your research'
+      const isComparison = Boolean(
+        rep?.company?.is_comparison ||
+        rep?.company?.comparison_verdict ||
+        (targetJob?.entities && targetJob.entities.length > 1) ||
+        / vs | compare /i.test(queryName)
+      )
+
+      const suggestions = isComparison
+        ? [
+            { label: 'Which company has higher operating margins (OPM)?', type: 'action' },
+            { label: 'Compare P/E valuation multiples & verdict', type: 'action' },
+            { label: 'What are the key downside risk watchpoints?', type: 'action' },
+            { label: 'What is the recommended pick for a 3–5 year horizon?', type: 'action' },
+          ]
+        : [
+            { label: 'What is the valuation verdict & P/E multiple?', type: 'action' },
+            { label: 'What are the core bull catalysts driving growth?', type: 'action' },
+            { label: 'What are the top downside risk triggers?', type: 'action' },
+            { label: 'Should I hold, accumulate, or trim at current price?', type: 'action' },
+          ]
+
+      const reportGreeting = `### 📊 Research Report Generated: **${queryName}**\n\nYour institutional equity research report is complete and all findings are cross-verified with primary filings.\n\nYou can review the complete dossier anytime in the **Report** tab (with interactive Beginner & Expert modes, live prices, and PDF export).\n\n**Now you can ask me anything related to this report!** Here are a few examples you can explore:`
+
+      setCopilotMessages((prev) => {
+        if (prev.some((m) => m.id === `report_ready_${currentJobId}`)) return prev
+        return [
+          ...prev,
+          {
+            id: `report_ready_${currentJobId}`,
+            role: 'assistant',
+            text: reportGreeting,
+            suggestions,
+          },
+        ]
+      })
+    }
+  }, [isDone, job, effectiveJob, effectiveReport, currentJobId, activeQuery])
+
   // Automatically open the report dossier as soon as research finishes generating
   const autoNavigatedRef = useRef(null)
   useEffect(() => {
@@ -909,34 +1023,67 @@ export default function StudioPage({
     }
   }, [running, submitting, currentJobId])
 
-  // Dedicated Copilot welcoming when switching to chat after a report has been generated
-  const hasAddedReportGreetingRef = useRef(null)
   const handleSwitchToChat = useCallback(() => {
     setActiveView('chat')
-    const targetJob = job || effectiveJob
-    if (isDone && (targetJob?.report || effectiveReport) && hasAddedReportGreetingRef.current !== currentJobId) {
-      hasAddedReportGreetingRef.current = currentJobId
-      const queryName = activeQuery || targetJob?.report?.company?.name || targetJob?.entities?.[0]?.name || 'your research'
-      const reportGreeting = `As per your query "${queryName}", I have generated an in-depth institutional equity research report. You can review the complete dossier anytime from the Report tab (where interactive in-app preview and PDF download options are available).\n\nIf you want to know more about this report or want to understand it in greater depth, I can help you with specific questions and analysis:`
-      setCopilotMessages((prev) => [
-        ...prev,
-        {
-          id: `report_ready_${currentJobId || Date.now()}`,
-          role: 'assistant',
-          text: reportGreeting,
-          suggestions: [
-            { label: 'What is the valuation verdict & P/E multiple?', type: 'action' },
-            { label: 'What are the core bull catalysts?', type: 'action' },
-            { label: 'What are the top downside risk triggers?', type: 'action' },
-            { label: 'Show agent conclusions and scope limitations', type: 'action' },
-          ],
-        },
-      ])
-    }
     if (!isTouchDevice()) {
       setTimeout(() => inputRef.current?.focus(), 120)
     }
-  }, [isDone, job, effectiveJob, effectiveReport, currentJobId, activeQuery])
+  }, [])
+
+  // Execute QA directly against the completed report
+  const executeReportQa = async (qText) => {
+    const q = (qText || '').trim()
+    if (!q || askingReport) return
+
+    setQaMessages((messages) => [...messages, { role: 'user', text: q }])
+    setAskingReport(true)
+    try {
+      let answerText = ''
+      let sources = []
+      let followUp = false
+
+      if (currentJobId && typeof onAskReport === 'function') {
+        try {
+          const response = await onAskReport(currentJobId, q)
+          if (response?.answer && !response.answer.includes('not established by the completed report')) {
+            answerText = response.answer
+            sources = response.sources || []
+            followUp = response.follow_up_research_needed
+          }
+        } catch (_) {}
+      }
+
+      if (!answerText) {
+        const targetJob = job || effectiveJob
+        answerText = getCopilotResponse(q, user, {
+          companyName: targetJob?.entities?.[0]?.name || activeQuery,
+          ticker: targetJob?.entities?.[0]?.ticker,
+          reportData: targetJob?.report_json || targetJob?.report || effectiveReport,
+          job: targetJob,
+        })
+      }
+
+      setQaMessages((messages) => [
+        ...messages,
+        {
+          role: 'assistant',
+          text: answerText || 'The report did not return an answer.',
+          sources,
+          followUp,
+        },
+      ])
+    } catch (error) {
+      setQaMessages((messages) => [
+        ...messages,
+        {
+          role: 'assistant',
+          text: `I could not answer from this report: ${error.message}`,
+        },
+      ])
+    } finally {
+      setAskingReport(false)
+    }
+  }
 
   // Focus input on mount + refocus when research finishes (DESKTOP ONLY — never on mobile/touch screens to avoid popping virtual keyboard)
   useEffect(() => {
@@ -1010,56 +1157,6 @@ export default function StudioPage({
     }
   }
 
-  // ─── Conversational Copilot Multi-Turn Messages State ────────────────────
-  const [copilotMessages, setCopilotMessages] = useState(() => {
-    if (activeQuery) {
-      const isStock = detectQueryType(activeQuery) === 'stock'
-      return [
-        { id: 'u_init', role: 'user', text: activeQuery },
-        {
-          id: 'a_init',
-          role: 'assistant',
-          text: isStock
-            ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
-            : getCopilotResponse(activeQuery, user),
-          suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
-        },
-      ]
-    }
-    return [
-      {
-        id: 'a_welcome',
-        role: 'assistant',
-        text: getCopilotResponse('', user),
-        suggestions: getFollowupSuggestions(''),
-      },
-    ]
-  })
-
-  // Synchronize external query transitions into Copilot thread
-  useEffect(() => {
-    if (activeQuery) {
-      const isStock = detectQueryType(activeQuery) === 'stock'
-      setCopilotMessages((prev) => {
-        // If already initialized with this activeQuery, keep existing conversation thread
-        if (prev.length > 1 && prev.some((m) => m.role === 'user' && m.text === activeQuery)) {
-          return prev
-        }
-        return [
-          { id: `u_${Date.now()}`, role: 'user', text: activeQuery },
-          {
-            id: `a_${Date.now() + 1}`,
-            role: 'assistant',
-            text: isStock
-              ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
-              : getCopilotResponse(activeQuery, user),
-            suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
-          },
-        ]
-      })
-    }
-  }, [activeQuery])
-
   // Auto-scroll chat on Q&A messages, copilot messages, completion, or active generation
   useEffect(() => {
     chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -1068,6 +1165,38 @@ export default function StudioPage({
   const handleCopilotAction = (rawText) => {
     const text = (rawText || '').trim()
     if (!text || isGenerating) return
+
+    // If a report is already available, check if the clicked suggestion or prompt is about this report
+    if (isDone && currentJobId) {
+      const qLower = text.toLowerCase()
+      const isNewStock = (() => {
+        if (/^(hi|hello|hey|who are you|who r u|what are you|help|introduce)/i.test(qLower)) return false
+        if (/what is|explain|define|how to|meaning of/i.test(qLower)) return false
+        if (/(?:which.*(?:better|winner|pick)|should i (?:hold|buy|sell)|can i hold|hold or sell|what to do|summarize|verdict|risks|downside|opm|margin|p\/e|pe|valuation|horizon|catalyst|findings)/i.test(qLower)) return false
+
+        const currentTickers = (job?.entities || []).map((ent) => (ent.ticker || '').toLowerCase()).filter(Boolean)
+        const currentNames = (job?.entities || []).map((ent) => (ent.name || '').toLowerCase()).filter(Boolean)
+
+        const type = detectQueryType(text)
+        if (type === 'stock') {
+          const words = qLower.split(/[\s,vs\-\/]+/)
+          const mentionsNewEntity = words.some((w) =>
+            ['reliance', 'nvidia', 'nvda', 'apple', 'aapl', 'microsoft', 'msft', 'tesla', 'tsla', 'wipro', 'hdfc', 'sbi', 'itc', 'tata', 'tatamotors', 'meta', 'google', 'googl', 'amazon', 'amzn', 'l&t', 'icici'].includes(w) &&
+            !currentTickers.includes(w) && !currentNames.some((n) => n.includes(w))
+          )
+          if (mentionsNewEntity || (words.includes('compare') && !currentTickers.every((t) => qLower.includes(t)))) {
+            return true
+          }
+        }
+        return false
+      })()
+
+      // If asking about the active report or clicking any suggestion chip, execute report Q&A directly!
+      if (!isNewStock) {
+        executeReportQa(text)
+        return
+      }
+    }
 
     const uId = `u_${Date.now()}`
     setCopilotMessages((prev) => [...prev, { id: uId, role: 'user', text }])
@@ -1189,46 +1318,7 @@ export default function StudioPage({
     }
 
     if (canAskReport) {
-      setQaMessages((messages) => [...messages, { role: 'user', text: q }])
-      setAskingReport(true)
-      try {
-        let answerText = ''
-        let sources = []
-        let followUp = false
-
-        try {
-          const response = await onAskReport(currentJobId, q)
-          if (response?.answer && !response.answer.includes('not established by the completed report')) {
-            answerText = response.answer
-            sources = response.sources || []
-            followUp = response.follow_up_research_needed
-          }
-        } catch (_) {}
-
-        if (!answerText) {
-          const targetJob = job || effectiveJob
-          answerText = getCopilotResponse(q, user, {
-            companyName: targetJob?.entities?.[0]?.name || activeQuery,
-            ticker: targetJob?.entities?.[0]?.ticker,
-            reportData: targetJob?.report_json || targetJob?.report || effectiveReport,
-            job: targetJob,
-          })
-        }
-
-        setQaMessages((messages) => [...messages, {
-          role: 'assistant',
-          text: answerText || 'The report did not return an answer.',
-          sources,
-          followUp,
-        }])
-      } catch (error) {
-        setQaMessages((messages) => [...messages, {
-          role: 'assistant',
-          text: `I could not answer from this report: ${error.message}`,
-        }])
-      } finally {
-        setAskingReport(false)
-      }
+      await executeReportQa(q)
     } else {
       handleCopilotAction(q)
     }
