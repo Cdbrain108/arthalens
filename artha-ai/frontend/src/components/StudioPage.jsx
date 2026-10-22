@@ -217,7 +217,7 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
   )
 }
 
-function InlineReportBriefCard({ job, pdfUrl, onViewPdf }) {
+function InlineReportBriefCard({ job, pdfUrl, onViewPdf, onOpenReport, researchMode = 'beginner' }) {
   const report = job?.report
   if (!report) return null
 
@@ -361,20 +361,30 @@ function InlineReportBriefCard({ job, pdfUrl, onViewPdf }) {
 
       {/* Action Strip */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenReport && (
+            <button
+              type="button"
+              onClick={onOpenReport}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black px-3.5 py-2 text-xs font-bold transition shadow-md cursor-pointer active:scale-95"
+            >
+              <FileText size={13} />
+              <span>Open In-App Report ({researchMode})</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onViewPdf}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black px-3.5 py-2 text-xs font-bold transition shadow-md cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white px-3.5 py-2 text-xs font-semibold transition cursor-pointer active:scale-95"
           >
             <Maximize2 size={13} />
-            <span>Open Institutional PDF Dossier</span>
+            <span>PDF Dossier</span>
           </button>
           {pdfUrl && (
             <a
               href={pdfUrl}
               download={`ArthaLens_${company.ticker || 'Research'}.pdf`}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 px-3 py-2 text-xs font-medium text-white transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 text-xs font-medium text-slate-300 transition cursor-pointer"
             >
               <Download size={13} />
               <span className="hidden sm:inline">Download PDF</span>
@@ -408,6 +418,9 @@ function StudioTopHeader({
   onViewPdf,
   onShare,
   isDone,
+  activeView = 'chat',
+  setActiveView,
+  hasReport = false,
 }) {
   const resolved = (entities || []).map((e) => e.name || e.ticker).filter(Boolean)
   const workspaceTitle = isConversational
@@ -445,16 +458,39 @@ function StudioTopHeader({
         </div>
       </div>
 
-      {/* Center: Perfectly Centered Sleek Indicator Pill */}
+      {/* Center: Sleek View Mode Switcher: Copilot Chat vs Report Dossier */}
       <div className="flex items-center justify-center min-w-0 flex-1 px-1 sm:px-2 text-center">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-[#16181e]/90 px-2.5 py-1 max-w-[155px] sm:max-w-[320px] shadow-[0_2px_12px_rgba(0,0,0,0.4)] backdrop-blur-md">
-          <Logo size={14} className="shrink-0" />
-          <span className="truncate text-[11px] sm:text-[13px] font-bold text-white tracking-tight">
-            {workspaceTitle}
-          </span>
-          <span className="hidden sm:inline-flex rounded-full bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.2 text-[9px] font-mono text-emerald-400 shrink-0">
-            {isConversational ? 'Copilot' : 'Multi-Agent'}
-          </span>
+        <div className="inline-flex items-center rounded-xl bg-white/5 border border-white/10 p-0.5 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveView?.('chat')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
+              activeView === 'chat'
+                ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <Sparkles size={13} className={activeView === 'chat' ? 'text-black' : 'text-emerald-400'} />
+            <span>Chat</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView?.('report')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
+              activeView === 'report'
+                ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/25'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <FileText size={13} className={activeView === 'report' ? 'text-black' : 'text-emerald-400'} />
+            <span>Report</span>
+            <span className={`text-[9.5px] px-1 py-0.2 rounded font-mono uppercase font-bold ${
+              activeView === 'report' ? 'bg-black/20 text-black' : 'bg-emerald-500/20 text-emerald-300'
+            }`}>
+              {researchMode}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -695,9 +731,7 @@ export default function StudioPage({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [followupText, setFollowupText] = useState('')
   const [researchMode, setResearchMode] = useState('beginner')
-  const [rightTab, setRightTab] = useState('preview')
-  const [mobilePane, setMobilePane] = useState(() => (job?.status === 'succeeded' && job?.report ? 'report' : 'chat'))
-  const [viewMode, setViewMode] = useState('report') // 'report' | 'copilot'
+  const [activeView, setActiveView] = useState('chat') // 'chat' | 'report'
   const [qaMessages, setQaMessages] = useState([])
   const [completedQaIds, setCompletedQaIds] = useState(() => new Set())
   const [askingReport, setAskingReport] = useState(false)
@@ -715,16 +749,10 @@ export default function StudioPage({
   const currentJobId = job?.job_id || sessions?.find((s) => s.job_id && !s.job_id.startsWith('chat_'))?.job_id || null
   const pdfUrl = currentJobId ? api.pdfUrl(currentJobId) : null
 
-  // Reset viewMode and Q&A messages on new job, switch to report pane on mobile ONLY when report is ready
+  // Reset Q&A messages on new job
   useEffect(() => {
     setQaMessages([])
     setCompletedQaIds(new Set())
-    setViewMode('report')
-    if (job?.status === 'succeeded' && job?.report) {
-      setMobilePane('report')
-    } else {
-      setMobilePane('chat')
-    }
   }, [job?.job_id, job?.report, job?.status])
 
   // Focus input on mount + refocus when research finishes (DESKTOP ONLY — never on mobile/touch screens to avoid popping virtual keyboard)
@@ -1077,16 +1105,21 @@ export default function StudioPage({
         onViewPdf={() => setShowPdfModal(true)}
         onShare={handleShare}
         isDone={isDone}
+        activeView={activeView}
+        setActiveView={setActiveView}
+        hasReport={Boolean(job?.report)}
       />
 
-      {/* ══ Full-Width Unified Copilot Chatbox Workspace ══ */}
+      {/* ══ Full-Width Unified Copilot Chat & Report Workspace ══ */}
       <div
         className="studio-split flex flex-1 overflow-hidden"
         data-running={String(running || submitting)}
+        data-active-view={activeView}
       >
-        <section
-          className="studio-left-pane flex flex-1 flex-col bg-[#14161b] overflow-hidden w-full"
-        >
+        {activeView === 'chat' ? (
+          <section
+            className="studio-left-pane flex flex-1 flex-col bg-[#14161b] overflow-hidden w-full"
+          >
           <div className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-6 space-y-4 scroll-slim scroll-smooth">
             <div className="w-full max-w-4xl mx-auto flex flex-col flex-1 space-y-4">
               {error && (
@@ -1192,7 +1225,7 @@ export default function StudioPage({
                   isConversational={isConversational}
                   generationStep={generationStep}
                   askingReport={askingReport}
-                  onViewReport={() => setShowPdfModal(true)}
+                  onViewReport={() => setActiveView('report')}
                 />
               )}
 
@@ -1202,6 +1235,8 @@ export default function StudioPage({
                   job={job}
                   pdfUrl={pdfUrl}
                   onViewPdf={() => setShowPdfModal(true)}
+                  onOpenReport={() => setActiveView('report')}
+                  researchMode={researchMode}
                 />
               )}
 
@@ -1340,6 +1375,36 @@ export default function StudioPage({
             </div>
           )}
         </section>
+        ) : (
+          <section className="studio-report-pane flex flex-1 flex-col bg-[#14161b] overflow-y-auto w-full p-3 sm:p-6 scroll-slim">
+            <div className="w-full max-w-5xl mx-auto space-y-4">
+              <ReportPreview
+                jobId={currentJobId}
+                job={job}
+                pdfUrl={pdfUrl}
+                initialMode={researchMode}
+                onModeChange={setResearchMode}
+                onStartResearch={onStartResearch}
+                onAskMoreAboutReport={() => {
+                  setActiveView('chat')
+                  setTimeout(() => inputRef.current?.focus(), 120)
+                }}
+              />
+            </div>
+            {/* Floating action button on mobile to quickly jump back to chat */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView('chat')
+                setTimeout(() => inputRef.current?.focus(), 150)
+              }}
+              className="sm:hidden fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-black px-4 py-2.5 shadow-[0_4px_24px_rgba(16,185,129,0.5)] border border-emerald-300/40 text-xs font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <Sparkles size={14} className="text-black animate-pulse" />
+              <span>Ask Copilot →</span>
+            </button>
+          </section>
+        )}
       </div>
 
       {toast && (
