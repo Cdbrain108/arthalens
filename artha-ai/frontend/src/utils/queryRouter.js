@@ -680,17 +680,25 @@ ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-speci
     return resp
   }
 
-  // 8. Name introduction — "my name is ak", "i am ak", "i'm ak", "call me ak"
+  // 8. User claiming/introducing themselves as creator: "i am the creator", "i created you", "i built you"
+  if (/(?:i am|im|i'm|this is) (?:the )?(?:creator|maker|developer|architect|author)|(?:i (?:created|built|made|developed|designed) you)/i.test(qLower)) {
+    return `Welcome, **Anuj**! 🚀 Honored to assist you. You created **ArthaLens (Artha AI)** as your flagship portfolio project and built it as a fully usable, real-world platform so that **anyone with an interest in stocks**—from first-time retail investors to seasoned analysts—can easily analyze equities, audit statutory filings, and get bias-free insights with deterministic math.\n\nEverything is operational and ready to go. What company or thesis would you like to run today?`
+  }
+
+  // 8B. Name introduction — "my name is ak", "i am ak", "i'm ak", "call me ak"
   const nameMatch = qLower.match(/^(?:my name is|i am|i'm|im|call me|this is)\s+([a-zA-Z][a-zA-Z .]{0,30})/)
   if (nameMatch) {
     const saidName = nameMatch[1].trim().replace(/[?.!]+$/, '')
     const display = saidName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    if (/anuj/i.test(saidName)) {
+      return `Welcome, **${display}**! 🚀 You are the creator of **ArthaLens (Artha AI)**! You built this platform as your flagship portfolio project and a real-world, production-ready tool so anyone interested in stocks can research companies with institutional rigor, verified filings, and deterministic math. What would you like to inspect or analyze today?`
+    }
     return `Nice to meet you, **${display}!** I'm **Artha AI Copilot**, an evidence-first financial research platform. Ask about any financial concept or compare two stock tickers to get started.`
   }
 
-  // 9. Creator / maker / founder / architect
+  // 9. Creator / maker / founder / architect inquiry
   if (/(creater|creator|created|who made|who built|who developed|who designed|built you|made you|developed you|designed you|your founder|your maker|your developer|your architect|your author|your team|your company|your owner|behind you|behind this|creator of|maker of|built this)/i.test(qLower)) {
-    return `**ArthaLens (Artha AI)** was conceptualized, architected, and built by **Anuj Kesharwani** (@Cdbrain108).\n\nIt is an autonomous, evidence-first multi-agent equity intelligence engine powered by 11 specialist agents, deterministic Python AST math, and verified statutory filing audits to eliminate financial hallucinations and broker bias.\n\nReady to analyze a company or thesis? Try asking *"Analyze TCS fundamentals"* or *"What are the risks in Reliance?"*.`
+    return `I was conceptualized, architected, and built by **Anuj Kesharwani** (@Cdbrain108) as his **flagship portfolio project**.\n\nAnuj built me not just as a technical showcase, but as a **fully usable, production-ready tool** so that **anyone interested in the stock market**—from beginner investors to experienced researchers—can freely and easily analyze companies, audit real regulatory filings, and make evidence-backed investment decisions with 100% deterministic math and zero hallucinations.\n\nReady to explore a stock? Try asking *"Analyze TCS fundamentals"* or *"What are the risks in Reliance?"*.`
   }
 
   // 10. Identity

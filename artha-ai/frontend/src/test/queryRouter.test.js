@@ -174,11 +174,22 @@ test('getCopilotResponse delivers comprehensive Indian blue-chip analysis for lo
 test('getCopilotResponse identifies Anuj Kesharwani as creator for creator inquiries', () => {
   const q1 = getCopilotResponse('who made you')
   assert.ok(q1.includes('Anuj Kesharwani'))
+  assert.ok(q1.includes('portfolio project'))
+  assert.ok(q1.includes('production-ready tool'))
+  assert.ok(q1.includes('anyone interested in the stock market'))
 
   const q2 = getCopilotResponse('no i mean creator of that project?')
   assert.ok(q2.includes('Anuj Kesharwani'))
+  assert.ok(q2.includes('portfolio project'))
 
   const q3 = getCopilotResponse('who is the architect and developer behind this?')
   assert.ok(q3.includes('Anuj Kesharwani'))
+
+  const q4 = getCopilotResponse('i am the creator')
+  assert.ok(q4.includes('Welcome, **Anuj**!'))
+  assert.ok(q4.includes('flagship portfolio project'))
+
+  const q5 = getCopilotResponse('i am Anuj Kesharwani')
+  assert.ok(q5.includes('creator of **ArthaLens'))
 })
 
