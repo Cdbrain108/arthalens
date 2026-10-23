@@ -588,7 +588,7 @@ async def ask_report(job_id: str, req: ReportQuestion):
 
 
 @router.api_route("/{job_id}/pdf", methods=["GET", "HEAD"])
-async def get_pdf(job_id: str):
+async def get_pdf(job_id: str, download: bool = False):
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, "job not found")
@@ -626,7 +626,11 @@ async def get_pdf(job_id: str):
             try:
                 from ..report.pdf import render_pdf
                 from ..schemas.models import ReportJSON
-                path = render_pdf(ReportJSON.model_validate(report_data), real_id)
+                if isinstance(report_data, dict):
+                    validated = ReportJSON.model_validate(report_data)
+                else:
+                    validated = report_data
+                path = render_pdf(validated, real_id)
                 jobs.attach_report(real_id, report_data, path)
             except Exception as e:
                 logger.error("Failed to render PDF on-demand for %s: %s", real_id, e)
@@ -634,15 +638,26 @@ async def get_pdf(job_id: str):
     if not path or not os.path.exists(path):
         raise HTTPException(404, "PDF not ready")
 
-    response = FileResponse(
-        path,
-        media_type="application/pdf",
-        content_disposition_type="inline",
-        filename=f"arthalens_{real_id}.pdf",
-    )
-    response.headers["content-disposition"] = f'inline; filename="arthalens_{real_id}.pdf"'
+    if download:
+        response = FileResponse(
+            path,
+            media_type="application/pdf",
+            content_disposition_type="attachment",
+            filename=f"arthalens_research_{clean_id}.pdf",
+        )
+        response.headers["content-disposition"] = f'attachment; filename="arthalens_research_{clean_id}.pdf"'
+    else:
+        # Strictly inline with NO filename to prevent Chromium and Edge from triggering automatic downloads
+        response = FileResponse(
+            path,
+            media_type="application/pdf",
+            content_disposition_type="inline",
+        )
+        response.headers["content-disposition"] = "inline"
+
     response.headers["content-type"] = "application/pdf"
     response.headers["access-control-allow-origin"] = "*"
+    response.headers["cache-control"] = "public, max-age=3600"
     return response
 
 

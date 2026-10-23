@@ -242,7 +242,7 @@ test('Account-specific session storage strictly partitions reports by userId', a
   assert.equal(getStorageKey('guest_123'), 'stock_research_sessions_guest')
 })
 
-test('PdfViewerModal provides Back to Report Page action and never renders download-triggering object or embed tags', () => {
+test('PdfViewerModal provides Back to Report Page action and never renders download-triggering iframe, object or embed tags', () => {
   const html = renderToStaticMarkup(
     React.createElement(PdfViewerModal, {
       jobId: 'tcs-job-1',
@@ -253,6 +253,7 @@ test('PdfViewerModal provides Back to Report Page action and never renders downl
   )
 
   assert.ok(html.includes('Back to Report Page'))
+  assert.ok(!html.includes('<iframe'))
   assert.ok(!html.includes('<object'))
   assert.ok(!html.includes('<embed'))
 })

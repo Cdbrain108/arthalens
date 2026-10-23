@@ -5,14 +5,14 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url'
 import { api } from '../api/client'
 import Logo from './Logo'
 
-// Configure PDF.js worker using local Vite asset URL to avoid cross-origin SecurityError
-if (typeof window !== 'undefined') {
+// Configure PDF.js worker using local Vite asset URL with resilient CDN fallback
+if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = typeof pdfjsWorker === 'string'
-      ? pdfjsWorker
-      : new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString()
+    const localWorker = typeof pdfjsWorker === 'string' && pdfjsWorker ? pdfjsWorker : null
+    const cdnWorker = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/pdf.worker.min.js`
+    pdfjsLib.GlobalWorkerOptions.workerSrc = localWorker || cdnWorker
   } catch {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
   }
 }
 
@@ -89,7 +89,6 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
   const [error, setError] = useState(null)
   const [scale, setScale] = useState(1.0)
   const [rawBlobUrl, setRawBlobUrl] = useState(null)
-  const [useNativeEmbed, setUseNativeEmbed] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
@@ -141,7 +140,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
         try {
           const loadingTask = pdfjsLib.getDocument({
             data: new Uint8Array(arrayBuffer),
-            cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+            cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/cmaps/`,
             cMapPacked: true,
           })
 
@@ -153,7 +152,8 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
         } catch (pdfErr) {
           console.warn('PDF.js canvas rendering fallback to in-app view:', pdfErr)
           if (active) {
-            setUseNativeEmbed(true)
+            // Never render an iframe here as iframes force Chromium/Edge to auto-download to disk!
+            setError('Canvas rendering could not display this PDF on your device. You can explore the full interactive report in-app, or download the PDF file directly.')
             setLoading(false)
           }
         }
@@ -231,7 +231,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
               <span>Back to Report Page</span>
             </button>
 
-            {pdfDoc && !useNativeEmbed && (
+            {pdfDoc && (
               <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-slate-300">
                 <button
                   type="button"
@@ -297,7 +297,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
           </div>
         </div>
 
-        {/* PDF Viewport */}
+        {/* PDF Viewport - Never render iframes to avoid automatic downloads */}
         <div className="min-h-0 flex-1 overflow-y-auto bg-[#0d0e12] p-2 sm:p-6 scroll-slim flex flex-col items-center">
           {loading ? (
             <div className="my-auto flex flex-col items-center justify-center gap-3 py-12 text-center text-[#9aa0a6]">
@@ -309,18 +309,18 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
                 Assembling high-resolution pages for your device
               </p>
             </div>
-          ) : error && !rawBlobUrl ? (
-            <div role="alert" className="my-auto flex flex-col items-center justify-center gap-3.5 py-10 text-center max-w-md px-4">
+          ) : error || !pdfDoc ? (
+            <div role="alert" className="my-auto flex flex-col items-center justify-center gap-3.5 py-10 text-center max-w-md px-4 animate-fade-in">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-lg">
                 <FileText size={24} />
               </div>
               <p className="text-[15px] font-bold text-white">Institutional Research Dossier</p>
               <p className="text-[12px] text-slate-300 leading-relaxed max-w-sm">
-                {error.includes('No PDF dossier is available')
+                {error && error.includes('No PDF dossier is available')
                   ? 'Your institutional research dossier is ready to view.'
-                  : error.includes('backend did not return a PDF')
+                  : error && error.includes('backend did not return a PDF')
                   ? 'The static PDF file compilation is pending, but your full interactive research dossier is ready to view right now.'
-                  : error}
+                  : error || 'Your full interactive research dossier is ready to view in-app.'}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
                 <button
@@ -335,6 +335,16 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
                   <FileText size={14} />
                   <span>Open Interactive Report</span>
                 </button>
+                {rawBlobUrl && (
+                  <a
+                    href={rawBlobUrl}
+                    download={`arthalens_research_${cleanJobId}.pdf`}
+                    className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 cursor-pointer"
+                  >
+                    <Download size={13} />
+                    <span>Download PDF</span>
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={() => setRetryCount((c) => c + 1)}
@@ -353,15 +363,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
                 </button>
               </div>
             </div>
-          ) : useNativeEmbed || (!pdfDoc && rawBlobUrl) ? (
-            <div className="w-full flex-1 flex flex-col items-center justify-start p-1 sm:p-3 w-full h-full max-w-5xl mx-auto space-y-2 animate-fade-in">
-              <iframe
-                src={`${rawBlobUrl}#toolbar=0&navpanes=0&view=FitH`}
-                className="w-full h-[76vh] sm:h-[82vh] rounded-xl border border-white/10 bg-white shadow-2xl"
-                title="Institutional Research PDF Dossier"
-              />
-            </div>
-          ) : pdfDoc ? (
+          ) : (
             <div className="w-full flex flex-col items-center max-w-4xl">
               {Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1).map((pageNum) => (
                 <PdfPageItem
@@ -372,7 +374,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, onClose, onSwitchToRepor
                 />
               ))}
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

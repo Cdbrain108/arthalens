@@ -21,7 +21,8 @@ async function request(path, options = {}, responseType = 'json') {
     throw error
   }
   if (responseType === 'blob') {
-    if (!res.headers.get('content-type')?.toLowerCase().includes('application/pdf')) {
+    const contentType = res.headers.get('content-type')?.toLowerCase() || ''
+    if (contentType.includes('text/html') || (!contentType.includes('application/pdf') && !contentType.includes('octet-stream') && !contentType.includes('binary'))) {
       throw new Error('The backend did not return a PDF')
     }
     return res.blob()
@@ -50,7 +51,7 @@ export const api = {
     })
   },
   getPdf: (jobId, options) => request(`/research/${encodeURIComponent(jobId)}/pdf`, options, 'blob'),
-  pdfUrl: (jobId) => `${BASE}/research/${encodeURIComponent(jobId)}/pdf`,
+  pdfUrl: (jobId, download = false) => `${BASE}/research/${encodeURIComponent(jobId)}/pdf${download ? '?download=1' : ''}`,
   getHistory: () => request('/research/history'),
   getAgents: () => request('/agents'),
   uploadDocument: (file, meta = {}) => {
