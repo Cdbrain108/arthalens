@@ -30,6 +30,7 @@ _ROLE_MODELS = {
     "validator": None,
     "challenger": None,
     "synthesizer": None,  # optionally point at a stronger model
+    "report_qa": None,    # high-reasoning document understanding model
 }
 
 # Extraction roles can run on the cheaper fast model when one is configured

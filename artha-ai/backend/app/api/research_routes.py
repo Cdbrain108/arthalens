@@ -360,11 +360,20 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
     candidates.sort(key=lambda item: item[0], reverse=True)
     top = candidates[:6]
     if not top:
+        comp_name = (report or {}).get("company", {}).get("name") or "the audited company"
         return ReportAnswer(
-            answer=("That question is not established by the completed report. "
-                    "I have not run a fresh search, so I will not infer an answer."),
+            answer=(f"I could not locate an exact direct match for that query phrasing in the completed report for **{comp_name}**.\n\n"
+                    "Please select one of the following key report dimensions or type your specific question below:"),
             evidence_gaps=list((report or {}).get("evidence_gaps") or [])[:5],
-            follow_up_research_needed=True,
+            follow_up_research_needed=False,
+            clarification_needed=True,
+            clarification_prompt=f"Select an audited area to inspect for {comp_name}:",
+            clarification_options=[
+                f"Downside risks & stress watchpoints",
+                f"Valuation multiples & DCF scenarios",
+                f"Operating margins & financial metrics",
+                f"Investment horizon directive (1–6m vs 3–5y)",
+            ],
         )
 
     lines = []

@@ -215,30 +215,51 @@ def synthesize(state: dict[str, Any]) -> ReportJSON:
 
 
 def answer_report_question(question: str, report: dict[str, Any], context: dict[str, Any] | None) -> ReportAnswer:
-    """Answer follow-up questions from the completed report and evidence packet."""
+    """Answer follow-up questions from the completed report and evidence packet using deep document reasoning."""
     if is_mock():
         from ..api.research_routes import _extractive_report_answer
         return _extractive_report_answer(question, report, context)
 
-    # Build a high-density, structured summary so verdict, cases, and metrics are never clipped
+    # Build an extensive, high-density structured payload covering all report dimensions
+    report_dict = report or {}
     key_sections = {}
     for k in (
         "query", "company", "executive_summary", "overall_assessment", "verdict",
         "bull_case", "bear_case", "what_could_change_view", "valuation_scenarios",
-        "metrics", "decision_framework", "reasoned_deductions"
+        "metrics", "decision_framework", "reasoned_deductions", "swot",
+        "quarterly_table", "action_decision", "comparison", "comparison_verdict",
+        "specialist_summaries"
     ):
-        if k in (report or {}):
-            key_sections[k] = report[k]
+        if k in report_dict:
+            key_sections[k] = report_dict[k]
+    # Also extract nested action_decision or comparison if stored inside company
+    if "company" in report_dict and isinstance(report_dict["company"], dict):
+        for sub_k in ("action_decision", "comparison", "comparison_verdict"):
+            if sub_k in report_dict["company"] and sub_k not in key_sections:
+                key_sections[sub_k] = report_dict["company"][sub_k]
 
     prompt = (
-        "You are Artha AI Copilot, an autonomous equity research assistant built by Artha AI. "
-        "Answer the user's question using ONLY the provided report sections and evidence packet. "
-        "Distinguish clearly between what the report establishes and what would require fresh research. "
-        "Always provide complete, grammatically sound, finished sentences — never leave sentences cut off mid-thought. "
-        "Never identify as DeepSeek, OpenAI, or any underlying model provider; your identity is always Artha AI Copilot.\n"
-        f"Question: {question}\n"
-        f"Key Report Sections: {json.dumps(key_sections, default=str)[:14000]}\n"
-        f"Evidence Excerpts: {json.dumps((context or {}).get('evidence', [])[:20], default=str)[:6000]}"
+        "You are Artha AI Copilot, a senior institutional research analyst and document reasoning specialist.\n"
+        "Your mission is to perform thorough, deterministic document reasoning over the provided equity research report "
+        "and evidence packet to answer the user's inquiry with utmost analytical rigor.\n\n"
+        "REASONING & SYNTHESIS DIRECTIVES:\n"
+        "1. GROUNDING: Ground your answers in the audited report sections (bull/bear cases, valuation scenarios, "
+        "operating margins, debt/solvency metrics, action decisions, quarterly trends, and peer comparisons).\n"
+        "2. ACTIVE DEDUCTION: When the user asks about an angle (such as 'short-term investment risks', 'long-term holding strategy', "
+        "or 'operating margin differences'), actively reason across the report findings (e.g. client budget scrutiny, high P/E multiples, "
+        "wage pressures, contract ramp-up friction, or debt-free balance sheets) to synthesize a direct, comprehensive response. "
+        "Do NOT lazily dismiss relevant questions as 'not established' when the report contains contextual findings.\n"
+        "3. AMBIGUOUS / CONFUSED QUERY CLARIFICATION:\n"
+        "   - If the user's query is broad, ambiguous, or underspecified (e.g. simply 'risks?', 'what next?', 'help with report', or an open-ended single word), "
+        "     set `clarification_needed = true`, formulate a helpful `clarification_prompt` asking what they would like to examine, "
+        "     and provide 2 to 4 concrete, actionable `clarification_options` (e.g. ['Short-term execution & budget risks', 'Long-term structural moats', 'Valuation multiple headroom']).\n"
+        "   - If the user's question has a clear, actionable intent (e.g. 'what are the risks for short term investment here?'), "
+        "     set `clarification_needed = false` and deliver a thorough, structured, and conclusive answer.\n"
+        "4. STYLE: Always produce polished, finished sentences formatted in clean GitHub markdown with bold key takeaways and bullet points.\n"
+        "5. IDENTITY: You are Artha AI Copilot. Never identify as OpenAI, DeepSeek, Google, or any base LLM provider.\n\n"
+        f"User Question: {question}\n\n"
+        f"Audited Report Data:\n{json.dumps(key_sections, default=str)[:28000]}\n\n"
+        f"Evidence Excerpts:\n{json.dumps((context or {}).get('evidence', [])[:20], default=str)[:6000]}"
     )
     llm = get_structured_llm("report_qa", ReportAnswer)
     return llm.invoke(prompt)

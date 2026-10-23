@@ -24,6 +24,8 @@ import {
   LogIn,
   ChevronRight,
   Layers,
+  HelpCircle,
+  ArrowRight,
 } from 'lucide-react'
 import LiveAgentStream from './LiveAgentStream'
 import ArthaReasoningBlock from './ArthaReasoningBlock'
@@ -1105,25 +1107,44 @@ export default function StudioPage({
       let answerText = ''
       let sources = []
       let followUp = false
+      let clarification = null
 
-      if (currentJobId && typeof onAskReport === 'function') {
+      const resolvedJobId = currentJobId || targetJob?.job_id || null
+      if (resolvedJobId && typeof onAskReport === 'function') {
         try {
-          const response = await onAskReport(currentJobId, q)
+          const response = await onAskReport(resolvedJobId, q)
           if (response?.answer && !response.answer.includes('not established by the completed report')) {
             answerText = response.answer
             sources = response.sources || []
             followUp = response.follow_up_research_needed
+            if (response.clarification_needed || (response.clarification_options && response.clarification_options.length > 0)) {
+              clarification = {
+                prompt: response.clarification_prompt || 'Clarification needed — select an option or type a response:',
+                options: response.clarification_options || [],
+              }
+            }
           }
         } catch (_) {}
       }
 
       if (!answerText) {
-        answerText = getCopilotResponse(q, user, {
+        const copilotResult = getCopilotResponse(q, user, {
           companyName: targetJob?.entities?.[0]?.name || activeQuery,
           ticker: targetJob?.entities?.[0]?.ticker,
           reportData: targetJob?.report_json || targetJob?.report || effectiveReport,
           job: targetJob,
         })
+        if (typeof copilotResult === 'object' && copilotResult?.text) {
+          answerText = copilotResult.text
+          if (copilotResult.clarification) {
+            clarification = copilotResult.clarification
+          }
+        } else {
+          answerText = String(copilotResult || '')
+          if (copilotResult?.clarification) {
+            clarification = copilotResult.clarification
+          }
+        }
       }
 
       setQaMessages((messages) => [
@@ -1133,6 +1154,7 @@ export default function StudioPage({
           text: answerText || 'The report did not return an answer.',
           sources,
           followUp,
+          clarification,
         },
       ])
     } catch (error) {
@@ -1738,6 +1760,63 @@ export default function StudioPage({
                                 {source.title || 'Source'}
                               </a>
                             ))}
+                          </div>
+                        )}
+
+                        {/* Interactive Clarification Card (Options & Custom Response) */}
+                        {message.clarification && (
+                          <div className="mt-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 backdrop-blur-sm animate-fade-in shadow-inner">
+                            <div className="flex items-center gap-2 mb-2.5 text-emerald-400 font-medium text-xs">
+                              <HelpCircle size={14} className="text-emerald-400 shrink-0" />
+                              <span>{message.clarification.prompt || 'Clarification needed — select an option or type a response:'}</span>
+                            </div>
+
+                            {/* Selectable Option Buttons */}
+                            {message.clarification.options?.length > 0 && (
+                              <div className="flex flex-col gap-1.5 mb-3">
+                                {message.clarification.options.map((opt, optIdx) => (
+                                  <button
+                                    key={`opt-${optIdx}`}
+                                    type="button"
+                                    onClick={() => {
+                                      executeReportQa(opt)
+                                    }}
+                                    className="flex items-center justify-between text-left rounded-lg border border-white/10 bg-white/[0.04] hover:bg-emerald-500/15 hover:border-emerald-500/40 px-3 py-2 text-xs text-white/90 transition-all group active:scale-[0.99]"
+                                  >
+                                    <span>{opt}</span>
+                                    <ArrowRight size={13} className="text-emerald-400 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Custom Response Write-in Box */}
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                const formEl = e.currentTarget
+                                const input = formEl.elements.clarificationText
+                                const val = (input?.value || '').trim()
+                                if (val) {
+                                  executeReportQa(val)
+                                  input.value = ''
+                                }
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <input
+                                name="clarificationText"
+                                type="text"
+                                placeholder="Or type a custom response..."
+                                className="flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-1.5 text-xs text-white placeholder-white/35 focus:border-emerald-500/60 focus:outline-none transition-colors"
+                              />
+                              <button
+                                type="submit"
+                                className="rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors shrink-0"
+                              >
+                                Submit
+                              </button>
+                            </form>
                           </div>
                         )}
                       </div>

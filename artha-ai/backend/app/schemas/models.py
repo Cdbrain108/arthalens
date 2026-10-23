@@ -341,6 +341,9 @@ class ReportAnswer(BaseModel):
     sources: list[dict] = Field(default_factory=list)
     evidence_gaps: list[str] = Field(default_factory=list)
     follow_up_research_needed: bool = False
+    clarification_needed: bool = False
+    clarification_prompt: str = ""
+    clarification_options: list[str] = Field(default_factory=list)
 
 
 class JobStatus(BaseModel):

@@ -375,6 +375,14 @@ test('Copilot answers comparison margin, P/E, and downside risks from completed 
   })
   assert.ok(!generalFollowup.includes('type any ticker to begin'))
   assert.ok(generalFollowup.includes('Audited Report Findings') || generalFollowup.includes('Tata Consultancy Services'))
+
+  // 7. Ambiguous/broad queries trigger interactive clarification options
+  const ambiguousResp = getCopilotResponse('risks', null, {
+    reportData: comparisonReport,
+  })
+  assert.ok(ambiguousResp.clarification, 'Expected clarification object for broad query')
+  assert.ok(ambiguousResp.clarification.options.length >= 2, 'Expected at least 2 clarification options')
+  assert.ok(ambiguousResp.includes('Clarification Needed'), 'Expected Clarification Needed header')
 })
 
 test('StudioPage renders clean new research workspace and does not resurrect older reports', () => {
