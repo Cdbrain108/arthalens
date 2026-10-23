@@ -353,6 +353,28 @@ test('Copilot answers comparison margin, P/E, and downside risks from completed 
   })
   assert.ok(riskResp.includes('Key Downside Risk Watchpoints'))
   assert.ok(riskResp.includes('BFSI'))
+
+  // 4. Short-term risks inquiry (user's exact question)
+  const shortTermRiskResp = getCopilotResponse('what are the risks for short term investment here?', null, {
+    reportData: comparisonReport,
+  })
+  assert.ok(shortTermRiskResp.includes('Short-Term Investment Risks'))
+  assert.ok(shortTermRiskResp.includes('Enterprise IT Budget Scrutiny'))
+  assert.ok(shortTermRiskResp.includes('debt-free balance sheets'))
+
+  // 5. Holding period / horizon inquiry
+  const horizonResp = getCopilotResponse('what is the time horizon or holding period?', null, {
+    reportData: comparisonReport,
+  })
+  assert.ok(horizonResp.includes('Investment Horizon Strategy'))
+  assert.ok(horizonResp.includes('Long-Term Horizon'))
+
+  // 6. Any other follow-up question with report loaded never shows generic starter prompt
+  const generalFollowup = getCopilotResponse('what about the business landscape?', null, {
+    reportData: comparisonReport,
+  })
+  assert.ok(!generalFollowup.includes('type any ticker to begin'))
+  assert.ok(generalFollowup.includes('Audited Report Findings') || generalFollowup.includes('Tata Consultancy Services'))
 })
 
 test('StudioPage renders clean new research workspace and does not resurrect older reports', () => {

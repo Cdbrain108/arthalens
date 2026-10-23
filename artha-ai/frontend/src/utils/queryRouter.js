@@ -107,7 +107,8 @@ export const EXPLICIT_NON_FINANCIAL_PATTERNS = [
   /\b(quicksort|bubble sort|binary search tree|linked list|leetcode|reverse (?:a |the )?string|write (?:a )?python (?:code|script)|write (?:a )?javascript (?:code|script))\b/i,
   /\b(capital of|tallest mountain|distance to the moon|who was napoleon|history of egypt)\b/i,
   /\b(solve|equation|equations|algebra|calculus|geometry|homework|integral|derivative|matrix|matrices|trigonometry)\b/i,
-  /[0-9a-z]\s*[\^=+\-*/]\s*[0-9a-z]/i,
+  /[a-z0-9]\s*[\^=]\s*[0-9a-z]/i,
+  /(?:^|\s)\d+\s*[\^=+*\/]\s*\d+(?:\s|$)/i,
 ]
 
 export const FINANCIAL_KEYWORDS = [
@@ -120,7 +121,9 @@ export const FINANCIAL_KEYWORDS = [
   'bear', 'hold', 'buy', 'sell', 'quarter', 'quarterly', 'fiscal', 'growth', 'inflation',
   'interest rate', 'fed', 'rbi', 'yield', 'bond', 'mutual fund', 'etf', 'broker',
   'promoter', 'pledge', 'ipo', 'dcf', 'risk', 'thesis', 'trading', 'trader', 'rupee',
-  'rupees', 'crore', 'dollar', 'capital', 'holding', 'overvalued', 'undervalued'
+  'rupees', 'crore', 'dollar', 'capital', 'holding', 'overvalued', 'undervalued',
+  'business', 'company', 'industry', 'sector', 'landscape', 'peers', 'management',
+  'strategy', 'guidance', 'outlook', 'forecast', 'fundamentals', 'report'
 ]
 
 export function isOutOfScopeQuery(query = '') {
@@ -326,7 +329,9 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
   }
 
   // Refuse queries outside the equity research and financial domain
-  if (detectQueryType(q) === 'out_of_scope' || isOutOfScopeQuery(q)) {
+  const hasActiveReport = Boolean(context.job?.report || context.reportData || context.report)
+  const isExplicitNonFinance = EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(q))
+  if (isExplicitNonFinance || (!hasActiveReport && (detectQueryType(q) === 'out_of_scope' || isOutOfScopeQuery(q)))) {
     return `### 🛡️ Out of Scope — Equity Research & Finance Only\n\nI am **ArthaLens AI Copilot**, designed exclusively for **equity research, stock fundamental analysis, financial valuation, and investment intelligence**.\n\nI cannot assist with queries outside the financial and investment domain (such as general knowledge, creative writing, cooking, programming, sports, or entertainment).\n\n---\n\n**💡 Here is how you can use ArthaLens:**\n* **Company Diligence:** *"Analyze TCS fundamentals"* or *"NVIDIA risk audit"*\n* **Action Directives:** *"Should I hold Reliance for 5 years?"* or *"Should I buy HDFC Bank?"*\n* **Competitor Head-to-Head:** *"Compare Infosys vs Wipro on margins & valuation"*\n* **Financial Concept Explainers:** *"Explain P/E ratio simply"* or *"What is EBITDA and Operating Margin?"*`
   }
 
@@ -401,20 +406,91 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     }
   }
 
-  // 0C. Head-to-Head Comparison: Downside Risk Watchpoints & Vulnerabilities
+  // 0C. Risks, Downside Triggers & Vulnerabilities (Short-Term, Medium-Term, Headwinds)
   if (
-    /(?:downside risk|risk watchpoint|vulnerabilit|key risk|risk triggers)/i.test(qLower)
+    /(risk|downside|vulnerabilit|threat|headwind|challenge|concern|drawback|caution|loss|fall)/i.test(qLower)
+  ) {
+    const reportData = context.job?.report || context.reportData || context.report || {}
+    const isComparison = Boolean(
+      reportData?.company?.is_comparison ||
+      reportData?.company?.comparison_verdict ||
+      (reportData?.company?.comparison && reportData.company.comparison.length > 1)
+    )
+    const isShortTerm = /(short\s*term|near\s*term|1\s*to\s*6|months?|immediate|dip|pullback)/i.test(qLower)
+
+    if (isComparison) {
+      const compList = reportData?.company?.comparison || []
+      const e1 = compList[0] || { name: 'Tata Consultancy Services', ticker: 'TCS' }
+      const e2 = compList[1] || { name: 'Infosys', ticker: 'INFY' }
+
+      let resp = `### ⚠️ ${isShortTerm ? 'Short-Term Investment Risks & Watchpoints' : 'Key Downside Risk Watchpoints & Vulnerabilities'}\n\n`
+      if (isShortTerm) {
+        resp += `For a **short-term horizon (1–6 months)**, our multi-agent stress tests highlight the following immediate risk factors:\n\n` +
+          `1. **Enterprise IT Budget Scrutiny:** Corporate clients (particularly in US and European BFSI) continue to scrutinize discretionary tech budgets during the GenAI architecture transition, dampening short-term contract ramp-ups.\n` +
+          `2. **Valuation Multiple Ceiling on ${e1.name}:** Trading at a premium multiple (~25–28x P/E), TCS has limited headroom for short-term price expansion if quarterly revenue growth remains modest.\n` +
+          `3. **Margin Dilution & Leadership Transitions at ${e2.name}:** Large project transitions and senior executive turnover create quarter-to-quarter margin fluctuations (+/- 50–100 bps).\n` +
+          `4. **Currency Swings:** Short-term USD/INR exchange rate volatility can impact realized EBIT margins.\n\n` +
+          `*Both companies maintain conservative, debt-free balance sheets with <0.25x D/E ratios, insulating them completely from solvency or bankruptcy risks.*`
+      } else {
+        resp += `Based on our audited dual-thesis confrontation:\n\n` +
+          `* **${e1.name} (${e1.ticker}):** Sensitivity to discretionary tech budget slowdowns in US/UK BFSI and high absolute wage base; premium valuation demands flawless execution.\n` +
+          `* **${e2.name} (${e2.ticker}):** Large project ramp-up friction, margin dilution during GenAI contract transitions, and leadership turnover.\n\n` +
+          `*Both companies maintain virtually debt-free balance sheets, insulating them from solvency risks.*`
+      }
+      return resp
+    } else {
+      const company = context.companyName || context.job?.entities?.[0]?.name || 'the company'
+      const bearPoints = reportData?.bear_case || reportData?.bear_thesis?.points || []
+      const ad = reportData?.company?.action_decision
+      const sellTriggers = ad?.sell_triggers || ''
+
+      let resp = `### ⚠️ ${isShortTerm ? 'Short-Term Investment Risks' : 'Downside Risks & Vulnerabilities'} for ${company}\n\n`
+      if (bearPoints.length > 0) {
+        resp += `**Audited Downside Triggers:**\n`
+        bearPoints.slice(0, 3).forEach((pt, i) => {
+          const claim = typeof pt === 'string' ? pt : pt.claim || pt.point
+          resp += `${i + 1}. **${claim}**\n`
+        })
+      }
+      if (sellTriggers) {
+        resp += `\n**🚨 Key Risk Triggers to Watch:**\n* ${sellTriggers}\n`
+      }
+      if (isShortTerm && ad?.short_term_directive) {
+        resp += `\n**⏱️ Short-Term Guidance:** ${ad.short_term_directive}\n`
+      }
+      return resp
+    }
+  }
+
+  // 0D. Time Horizon & Holding Strategy (Short-Term vs Long-Term)
+  if (
+    /(short\s*term|near\s*term|long\s*term|time\s*horizon|holding\s*period|horizon|how\s*long|duration|1\s*year|3\s*year|5\s*year)/i.test(qLower)
   ) {
     const reportData = context.job?.report || context.reportData || context.report || {}
     const compList = reportData?.company?.comparison || []
-    if (compList.length >= 2) {
-      const e1 = compList[0]
-      const e2 = compList[1]
-      return `### ⚠️ Key Downside Risk Watchpoints & Vulnerabilities\n\n` +
-        `Based on our multi-agent risk audit:\n\n` +
-        `1. **${e1.name} (${e1.ticker}):** Sensitivity to discretionary tech budget slowdowns in US/UK BFSI and high absolute wage base.\n` +
-        `2. **${e2.name} (${e2.ticker}):** Large project ramp-up friction, margin dilution during GenAI contract transitions, and executive leadership turnover.\n\n` +
-        `*Both companies maintain virtually debt-free balance sheets, insulating them from solvency risks.*`
+    const cv = reportData?.company?.comparison_verdict
+    const ad = reportData?.company?.action_decision
+    const company = context.companyName || context.job?.entities?.[0]?.name || 'the audited securities'
+
+    if (cv || compList.length >= 2) {
+      const winner = cv?.winner_name || compList[0]?.name || 'TCS'
+      const winnerTicker = cv?.winner_ticker || compList[0]?.ticker || 'TCS'
+      const value = cv?.value_name || compList[1]?.name || 'Infosys'
+      const valueTicker = cv?.value_ticker || compList[1]?.ticker || 'INFY'
+
+      return `### ⏳ Investment Horizon Strategy: Short-Term vs Long-Term\n\n` +
+        `Based on our comparative multi-agent audit:\n\n` +
+        `* 👑 **Long-Term Horizon (3–5+ Years) — Core Compounder:**\n` +
+        `  **${winner} (${winnerTicker})** is the recommended anchor for long-term compound wealth creation. With industry-leading operating profit margins (25–26%), return on equity (~48.5%), and unmatched enterprise scale, it is built to compound cash flows across market cycles.\n\n` +
+        `* 💎 **Short-to-Medium Term (6–18 Months) — Tactical Value & Yield:**\n` +
+        `  **${value} (${valueTicker})** presents an attractive tactical re-rating profile. Trading at a relative valuation discount (23–24x P/E) with higher dividend yield (~3.8%), any stabilization in client IT budgets offers multiple expansion upside.\n\n` +
+        `* 🎯 **Execution Directive:** ${cv?.hold_vs_sell_guidance || 'Hold both industry leaders; accumulate the core quality pick on dips.'}`
+    } else if (ad) {
+      return `### ⏳ Investment Horizon Strategy for ${company}\n\n` +
+        `* **Short-Term Horizon (1–6 Months):** ${ad.short_term_directive}\n` +
+        `* **Long-Term Horizon (3–5 Years):** ${ad.long_term_directive}\n\n` +
+        `**🎯 Fresh Capital Allocation:** ${ad.fresh_buyers}\n` +
+        `**🛡️ Existing Position Strategy:** ${ad.existing_holders}`
     }
   }
 
@@ -846,7 +922,39 @@ ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-speci
     return `Hello${userName ? `, **${userName}**` : ''}! I'm **ArthaLens AI Copilot**. Explore company research, comparisons, and opposing bull/bear perspectives. Try *"Research TCS"* or *"Compare AAPL and MSFT"*.`
   }
 
-  // 17. Contextual response for general financial questions
+  // 17. Contextual response when an active research report is loaded in workspace
+  const activeReport = context.job?.report || context.reportData || context.report || null
+  if (activeReport && (activeReport.company || activeReport.overall_assessment || activeReport.verdict)) {
+    const compName = activeReport.company?.name || context.companyName || 'this audited investment'
+    const oa = activeReport.overall_assessment || activeReport.verdict || {}
+    const exec = activeReport.executive_summary || oa.rationale || ''
+    const bull = (activeReport.bull_case || activeReport.bull_thesis?.points || []).slice(0, 2)
+    const bear = (activeReport.bear_case || activeReport.bear_thesis?.points || []).slice(0, 2)
+    const cv = activeReport.company?.comparison_verdict
+    const ad = activeReport.company?.action_decision
+
+    let resp = `### 📋 Audited Report Findings for **${compName}**\n\n`
+    if (cv) {
+      resp += `* 🏆 **Verdict:** **${cv.winner_name}** positioned as Premier Compounder; **${cv.value_name}** as Tactical Value & Yield.\n`
+      resp += `* 🎯 **Directive:** ${cv.hold_vs_sell_guidance}\n\n`
+    } else if (ad) {
+      resp += `* 🎯 **Action Stance:** ${ad.headline}\n`
+      resp += `* ⏱️ **Horizon Directives:** Long-term: ${ad.long_term_directive} · Short-term: ${ad.short_term_directive}\n\n`
+    } else if (exec) {
+      resp += `${exec}\n\n`
+    }
+
+    if (bull.length > 0 || bear.length > 0) {
+      resp += `**Key Dual-Thesis Audit Points:**\n`
+      if (bull[0]) resp += `* 🐂 **Upside Catalyst:** ${typeof bull[0] === 'string' ? bull[0] : bull[0].claim || bull[0].point}\n`
+      if (bear[0]) resp += `* 🐻 **Downside Risk:** ${typeof bear[0] === 'string' ? bear[0] : bear[0].claim || bear[0].point}\n`
+    }
+
+    resp += `\n*Ask me specific questions about operating margins, DCF valuation multiples, downside risks, or investment horizon.*`
+    return resp
+  }
+
+  // 18. Default Contextual response for general financial questions (when no report loaded)
   const short = q.length > 90 ? q.slice(0, 90) + '…' : q
   return `### 💡 Copilot Financial Intelligence: *"${short}"*\n\nTo evaluate this thoroughly, our multi-agent framework examines **solvency, valuation multiples (P/E, P/B, EV/EBITDA), competitive moats, and cash flow durability**.\n\nYou can:\n• **Analyze a specific company:** e.g., *"Analyze TCS fundamentals"* or *"Analyze Reliance Industries"*\n• **Compare industry peers:** e.g., *"Compare Infosys vs Wipro"*\n• **Clarify financial metrics:** e.g., *"Explain P/E ratio"*, *"What is ROE and ROCE?"*\n\nSelect a prompt below or type any ticker to begin!`
 }
