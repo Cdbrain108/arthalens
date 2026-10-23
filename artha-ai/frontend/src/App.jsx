@@ -325,7 +325,7 @@ export default function App() {
             submitting={submitting}
             error={error}
             onStartResearch={handleStartResearch}
-            onAskReport={(jobId, question) => api.askReport(jobId, question)}
+            onAskReport={(jobId, question, history) => api.askReport(jobId, question, history)}
             onNewResearch={handleNewResearch}
             onBackToStart={() => navigate('landing')}
             user={user}

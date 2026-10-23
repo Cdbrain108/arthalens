@@ -38,11 +38,17 @@ export const api = {
     }),
   getStatus: (jobId, options) => request(`/research/${encodeURIComponent(jobId)}/status`, options),
   getReport: (jobId, options) => request(`/research/${encodeURIComponent(jobId)}/report`, options),
-  askReport: (jobId, question, options = {}) => request(`/research/${encodeURIComponent(jobId)}/ask`, {
-    ...options,
-    method: 'POST',
-    body: JSON.stringify({ question }),
-  }),
+  askReport: (jobId, question, historyOrOptions, maybeOptions) => {
+    const hasHistory = Array.isArray(historyOrOptions) && historyOrOptions.length > 0
+    const history = hasHistory ? historyOrOptions : []
+    const options = !Array.isArray(historyOrOptions) && historyOrOptions ? historyOrOptions : (maybeOptions || {})
+    const payload = hasHistory ? { question, history } : { question }
+    return request(`/research/${encodeURIComponent(jobId)}/ask`, {
+      ...options,
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
   getPdf: (jobId, options) => request(`/research/${encodeURIComponent(jobId)}/pdf`, options, 'blob'),
   pdfUrl: (jobId) => `${BASE}/research/${encodeURIComponent(jobId)}/pdf`,
   getHistory: () => request('/research/history'),

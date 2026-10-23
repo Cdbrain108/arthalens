@@ -214,8 +214,8 @@ def synthesize(state: dict[str, Any]) -> ReportJSON:
 
 
 
-def answer_report_question(question: str, report: dict[str, Any], context: dict[str, Any] | None) -> ReportAnswer:
-    """Answer follow-up questions from the completed report and evidence packet using deep document reasoning."""
+def answer_report_question(question: str, report: dict[str, Any], context: dict[str, Any] | None, history: list[dict] | None = None) -> ReportAnswer:
+    """Answer follow-up questions from the completed report and evidence packet using deep document reasoning and conversation memory."""
     if is_mock():
         from ..api.research_routes import _extractive_report_answer
         return _extractive_report_answer(question, report, context)
@@ -238,6 +238,18 @@ def answer_report_question(question: str, report: dict[str, Any], context: dict[
             if sub_k in report_dict["company"] and sub_k not in key_sections:
                 key_sections[sub_k] = report_dict["company"][sub_k]
 
+    history_block = ""
+    if history:
+        turns = []
+        for msg in history[-6:]:
+            role = "User" if msg.get("role") == "user" else "Copilot"
+            content = (msg.get("content") or msg.get("text") or "").strip()
+            if content:
+                clipped = content[:450] + ("..." if len(content) > 450 else "")
+                turns.append(f"{role}: {clipped}")
+        if turns:
+            history_block = "PRIOR CONVERSATION HISTORY (Use to resolve references like 'it', 'them', 'the first point', 'previous question'):\n" + "\n".join(turns) + "\n\n"
+
     prompt = (
         "You are Artha AI Copilot, a senior institutional research analyst and document reasoning specialist.\n"
         "Your mission is to perform thorough, deterministic document reasoning over the provided equity research report "
@@ -245,20 +257,23 @@ def answer_report_question(question: str, report: dict[str, Any], context: dict[
         "REASONING & SYNTHESIS DIRECTIVES:\n"
         "1. GROUNDING: Ground your answers in the audited report sections (bull/bear cases, valuation scenarios, "
         "operating margins, debt/solvency metrics, action decisions, quarterly trends, and peer comparisons).\n"
-        "2. ACTIVE DEDUCTION: When the user asks about an angle (such as 'short-term investment risks', 'long-term holding strategy', "
+        "2. CONVERSATION CONTEXT: If prior conversation turns are provided, resolve user references (such as 'them', 'its', 'earlier point', 'how about the second company') "
+        "consistently with the conversation flow while anchoring facts in the audited report data.\n"
+        "3. ACTIVE DEDUCTION: When the user asks about an angle (such as 'short-term investment risks', 'long-term holding strategy', "
         "or 'operating margin differences'), actively reason across the report findings (e.g. client budget scrutiny, high P/E multiples, "
         "wage pressures, contract ramp-up friction, or debt-free balance sheets) to synthesize a direct, comprehensive response. "
         "Do NOT lazily dismiss relevant questions as 'not established' when the report contains contextual findings.\n"
-        "3. AMBIGUOUS / CONFUSED QUERY CLARIFICATION:\n"
+        "4. AMBIGUOUS / CONFUSED QUERY CLARIFICATION:\n"
         "   - If the user's query is broad, ambiguous, or underspecified (e.g. simply 'risks?', 'what next?', 'help with report', or an open-ended single word), "
         "     set `clarification_needed = true`, formulate a helpful `clarification_prompt` asking what they would like to examine, "
         "     and provide 2 to 4 concrete, actionable `clarification_options` (e.g. ['Short-term execution & budget risks', 'Long-term structural moats', 'Valuation multiple headroom']).\n"
         "   - If the user's question has a clear, actionable intent (e.g. 'what are the risks for short term investment here?'), "
         "     set `clarification_needed = false` and deliver a thorough, structured, and conclusive answer.\n"
-        "4. STYLE: Always produce polished, finished sentences formatted in clean GitHub markdown with bold key takeaways and bullet points.\n"
-        "5. IDENTITY: You are Artha AI Copilot. Never identify as OpenAI, DeepSeek, Google, or any base LLM provider.\n\n"
+        "5. STYLE: Always produce polished, finished sentences formatted in clean GitHub markdown with bold key takeaways and bullet points.\n"
+        "6. IDENTITY: You are Artha AI Copilot. Never identify as OpenAI, DeepSeek, Google, or any base LLM provider.\n\n"
         f"User Question: {question}\n\n"
-        f"Audited Report Data:\n{json.dumps(key_sections, default=str)[:28000]}\n\n"
+        f"{history_block}"
+        f"Audited Report Data:\n{json.dumps(key_sections, default=str)[:26000]}\n\n"
         f"Evidence Excerpts:\n{json.dumps((context or {}).get('evidence', [])[:20], default=str)[:6000]}"
     )
     llm = get_structured_llm("report_qa", ReportAnswer)

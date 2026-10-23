@@ -1110,9 +1110,14 @@ export default function StudioPage({
       let clarification = null
 
       const resolvedJobId = currentJobId || targetJob?.job_id || null
+      const priorHistory = qaMessages.slice(-6).map((m) => ({
+        role: m.role,
+        content: m.text,
+      }))
+
       if (resolvedJobId && typeof onAskReport === 'function') {
         try {
-          const response = await onAskReport(resolvedJobId, q)
+          const response = await onAskReport(resolvedJobId, q, priorHistory)
           if (response?.answer && !response.answer.includes('not established by the completed report')) {
             answerText = response.answer
             sources = response.sources || []
@@ -1133,6 +1138,7 @@ export default function StudioPage({
           ticker: targetJob?.entities?.[0]?.ticker,
           reportData: targetJob?.report_json || targetJob?.report || effectiveReport,
           job: targetJob,
+          history: priorHistory,
         })
         if (typeof copilotResult === 'object' && copilotResult?.text) {
           answerText = copilotResult.text

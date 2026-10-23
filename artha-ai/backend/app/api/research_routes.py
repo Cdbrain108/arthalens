@@ -37,6 +37,7 @@ class ResearchRequest(BaseModel):
 
 class ReportQuestion(BaseModel):
     question: str
+    history: list[dict] = Field(default_factory=list)
 
 
 def _on_task_done(task: asyncio.Task) -> None:
@@ -402,12 +403,12 @@ def _extractive_report_answer(question: str, report: dict, context: dict | None)
     )
 
 
-def _answer_report_question(question: str, report: dict, context: dict | None) -> ReportAnswer:
+def _answer_report_question(question: str, report: dict, context: dict | None, history: list[dict] | None = None) -> ReportAnswer:
     if is_mock():
         return _extractive_report_answer(question, report, context)
     try:
         from ..graph.meta import answer_report_question
-        ans = answer_report_question(question, report, context)
+        ans = answer_report_question(question, report, context, history=history)
         # If the LLM claim states the question is not established, but our deterministic extractor
         # finds verified findings (such as peer verdicts, executive summaries, bull/bear triggers),
         # use the verified report findings so the user receives a factual, grounded answer.
@@ -582,7 +583,7 @@ async def ask_report(job_id: str, req: ReportQuestion):
     if not report:
         raise HTTPException(404, "report not ready")
     answer = await asyncio.to_thread(
-        _answer_report_question, question, report, jobs.get_context(job_id))
+        _answer_report_question, question, report, jobs.get_context(job_id), req.history)
     return answer.model_dump()
 
 
