@@ -158,6 +158,61 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
               }}
             />
 
+            {/* Interactive Clarification Card (Options & Custom Response) */}
+            {msg.clarification && (
+              <div className="mt-3.5 rounded-2xl border border-emerald-500/35 bg-emerald-950/25 p-3.5 sm:p-4 backdrop-blur-md animate-fade-in shadow-inner text-left">
+                <div className="flex items-center gap-2 mb-2.5 text-emerald-400 font-semibold text-xs sm:text-[13px]">
+                  <HelpCircle size={15} className="text-emerald-400 shrink-0" />
+                  <span>{msg.clarification.prompt || 'Clarification needed — tap an option or type a response:'}</span>
+                </div>
+
+                {/* Selectable Option Buttons */}
+                {Array.isArray(msg.clarification.options) && msg.clarification.options.length > 0 && (
+                  <div className="flex flex-col gap-2 mb-3">
+                    {msg.clarification.options.map((opt, optIdx) => (
+                      <button
+                        key={`conv-opt-${optIdx}`}
+                        type="button"
+                        onClick={() => onAction(opt)}
+                        className="flex items-center justify-between text-left rounded-xl border border-white/15 bg-white/[0.06] hover:bg-emerald-500/20 hover:border-emerald-500/40 px-3.5 py-2.5 min-h-[44px] text-xs sm:text-[13px] text-white/95 transition-all group active:scale-[0.98] cursor-pointer"
+                      >
+                        <span className="font-medium leading-snug">{opt}</span>
+                        <ArrowRight size={14} className="text-emerald-400 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Custom Response Write-in Box */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const formEl = e.currentTarget
+                    const input = formEl.elements.convClarificationText
+                    const val = (input?.value || '').trim()
+                    if (val) {
+                      onAction(val)
+                      input.value = ''
+                    }
+                  }}
+                  className="flex items-center gap-2 pt-1"
+                >
+                  <input
+                    name="convClarificationText"
+                    type="text"
+                    placeholder="Or type a custom response..."
+                    className="flex-1 rounded-xl border border-white/15 bg-black/50 px-3.5 py-2.5 min-h-[42px] text-[16px] sm:text-xs text-white placeholder-white/40 focus:border-emerald-500/60 focus:outline-none transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 border border-emerald-400/50 px-4 py-2.5 min-h-[42px] text-xs font-bold text-black transition-all shrink-0 active:scale-95 cursor-pointer"
+                  >
+                    Submit
+                  </button>
+                </form>
+              </div>
+            )}
+
             {/* Suggestions on latest assistant turn (available for all users whenever research is not actively running) */}
             {isLatestAssistant && hasFinishedTyping && !running && Array.isArray(msg.suggestions) && msg.suggestions.length > 0 && (
               <div className="pt-3 border-t border-white/5 space-y-2 animate-fade-in">
@@ -174,7 +229,7 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
                         key={sug.label}
                         type="button"
                         onClick={() => onAction(sug.label)}
-                        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-[12px] text-[#bdc1c6] transition hover:bg-white/10 hover:text-white hover:border-white/20 group cursor-pointer"
+                        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 min-h-[42px] text-left text-[12px] sm:text-[12.5px] text-[#bdc1c6] transition hover:bg-white/10 hover:text-white hover:border-white/20 group cursor-pointer active:scale-[0.98]"
                       >
                         <Icon size={14} style={{ color: iconColor }} className="shrink-0 group-hover:scale-110 transition-transform" />
                         <span className="truncate">{sug.label}</span>
@@ -468,13 +523,13 @@ function StudioTopHeader({
   const userInitials = (user?.displayName || user?.name || user?.email || 'A').trim().charAt(0).toUpperCase()
 
   return (
-    <header className="studio-top-header flex shrink-0 items-center justify-between border-b border-white/10 bg-[#16181e] px-2 sm:px-6 z-20">
+    <header className="studio-top-header flex shrink-0 items-center justify-between border-b border-white/10 bg-[#16181e] px-2 sm:px-6 z-20 min-h-[52px]">
       {/* Left: Clean Home button (compact on mobile) */}
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
         <button
           type="button"
           onClick={onBackToStart}
-          className="flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-3 text-[12px] font-semibold text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
+          className="flex h-9 w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-3 text-[12px] font-semibold text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
           aria-label="Back to home"
           title="Back to home"
         >
@@ -501,7 +556,7 @@ function StudioTopHeader({
               setActiveView?.('chat')
             }}
             disabled={running || submitting}
-            className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer min-h-[34px] active:scale-95 ${
               running || submitting
                 ? 'opacity-40 cursor-not-allowed text-slate-400'
                 : activeView === 'chat'
@@ -529,7 +584,7 @@ function StudioTopHeader({
           <button
             type="button"
             onClick={() => setActiveView?.('report')}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-300 cursor-pointer relative ${
+            className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-300 cursor-pointer relative min-h-[34px] active:scale-95 ${
               running || submitting
                 ? 'bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 border border-emerald-400/80 text-emerald-300 ring-1 ring-emerald-400/50 shadow-[0_0_22px_rgba(16,185,129,0.5)] animate-pulse'
                 : activeView === 'report'
@@ -564,11 +619,12 @@ function StudioTopHeader({
             {running || submitting ? (
               <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-200 font-bold uppercase tracking-wider animate-pulse">
                 <Sparkles size={9} className="animate-spin text-emerald-300" style={{ animationDuration: '3s' }} />
-                <span>Generating...</span>
+                <span className="hidden sm:inline">Generating...</span>
+                <span className="sm:hidden">...</span>
               </span>
             ) : (
               <span
-                className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-mono uppercase font-bold tracking-wider transition-colors ${
+                className={`hidden sm:inline-block text-[9.5px] px-1.5 py-0.5 rounded-md font-mono uppercase font-bold tracking-wider transition-colors ${
                   activeView === 'report'
                     ? 'bg-black/25 text-black'
                     : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
@@ -587,22 +643,22 @@ function StudioTopHeader({
           type="button"
           onClick={onNewResearch}
           disabled={running}
-          className="flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-2.5 text-[11.5px] font-medium text-[#f1f3f4] transition hover:bg-white/10 disabled:opacity-40 cursor-pointer active:scale-95"
+          className="flex h-9 w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-2.5 text-[11.5px] font-medium text-[#f1f3f4] transition hover:bg-white/10 disabled:opacity-40 cursor-pointer active:scale-95"
           title="Start new research"
           aria-label="Start new research"
         >
-          <Sparkles size={13} className="text-emerald-400" />
+          <Sparkles size={14} className="text-emerald-400" />
           <span className="hidden sm:inline">New</span>
         </button>
 
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 text-slate-300 hover:text-white sm:px-2.5 cursor-pointer active:scale-95"
+          className="flex h-9 w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 text-slate-300 hover:text-white sm:px-2.5 cursor-pointer active:scale-95"
           title="Past research history"
           aria-label="Past research history"
         >
-          <Menu size={15} />
+          <Menu size={16} />
           <span className="hidden lg:inline text-xs">History</span>
         </button>
 
@@ -611,7 +667,7 @@ function StudioTopHeader({
             type="button"
             onClick={onViewPdf}
             disabled={!isDone || running}
-            className={`flex h-8 sm:h-9 items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
+            className={`flex h-9 items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
               isDone
                 ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
                 : 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed opacity-50'
@@ -622,7 +678,7 @@ function StudioTopHeader({
                 : 'PDF dossier compiles upon research completion'
             }
           >
-            <FileText size={13} />
+            <FileText size={14} />
             <span className="hidden sm:inline">PDF</span>
           </button>
         )}
@@ -631,10 +687,10 @@ function StudioTopHeader({
           <button
             type="button"
             onClick={onOpenAuth}
-            className="flex h-8 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer active:scale-95 shadow-sm"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer active:scale-95 shadow-sm"
             title="Sign in to your account"
           >
-            <LogIn size={13} />
+            <LogIn size={14} />
             <span className="inline text-xs">Sign In</span>
           </button>
         ) : (
@@ -643,7 +699,7 @@ function StudioTopHeader({
               type="button"
               onClick={() => setProfileOpen((prev) => !prev)}
               title={`Signed in as ${user?.displayName || user?.name || user?.email || 'Researcher'}`}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
             >
               {userInitials}
             </button>
@@ -696,7 +752,10 @@ function StudioChatInputBar({
 }) {
   const hasText = value.trim().length > 0
   return (
-    <div className="studio-chat-input border-t border-white/10 bg-[#181a1f]/90 backdrop-blur-xl p-3">
+    <div
+      className="studio-chat-input border-t border-white/10 bg-[#181a1f]/95 backdrop-blur-xl px-2.5 pt-2.5 sm:px-4 sm:pt-3"
+      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
+    >
       <div className="relative group">
         {/* Emerald-Teal Aurora glow — lights up softly on focus-within */}
         <div className="pointer-events-none absolute -inset-[2px] rounded-[16px] bg-gradient-to-r from-emerald-500/40 via-teal-500/30 to-blue-500/30 opacity-0 blur-lg transition-opacity duration-300 group-focus-within:opacity-100" />
@@ -704,11 +763,11 @@ function StudioChatInputBar({
 
         <form
           onSubmit={onSubmit}
-          className="relative flex items-center gap-1.5 rounded-[14px] border border-white/15 bg-[#1e2026]/95 px-2.5 py-2 shadow-[0_8px_30px_-10px_rgba(0,0,0,0.8)] transition-all duration-200 hover:border-white/25 focus-within:border-emerald-500/60 focus-within:bg-[#16181d] focus-within:shadow-[0_0_0_1px_rgba(16,185,129,0.3),0_10px_40px_-10px_rgba(16,185,129,0.35)]"
+          className="relative flex items-center gap-1.5 rounded-[14px] border border-white/15 bg-[#1e2026]/95 px-2.5 py-1.5 sm:py-2 shadow-[0_8px_30px_-10px_rgba(0,0,0,0.8)] transition-all duration-200 hover:border-white/25 focus-within:border-emerald-500/60 focus-within:bg-[#16181d] focus-within:shadow-[0_0_0_1px_rgba(16,185,129,0.3),0_10px_40px_-10px_rgba(16,185,129,0.35)]"
         >
           <button
             type="button"
-            className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white"
+            className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white"
             title="Add context"
           >
             <Plus size={16} />
@@ -727,7 +786,7 @@ function StudioChatInputBar({
               disabled={running}
               autoComplete="off"
               spellCheck="false"
-              className={`w-full bg-transparent text-[13.5px] text-[#f1f3f4] placeholder-[#5f6368] focus:outline-none disabled:opacity-60 ${!hasText && !running ? 'pl-6' : 'pl-1'}`}
+              className={`w-full bg-transparent text-[16px] sm:text-[13.5px] text-[#f1f3f4] placeholder-[#5f6368] focus:outline-none disabled:opacity-60 ${!hasText && !running ? 'pl-6' : 'pl-1'}`}
             />
           </div>
 
@@ -739,7 +798,7 @@ function StudioChatInputBar({
 
           <button
             type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white cursor-pointer"
             title="Voice input"
           >
             <Mic size={15} />
@@ -749,7 +808,7 @@ function StudioChatInputBar({
             type="submit"
             disabled={!hasText || running}
             title={running ? 'Researching…' : 'Start research'}
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
+            className={`flex h-10 w-10 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
               hasText && !running
                 ? 'hover:brightness-115 hover:scale-105 active:scale-95'
                 : 'opacity-85'
@@ -771,7 +830,7 @@ function StudioChatInputBar({
               <ArrowUp
                 size={18}
                 strokeWidth={3}
-                className="text-white"
+                className="text-white transition-transform group-hover:-translate-y-0.5"
                 style={{ stroke: '#ffffff', color: '#ffffff', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}
               />
             )}
@@ -1917,8 +1976,9 @@ export default function StudioPage({
                 color: '#ffffff',
                 border: '1.5px solid #6ee7b7',
                 boxShadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
+                bottom: 'max(1.25rem, env(safe-area-inset-bottom, 1.25rem))',
               }}
-              className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xl"
+              className="fixed right-4 sm:right-6 z-40 flex items-center gap-2 rounded-full px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xl"
               title="Chat with Artha Copilot about this report"
               aria-label="Chat with Artha Copilot about this report"
             >

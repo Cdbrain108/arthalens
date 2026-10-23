@@ -1127,8 +1127,8 @@ export default function ReportPreview({
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[12.5px]">
+          <div className="overflow-x-auto scroll-slim touch-pan-x">
+            <table className="w-full min-w-[640px] text-left text-[12.5px]">
               <thead className="border-b border-white/10 bg-white/[0.01] font-mono text-[10px] uppercase tracking-wider text-[#9aa0a6]">
                 <tr>
                   <th className="py-2.5 pl-4 pr-3">Company &amp; Ticker</th>
@@ -1419,7 +1419,7 @@ export default function ReportPreview({
           <button
             type="button"
             onClick={() => handleModeToggle('beginner')}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[12px] font-semibold transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 min-h-[38px] text-[12px] font-semibold transition active:scale-95 cursor-pointer ${
               mode === 'beginner' ? 'bg-[#4285f4] text-white shadow-md' : 'text-[#9aa0a6] hover:text-[#f1f3f4]'
             }`}
           >
@@ -1429,7 +1429,7 @@ export default function ReportPreview({
           <button
             type="button"
             onClick={() => handleModeToggle('expert')}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[12px] font-semibold transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 min-h-[38px] text-[12px] font-semibold transition active:scale-95 cursor-pointer ${
               mode === 'expert' ? 'bg-[#fbbc04] font-bold text-slate-950 shadow-md' : 'text-[#9aa0a6] hover:text-[#f1f3f4]'
             }`}
           >
@@ -1442,7 +1442,7 @@ export default function ReportPreview({
           <button
             type="button"
             onClick={onAskMoreAboutReport}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-1.5 font-sans text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/25 transition shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-1.5 min-h-[38px] font-sans text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/25 transition shadow-sm cursor-pointer active:scale-95"
           >
             <Sparkles size={14} className="text-emerald-400" />
             <span>Chat with Copilot</span>
@@ -1452,7 +1452,7 @@ export default function ReportPreview({
         <button
           type="button"
           onClick={() => setShowPdfViewer(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-[#4285f4]/35 bg-[#4285f4]/10 px-3.5 py-1.5 font-mono text-[12px] text-[#8ab4f8] transition hover:bg-[#4285f4]/20 cursor-pointer"
+          className="flex items-center gap-1.5 rounded-xl border border-[#4285f4]/35 bg-[#4285f4]/10 px-3.5 py-1.5 min-h-[38px] font-mono text-[12px] text-[#8ab4f8] transition hover:bg-[#4285f4]/20 cursor-pointer active:scale-95"
         >
           <Eye size={14} />
           <span>View PDF</span>
@@ -1461,7 +1461,7 @@ export default function ReportPreview({
           href={resolvedPdfUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-[12px] text-[#f1f3f4] transition hover:bg-white/10 hover:text-white"
+          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 min-h-[38px] font-mono text-[12px] text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
         >
           <ExternalLink size={14} />
           <span>New window</span>
@@ -2210,8 +2210,8 @@ export default function ReportPreview({
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
-        <table className="w-full text-left text-[12px]">
+      <div className="overflow-x-auto scroll-slim touch-pan-x rounded-xl border border-white/10 bg-white/[0.02]">
+        <table className="w-full min-w-[560px] text-left text-[12px]">
           <thead className="border-b border-white/10 bg-white/[0.03] text-[11px] uppercase tracking-wider text-[#9aa0a6]">
             <tr>
               <th className="px-4 py-3 font-semibold">Metric</th>
@@ -2274,8 +2274,8 @@ export default function ReportPreview({
           detail="Neither a live quote nor a validated finding supplied any of the headline ratios for this security, so the table is empty rather than populated with sector averages."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
-          <table className="w-full text-left text-[12px]">
+        <div className="overflow-x-auto scroll-slim touch-pan-x rounded-xl border border-white/10 bg-white/[0.02]">
+          <table className="w-full min-w-[560px] text-left text-[12px]">
             <thead className="border-b border-white/10 bg-white/[0.03] text-[11px] uppercase tracking-wider text-[#9aa0a6]">
               <tr>
                 <th className="px-4 py-3 font-semibold">Metric</th>
@@ -2342,8 +2342,8 @@ export default function ReportPreview({
             <span className="font-mono text-[11px] text-[#8ab4f8]">Verified corporate filings</span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
-            <table className="w-full text-left text-[12px]">
+          <div className="overflow-x-auto scroll-slim touch-pan-x rounded-xl border border-white/10 bg-white/[0.02]">
+            <table className="w-full min-w-[620px] text-left text-[12px]">
               <thead className="border-b border-white/10 bg-white/[0.03] text-[11px] uppercase tracking-wider text-[#9aa0a6]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Reporting Quarter</th>
@@ -2412,8 +2412,8 @@ export default function ReportPreview({
             <span className="font-mono text-[11px] text-[#9aa0a6]">Constant EPS Sensitivity</span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
-            <table className="w-full text-left text-[12px]">
+          <div className="overflow-x-auto scroll-slim touch-pan-x rounded-xl border border-white/10 bg-white/[0.02]">
+            <table className="w-full min-w-[480px] text-left text-[12px]">
               <thead className="border-b border-white/10 bg-white/[0.03] text-[11px] uppercase tracking-wider text-[#9aa0a6]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Multiple Scenario</th>
@@ -2450,8 +2450,8 @@ export default function ReportPreview({
             <span className="font-mono text-[11px] text-emerald-400">Execution Watchlist</span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
-            <table className="w-full text-left text-[12px]">
+          <div className="overflow-x-auto scroll-slim touch-pan-x rounded-xl border border-white/10 bg-white/[0.02]">
+            <table className="w-full min-w-[560px] text-left text-[12px]">
               <thead className="border-b border-white/10 bg-white/[0.03] text-[11px] uppercase tracking-wider text-[#9aa0a6]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Performance Indicator</th>
@@ -3230,7 +3230,7 @@ export default function ReportPreview({
           <button
             type="button"
             onClick={onAskMoreAboutReport}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-[13px] font-bold text-black shadow-lg hover:brightness-110 transition cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 min-h-[44px] w-full sm:w-auto text-[13px] font-bold text-black shadow-lg hover:brightness-110 active:scale-95 transition cursor-pointer shrink-0"
           >
             <span>Ask Artha Copilot</span>
             <Sparkles size={14} />

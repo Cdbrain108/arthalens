@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   ChevronDown,
   ChevronUp,
+  ArrowRight,
 } from 'lucide-react'
 import Logo from './Logo'
 import PdfViewerModal from './PdfViewerModal'
@@ -746,6 +747,61 @@ export default function ArthaCopilot({
                     </div>
                   )}
 
+                  {/* Interactive Clarification Card (Options & Custom Response) */}
+                  {msg.clarification && (
+                    <div className="mt-3 rounded-2xl border border-emerald-500/35 bg-emerald-950/25 p-3.5 sm:p-4 backdrop-blur-md animate-fade-in shadow-inner text-left">
+                      <div className="flex items-center gap-2 mb-2.5 text-emerald-400 font-semibold text-xs sm:text-[13px]">
+                        <HelpCircle size={15} className="text-emerald-400 shrink-0" />
+                        <span>{msg.clarification.prompt || 'Clarification needed — tap an option or type a response:'}</span>
+                      </div>
+
+                      {/* Selectable Option Buttons */}
+                      {Array.isArray(msg.clarification.options) && msg.clarification.options.length > 0 && (
+                        <div className="flex flex-col gap-2 mb-3">
+                          {msg.clarification.options.map((opt, optIdx) => (
+                            <button
+                              key={`copilot-opt-${optIdx}`}
+                              type="button"
+                              onClick={() => handleAsk(opt)}
+                              className="flex items-center justify-between text-left rounded-xl border border-white/15 bg-white/[0.06] hover:bg-emerald-500/20 hover:border-emerald-500/40 px-3.5 py-2.5 min-h-[44px] text-xs sm:text-[13px] text-white/95 transition-all group active:scale-[0.98] cursor-pointer"
+                            >
+                              <span className="font-medium leading-snug">{opt}</span>
+                              <ArrowRight size={14} className="text-emerald-400 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Custom Response Write-in Box */}
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          const formEl = e.currentTarget
+                          const input = formEl.elements.copilotClarificationText
+                          const val = (input?.value || '').trim()
+                          if (val) {
+                            handleAsk(val)
+                            input.value = ''
+                          }
+                        }}
+                        className="flex items-center gap-2 pt-1"
+                      >
+                        <input
+                          name="copilotClarificationText"
+                          type="text"
+                          placeholder="Or type a custom response..."
+                          className="flex-1 rounded-xl border border-white/15 bg-black/50 px-3.5 py-2.5 min-h-[42px] text-[16px] sm:text-xs text-white placeholder-white/40 focus:border-emerald-500/60 focus:outline-none transition-colors"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 border border-emerald-400/50 px-4 py-2.5 min-h-[42px] text-xs font-bold text-black transition-all shrink-0 active:scale-95 cursor-pointer"
+                        >
+                          Submit
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
                   {/* Sources Citations */}
                   {msg.sources?.length > 0 && (
                     <div className="mt-2.5 border-t border-white/10 pt-2 flex flex-wrap gap-1.5">
@@ -794,7 +850,7 @@ export default function ArthaCopilot({
                     key={i}
                     type="button"
                     onClick={() => handleAsk(p)}
-                    className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11.5px] text-slate-300 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 transition text-left cursor-pointer"
+                    className="rounded-full border border-white/15 bg-white/5 px-3.5 py-2 min-h-[38px] text-[12px] text-slate-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 transition text-left cursor-pointer active:scale-95"
                   >
                     {p} →
                   </button>
@@ -806,13 +862,16 @@ export default function ArthaCopilot({
       </div>
 
       {/* ══ 4. FIXED DOCKED COPILOT INPUT BAR ══ */}
-      <div className="border-t border-white/10 bg-[#16181f]/95 p-3 sm:p-4 backdrop-blur-xl z-20">
+      <div
+        className="border-t border-white/10 bg-[#16181f]/95 p-2.5 sm:p-4 backdrop-blur-xl z-20"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
+      >
         <form
           onSubmit={(e) => {
             e.preventDefault()
             handleAsk()
           }}
-          className="max-w-4xl mx-auto relative flex items-center gap-2 rounded-2xl bg-[#101216] border border-white/15 px-4 py-2.5 shadow-xl focus-within:border-emerald-500/50 transition-colors"
+          className="max-w-4xl mx-auto relative flex items-center gap-2 rounded-2xl bg-[#101216] border border-white/15 px-3 py-2 sm:px-4 sm:py-2.5 shadow-xl focus-within:border-emerald-500/50 transition-colors"
         >
           <Sparkles size={16} className="text-emerald-400 shrink-0" />
           <input
@@ -822,13 +881,13 @@ export default function ArthaCopilot({
             onChange={(e) => setQuestion(e.target.value)}
             disabled={asking}
             placeholder={`Ask about this report (e.g. PE, risks, horizon)...`}
-            className="flex-1 bg-transparent text-[13px] sm:text-[14px] text-white placeholder-slate-500 focus:outline-none min-w-0"
+            className="flex-1 bg-transparent text-[16px] sm:text-[14px] text-white placeholder-slate-500 focus:outline-none min-w-0"
           />
           <button
             type="submit"
             disabled={!question.trim() || asking}
             title={asking ? 'Asking Copilot…' : 'Send message to Copilot'}
-            className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-[13px] font-extrabold text-white transition-all duration-200 shadow-md cursor-pointer hover:brightness-115 hover:scale-105 active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 min-h-[44px] min-w-[44px] justify-center text-[13px] font-extrabold text-white transition-all duration-200 shadow-md cursor-pointer hover:brightness-115 hover:scale-105 active:scale-95 shrink-0"
             style={{
               background: question.trim() && !asking
                 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
