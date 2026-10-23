@@ -355,4 +355,38 @@ test('Copilot answers comparison margin, P/E, and downside risks from completed 
   assert.ok(riskResp.includes('BFSI'))
 })
 
+test('StudioPage renders clean new research workspace and does not resurrect older reports', () => {
+  const pastSessions = [
+    {
+      job_id: 'old-job-999',
+      query: 'TCS vs Infosys',
+      snapshot: {
+        job_id: 'old-job-999',
+        status: 'succeeded',
+        report: { company: { name: 'Old TCS vs Infosys' } },
+        entities: [{ name: 'TCS' }, { name: 'Infosys' }],
+      },
+    },
+  ]
+
+  // When job is null and query is empty (as when user clicks New Research)
+  const html = renderToStaticMarkup(
+    React.createElement(StudioPage, {
+      job: null,
+      query: '',
+      running: false,
+      submitting: false,
+      sessions: pastSessions,
+      onNewResearch: () => {},
+      onStartResearch: () => {},
+      user: mockUser,
+    })
+  )
+
+  // Should render the fresh workspace hero, NOT the old report
+  assert.ok(html.includes('Suggested Financial Inquiries'))
+  assert.ok(html.includes('Artha AI Copilot'))
+  assert.ok(!html.includes('Old TCS vs Infosys'))
+})
+
 

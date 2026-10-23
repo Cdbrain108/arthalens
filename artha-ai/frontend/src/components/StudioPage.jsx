@@ -826,13 +826,31 @@ export default function StudioPage({
   const chatScrollRef = useRef(null)
   const inputRef = useRef(null)
 
-  const latestResearchSession = sessions?.find((s) => s.job_id && !s.job_id.startsWith('chat_')) || sessions?.[0] || null
-  const effectiveJob = job || latestResearchSession?.snapshot || null
-  const activeQuery = job?.query || query || effectiveJob?.query || latestResearchSession?.query || ''
-  const currentJobId = job?.job_id || latestResearchSession?.job_id || null
+  const effectiveJob = job || null
+  const activeQuery = job?.query || query || ''
+  const currentJobId = job?.job_id || null
+
+  // When active job and query are cleared (e.g. from New Research action), reset local Studio states
+  useEffect(() => {
+    if (!job && !query) {
+      setActiveView('chat')
+      setQaMessages([])
+      setCompletedQaIds(new Set())
+      setFetchedReport(null)
+      setFollowupText('')
+      setCopilotMessages([
+        {
+          id: 'a_welcome',
+          role: 'assistant',
+          text: getCopilotResponse('', user),
+          suggestions: getFollowupSuggestions(''),
+        },
+      ])
+    }
+  }, [job, query, user])
 
   // Fetch full report JSON if not present directly on job status snapshot
-  const [fetchedReport, setFetchedReport] = useState(() => job?.report || effectiveJob?.report || null)
+  const [fetchedReport, setFetchedReport] = useState(() => job?.report || null)
   useEffect(() => {
     if (!currentJobId) return
     if (job?.report) {
@@ -1139,7 +1157,28 @@ export default function StudioPage({
       setPendingAction('new')
       setShowLeaveWarning(true)
     } else {
+      setActiveView('chat')
+      setQaMessages([])
+      setCompletedQaIds(new Set())
+      setFetchedReport(null)
+      setFollowupText('')
+      setCopilotMessages([
+        {
+          id: 'a_welcome',
+          role: 'assistant',
+          text: getCopilotResponse('', user),
+          suggestions: getFollowupSuggestions(''),
+        },
+      ])
+      try {
+        localStorage.removeItem('artha_last_viewed_job_id')
+        localStorage.removeItem('artha_active_job')
+        sessionStorage.setItem('artha_new_research', 'true')
+      } catch {}
       onNewResearch?.()
+      if (!isTouchDevice()) {
+        setTimeout(() => inputRef.current?.focus(), 80)
+      }
     }
   }
 

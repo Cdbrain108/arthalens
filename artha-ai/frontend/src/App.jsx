@@ -76,10 +76,13 @@ export default function App() {
     }
   }, [job, query])
 
-  // Restore running research on startup or mobile tab reload
+  // Restore running or last viewed research on startup or mobile tab reload
   useEffect(() => {
     let cancelled = false
     try {
+      if (sessionStorage.getItem('artha_new_research') === 'true') {
+        return
+      }
       const savedActive = localStorage.getItem('artha_active_job')
       if (savedActive) {
         const parsed = JSON.parse(savedActive)
@@ -99,13 +102,35 @@ export default function App() {
                 localStorage.removeItem('artha_active_job')
               } catch {}
             })
+          return
         }
+      }
+      const lastViewedId = localStorage.getItem('artha_last_viewed_job_id')
+      if (lastViewedId && window.location.hash === '#chat') {
+        api
+          .getStatus(lastViewedId)
+          .then((statusSnapshot) => {
+            if (cancelled) return
+            if (statusSnapshot && statusSnapshot.job_id) {
+              restore(statusSnapshot)
+            }
+          })
+          .catch(() => {})
       }
     } catch {}
     return () => {
       cancelled = true
     }
   }, [restore, navigate])
+
+  // Track active job ID so reloads on #chat preserve the active view
+  useEffect(() => {
+    if (job?.job_id && !job.job_id.startsWith('chat_')) {
+      try {
+        localStorage.setItem('artha_last_viewed_job_id', job.job_id)
+      } catch {}
+    }
+  }, [job])
 
   // Guard beforeunload during active generation
   useEffect(() => {
@@ -186,6 +211,9 @@ export default function App() {
     (value) => {
       const trimmed = (value || '').trim()
       if (running) return
+      try {
+        sessionStorage.removeItem('artha_new_research')
+      } catch {}
       setQuery(trimmed)
       navigate('chat')
       if (!trimmed) {
@@ -217,6 +245,12 @@ export default function App() {
   const handleSelectSession = useCallback(
     (session) => {
       if (!session || running) return
+      try {
+        sessionStorage.removeItem('artha_new_research')
+        if (session.job_id) {
+          localStorage.setItem('artha_last_viewed_job_id', session.job_id)
+        }
+      } catch {}
       setQuery(session.query || '')
       navigate('chat')
       if (session.status === 'chat' || !session.job_id || session.job_id.startsWith('chat_')) {
@@ -235,10 +269,12 @@ export default function App() {
     if (running) return
     try {
       localStorage.removeItem('artha_active_job')
+      localStorage.removeItem('artha_last_viewed_job_id')
+      sessionStorage.setItem('artha_new_research', 'true')
     } catch {}
     reset()
     setQuery('')
-    navigate('landing')
+    navigate('chat')
   }, [reset, running, navigate])
 
   const handleDeleteSession = useCallback(
