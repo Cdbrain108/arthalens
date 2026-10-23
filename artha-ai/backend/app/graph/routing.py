@@ -17,6 +17,8 @@ ROUTING_TABLE = {
 
 
 def enforce_policy(analysis: QueryAnalysis, plan: ResearchPlan, document_ids=None):
+    if not analysis.entities and analysis.intent != 'document' and not document_ids:
+        return []
     rule = ROUTING_TABLE.get(analysis.intent, ROUTING_TABLE['general'])
     selected = ({a for a in plan.selected_agents if a in AGENT_REGISTRY} | rule['min']) - rule['never']
     if analysis.intent not in ('conversational', 'news') and document_ids:

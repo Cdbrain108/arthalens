@@ -1142,7 +1142,19 @@ def _build_comparison_verdict(comp_data):
 
 
 def _build_action_decision(company, metrics, classification, price_val=None):
-    ticker = company.get("ticker") or "EQUITY"
+    ticker = company.get("ticker") or ""
+    if not ticker or ticker in ("EQUITY", "UNSPECIFIED"):
+        return {
+            "is_action_query": False,
+            "headline": "NO TARGET SECURITY IDENTIFIED",
+            "badge": "SPECIFY TICKER",
+            "verdict_summary": "Autonomous institutional equity research requires an explicit target security or ticker symbol (e.g. TCS, INFY, RELIANCE, NVDA) or peer pair. Please specify a company name to run deterministic valuation and statutory filing audits.",
+            "existing_holders": "Specify a stock ticker to audit current holdings against balance-sheet solvency.",
+            "fresh_buyers": "Specify a stock ticker to evaluate fresh capital deployment and DCF scenarios.",
+            "long_term_directive": "Research requires statutory filings of a specific listed company.",
+            "short_term_directive": "Identify a ticker to evaluate momentum, range, and operational execution.",
+            "sell_triggers": "Exit rules depend on the target company's audited margins and debt leverage."
+        }
     prof = PEER_PROFILES.get(ticker, {})
     name = company.get("name") or prof.get("name", ticker)
     opm = metrics.get("opm_pct") or prof.get("opm", "20.0%")
@@ -1353,7 +1365,9 @@ def _build_discovery_portfolio(comp_data=None):
 
 
 def _build_strategic_pillars(company, metrics):
-    ticker = company.get("ticker", "EQUITY")
+    ticker = company.get("ticker") or ""
+    if not ticker or (ticker in ("EQUITY", "UNSPECIFIED") and not metrics):
+        return []
     prof = PEER_PROFILES.get(ticker, {})
     name = company.get("name") or prof.get("name", ticker)
     pe = metrics.get("pe_ratio") or prof.get("pe", "22.0x")
@@ -1826,13 +1840,6 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         and (e.get("ticker") or "") not in ("PORTFOLIO", "EQUITY")
     ]
 
-    is_discovery_query = any(k in q_lower for k in [
-        "have some money", "where to invest", "which organization", "which companies are good",
-        "which organization are good", "what to buy", "what stocks", "short term and long term hold",
-        "stocks to buy", "performing well", "which stocks are performing well", "less price",
-        "low price", "future growth", "undervalued", "progressively performing well"
-    ])
-
     user_has_multi_entities = len(entities) > 1
     has_comp_keyword = any(k in q_lower for k in (" vs ", " versus ", " compare ", " comparison ", " better than ", "which one to buy"))
 
@@ -1841,11 +1848,9 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
             entities = [{"name": PEER_PROFILES.get(t, {}).get("name", t), "ticker": t} for t in ev_tickers]
         elif ev_tickers:
             entities = [{"name": PEER_PROFILES.get(ev_tickers[0], {}).get("name", ev_tickers[0]), "ticker": ev_tickers[0]}]
-        elif is_discovery_query:
-            entities = [{"name": PEER_PROFILES[t]["name"], "ticker": t} for t in ["BEL", "ZOMATO", "TATAPOWER", "ITC"]]
 
     is_comparison = bool(state.get("compare_mode")) or (len(entities) > 1 and (user_has_multi_entities or has_comp_keyword))
-    if is_comparison:
+    if is_comparison and len(entities) >= 2:
         tickers_str = " · ".join(e.get("ticker") for e in entities)
         names_str = ", ".join(e.get("name") or e.get("ticker") for e in entities)
         company = {
@@ -1856,6 +1861,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
             "is_comparison": True
         }
     else:
+        is_comparison = False
         raw_c = entities[0] if entities else (state.get("company") or report.get("company") or {})
         company = dict(raw_c)
         if not company.get("ticker"):
@@ -1866,7 +1872,14 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
                     if p_tick.lower() in q_lower:
                         company["ticker"] = p_tick
                         break
-        if company.get("ticker") and not company.get("name"):
+        if not company.get("ticker"):
+            company = {
+                "name": "No Target Security Specified",
+                "ticker": "UNSPECIFIED",
+                "exchange": "None",
+                "market_situation_story": "Autonomous equity research requires at least one target corporate ticker to extract statutory balance sheets, SEC/NSE disclosures, and deterministic valuation multiples."
+            }
+        elif not company.get("name"):
             company["name"] = PEER_PROFILES.get(company["ticker"], {}).get("name", company["ticker"])
 
     sources, citations = _citation_index(evidence)
@@ -1984,7 +1997,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
             "market_status": prof.get("market_status", "Active Market Trading"),
             "market_situation_story": prof.get("market_situation_story", f"{company.get('name', t or 'The security')} is evaluated based on audited operational disclosures and market data."),
             "investment_role": prof.get("investment_role", "Evaluated Asset"),
-            "role_badge": prof.get("role_badge", "EQUITY"),
+            "role_badge": prof.get("role_badge", "QUALITY COMPOUNDER" if t and t != "UNSPECIFIED" else "UNSPECIFIED"),
             "investment_horizon": prof.get("investment_horizon", "Long-Term Horizon"),
             "action_stance": prof.get("action_stance", "MONITOR OPERATIONAL DISCLOSURES"),
             "investment_difference": prof.get("investment_difference", "Primary research evaluation.")
@@ -2028,33 +2041,36 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
                         else:
                             derived.append(f"[{tick}] Macroeconomic fluctuations and sector competition could impact near-term margins.")
             else:
-                tick = company.get("ticker", "EQUITY")
-                for e in evidence:
-                    claim = e.get("claim", "")
-                    eid = e.get("evidence_id")
-                    tag = f" [{citations[eid]}]" if eid and eid in citations else ""
-                    claim_lower = claim.lower()
-                    if field == "bull_case":
-                        if e.get("sentiment") == "positive" or any(w in claim_lower for w in ("growth", "profit", "margin", "expanded", "positive", "leadership", "dividend", "cash", "strong", "moat", "revenue")):
-                            item = f"[{tick}] {claim}{tag}"
-                            if item not in derived:
-                                derived.append(item)
-                    else:
-                        if e.get("sentiment") == "negative" or any(w in claim_lower for w in ("debt", "loss", "decline", "drop", "drawdown", "fell", "risk", "attrition", "slowdown", "headwind", "pressure", "litigation")):
-                            item = f"[{tick}] {claim}{tag}"
-                            if item not in derived:
-                                derived.append(item)
-                if not derived:
-                    if field == "bull_case":
-                        derived = [
-                            f"[{tick}] Operating cash flows reliably support ongoing operations and capital investments.",
-                            f"[{tick}] Established market position and core customer engagements support business defensiveness."
-                        ]
-                    else:
-                        derived = [
-                            f"[{tick}] Broader macroeconomic conditions could impact customer demand cycles.",
-                            f"[{tick}] Potential cost pressures and competitive dynamics across core operational markets."
-                        ]
+                tick = company.get("ticker") or ""
+                if tick and tick not in ("EQUITY", "UNSPECIFIED"):
+                    for e in evidence:
+                        claim = e.get("claim", "")
+                        eid = e.get("evidence_id")
+                        tag = f" [{citations[eid]}]" if eid and eid in citations else ""
+                        claim_lower = claim.lower()
+                        if field == "bull_case":
+                            if e.get("sentiment") == "positive" or any(w in claim_lower for w in ("growth", "profit", "margin", "expanded", "positive", "leadership", "dividend", "cash", "strong", "moat", "revenue")):
+                                item = f"[{tick}] {claim}{tag}"
+                                if item not in derived:
+                                    derived.append(item)
+                        else:
+                            if e.get("sentiment") == "negative" or any(w in claim_lower for w in ("debt", "loss", "decline", "drop", "drawdown", "fell", "risk", "attrition", "slowdown", "headwind", "pressure", "litigation")):
+                                item = f"[{tick}] {claim}{tag}"
+                                if item not in derived:
+                                    derived.append(item)
+                    if not derived:
+                        if field == "bull_case":
+                            derived = [
+                                f"[{tick}] Operating cash flows reliably support ongoing operations and capital investments.",
+                                f"[{tick}] Established market position and core customer engagements support business defensiveness."
+                            ]
+                        else:
+                            derived = [
+                                f"[{tick}] Broader macroeconomic conditions could impact customer demand cycles.",
+                                f"[{tick}] Potential cost pressures and competitive dynamics across core operational markets."
+                            ]
+                else:
+                    derived = []
             chosen = derived[:6]
         elif not evidence:
             chosen = []
@@ -2114,7 +2130,31 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
     bear_line = f"Primary downside risks and friction points include: {bear_str}." if bear_str else ""
     cat_line = f"Strategic pivot triggers to monitor: {cat_str}." if cat_str else ""
 
-    if is_comparison and comp_data and comparison_verdict:
+    if company.get("ticker") in ("UNSPECIFIED", "") or (not entities and not ev_tickers):
+        classification = "UNSPECIFIED ENTITY"
+        rationale = "Autonomous institutional equity research requires an explicit target security or ticker symbol (e.g. TCS, INFY, RELIANCE, NVDA). No corporate security was identified in this inquiry."
+        r.executive_summary = (
+            "No specific corporate entity or ticker symbol was identified in the inquiry. "
+            "Autonomous multi-agent equity research audits primary statutory filings (NSE/BSE/SEC) and "
+            "deterministic valuation models for individual listed companies or peer cohorts. "
+            "To generate an audited research dossier, please specify a company name or exchange ticker "
+            "(e.g., TCS, Reliance, Infosys, Apple, Nvidia) or peer comparison pair."
+        )
+        r.overall_assessment = {
+            "classification": "UNSPECIFIED ENTITY",
+            "rationale": rationale,
+            "quality_rating": "Unspecified",
+            "evidence_grounding_pct": 100.0,
+            "claim_coverage": {"total": 0, "accepted": 0, "percentage": 100.0},
+            "verified_sources_count": 0,
+            "coverage_definition": "No corporate security specified for autonomous agent execution.",
+            "data_currency": "Awaiting corporate ticker specification."
+        }
+        r.bull_case = []
+        r.bear_case = []
+        r.evidence_gaps = ["Autonomous research requires a specific corporate ticker or peer comparison pair."]
+        r.what_could_change_view = ["Specify a listed company or ticker symbol to run the multi-agent statutory audit."]
+    elif is_comparison and comp_data and comparison_verdict:
         names_str = ", ".join(e.get("name") or e.get("ticker") for e in entities)
         fin_parts = []
         for c in comp_data:

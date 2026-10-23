@@ -205,9 +205,20 @@ def bull_bear_risk(state: dict) -> dict:
 
 def synthesize(state: dict) -> dict:
     if state.get("intent") == "conversational" or not (state.get("entities") or []):
-        from ..llm_mock import mock_synthesize
-        rep = mock_synthesize(dict(state))
-        return {**_stamp(state, "synthesize"), "synthesis": rep, "report": rep}
+        report = ReportJSON(
+            query=state.get("query", ""),
+            company={"name": "No Target Security Specified", "ticker": "UNSPECIFIED", "exchange": "None"},
+            executive_summary="No specific corporate entity or ticker symbol was identified in the inquiry. Autonomous multi-agent equity research audits primary statutory filings (NSE/BSE/SEC) and deterministic valuation models for individual listed companies or peer cohorts. To generate an audit dossier, please provide a company name or ticker (e.g., TCS, Reliance, Infosys, Apple, Nvidia).",
+            overall_assessment={
+                "classification": "UNSPECIFIED ENTITY",
+                "rationale": "No company ticker was provided to execute specialist agent tools against statutory filings."
+            },
+            bull_case=[],
+            bear_case=[],
+            evidence_gaps=["Autonomous research requires a specific corporate ticker or peer comparison pair."],
+            what_could_change_view=["Specify a listed company or ticker symbol to run the multi-agent statutory audit."]
+        ).model_dump()
+        return {**_stamp(state, "synthesize"), "synthesis": report, "report": report}
     if not state.get("evidence"):
         report = ReportJSON(
             query=state["query"], company=(state.get("entities") or [{}])[0],

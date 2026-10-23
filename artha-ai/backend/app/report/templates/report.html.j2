@@ -1266,6 +1266,12 @@
           </td>
           <td>{{ row.meaning }} <span style="color: #64748b; font-size: 5.5pt;">(Formula: {{ row.formula }})</span></td>
         </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: #64748b; padding: 8px 4px; font-style: italic;">
+            No audited ratios recorded. Primary filings require a valid corporate security to calculate deterministic multiples.
+          </td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -1373,6 +1379,12 @@
           <td style="text-align: right; font-weight: 700; color: #15803d;">{{ row.net_profit }}</td>
           <td style="text-align: center; color: #15803d; font-weight: 700;">{{ row.yoy_growth }}</td>
         </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: #64748b; padding: 8px 4px; font-style: italic;">
+            No quarterly financial filings recorded.
+          </td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -1431,6 +1443,12 @@
           <td style="text-align: center; font-weight: 800;">{{ sc.multiple }}</td>
           <td style="text-align: center; font-weight: 800; color: #2563eb;">{{ sc.implied_price }}</td>
           <td>{{ sc.description }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: #64748b; padding: 8px 4px; font-style: italic;">
+            No valuation scenarios modeled. Static earnings stress-testing requires verified trailing EPS and multiple bands.
+          </td>
         </tr>
       {% endfor %}
     </tbody>

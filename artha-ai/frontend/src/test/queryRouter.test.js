@@ -46,8 +46,6 @@ test('detectQueryType correctly classifies actionable company and ticker queries
     'Apple 10-K',
     'NVDA growth analysis',
     'HDFC Bank valuation',
-    'Which Indian company stock should be best to buy now for a long term goal?',
-    'Best stocks to buy right now',
   ]
 
   for (const q of stockQueries) {
@@ -56,6 +54,25 @@ test('detectQueryType correctly classifies actionable company and ticker queries
       result,
       'stock',
       `Query "${q}" should be classified as 'stock' but got '${result}'`
+    )
+  }
+})
+
+test('detectQueryType correctly classifies open-ended stock discovery queries without entities as conversational', () => {
+  const discoveryQueries = [
+    'Which Indian company stock should be best to buy now for a long term goal?',
+    'Best stocks to buy right now',
+    'See i have 1lakh inr, i want to invest it into stocks, so which stocks will be best to buy for long term?',
+    'where should i invest',
+    'top stocks in india for compounding',
+  ]
+
+  for (const q of discoveryQueries) {
+    const result = detectQueryType(q)
+    assert.strictEqual(
+      result,
+      'conversational',
+      `Query "${q}" should be classified as 'conversational' but got '${result}'`
     )
   }
 })
