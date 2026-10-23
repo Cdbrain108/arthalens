@@ -1054,6 +1054,52 @@ export default function StudioPage({
     if (!q || askingReport) return
 
     setQaMessages((messages) => [...messages, { role: 'user', text: q }])
+
+    const qLower = q.toLowerCase()
+    const targetJob = job || effectiveJob
+    const company = targetJob?.report?.company?.name || targetJob?.entities?.[0]?.name || activeQuery || 'the audited company'
+
+    // 1. Friendly conversational greetings / identity queries
+    if (
+      /^(hi|hello|hey|good\s*(morning|afternoon|evening)|howdy|greetings|who are you|who r u|what are you|what can you do|help)$/i.test(qLower) ||
+      (/^(hi|hello|hey)\b/i.test(qLower) && q.length < 15)
+    ) {
+      const greetingReply = `Hello! I am **Artha AI Copilot**, your autonomous equity research assistant.\n\nI have the full audited research report for **${company}** loaded and verified with primary filings.\n\n**You can ask me anything about this report, such as:**\n* *"Which company has higher operating margins (OPM)?"*\n* *"Compare P/E valuation multiples & verdict"*\n* *"What are the key downside risk watchpoints?"*\n* *"What is the recommended pick for a 3–5 year horizon?"*\n\nOr feel free to ask about any financial ratio or metric!`
+      
+      setQaMessages((messages) => [
+        ...messages,
+        {
+          role: 'assistant',
+          text: greetingReply,
+          sources: [],
+          followUp: false,
+        },
+      ])
+      return
+    }
+
+    // 2. Financial concept explainer queries (e.g. "what is PE ratio", "explain DCF", "what is EBITDA")
+    const isConcept = /^(what is|what are|explain|define|how to calculate|meaning of)/i.test(qLower) &&
+      !/(this company|this stock|the report|in the report|these companies|verdict|recommendation|tcs|infosys|reliance)/i.test(qLower)
+    if (isConcept) {
+      const conceptAnswer = getCopilotResponse(q, user, {
+        companyName: targetJob?.entities?.[0]?.name || activeQuery,
+        ticker: targetJob?.entities?.[0]?.ticker,
+        reportData: targetJob?.report_json || targetJob?.report || effectiveReport,
+        job: targetJob,
+      })
+      setQaMessages((messages) => [
+        ...messages,
+        {
+          role: 'assistant',
+          text: conceptAnswer,
+          sources: [],
+          followUp: false,
+        },
+      ])
+      return
+    }
+
     setAskingReport(true)
     try {
       let answerText = ''
@@ -1072,7 +1118,6 @@ export default function StudioPage({
       }
 
       if (!answerText) {
-        const targetJob = job || effectiveJob
         answerText = getCopilotResponse(q, user, {
           companyName: targetJob?.entities?.[0]?.name || activeQuery,
           ticker: targetJob?.entities?.[0]?.ticker,
