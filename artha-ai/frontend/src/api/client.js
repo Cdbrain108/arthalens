@@ -1,5 +1,8 @@
-// Bulls Eye API client.
-const rawBase = (import.meta?.env?.VITE_API_URL || '').trim().replace(/\/+$/, '')
+// ArthaLens API client.
+const rawBase = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://bullseye-backend-923160450523.us-central1.run.app' : '')
+).trim().replace(/\/+$/, '')
 const BASE = rawBase ? (rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`) : '/api'
 
 async function request(path, options = {}, responseType = 'json') {
@@ -12,7 +15,8 @@ async function request(path, options = {}, responseType = 'json') {
     headers,
   })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
+    const isHtml = (res.headers.get('content-type') || '').includes('text/html')
+    const body = isHtml ? null : await res.json().catch(() => ({}))
     const detail = Array.isArray(body?.detail)
       ? body.detail.map((item) => item.msg).filter(Boolean).join('; ')
       : typeof body?.detail === 'string' ? body.detail : null
@@ -26,6 +30,10 @@ async function request(path, options = {}, responseType = 'json') {
       throw new Error('The backend did not return a PDF')
     }
     return res.blob()
+  }
+  const contentType = res.headers.get('content-type')?.toLowerCase() || ''
+  if (contentType.includes('text/html')) {
+    throw new Error('Backend returned HTML instead of JSON. Ensure Cloud Run backend is connected.')
   }
   return res.json()
 }

@@ -17,6 +17,7 @@ import QueryReasoningAccordion from './QueryReasoningAccordion'
 import AgentProcessContinuation from './AgentProcessContinuation'
 import ReportPreview from './ReportPreview'
 import Logo from './Logo'
+import { api } from '../api/client'
 
 export default function ChatPage({
   job,
@@ -36,7 +37,7 @@ export default function ChatPage({
   const isDone = job?.status === 'succeeded'
   const activeQuery = job?.query || query
   const hasActiveSession = Boolean(activeQuery || job || submitting)
-  const pdfUrl = job?.job_id ? `/api/research/${encodeURIComponent(job.job_id)}/pdf` : null
+  const pdfUrl = job?.job_id ? api.pdfUrl(job.job_id) : null
 
   // Agent counts come from the job, never from a constant — the router selects
   // only the specialists a given query needs, so "6" is wrong on most runs.

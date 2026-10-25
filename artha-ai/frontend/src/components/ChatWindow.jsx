@@ -14,6 +14,7 @@ import QueryReasoningAccordion from './QueryReasoningAccordion'
 import AgentProcessContinuation from './AgentProcessContinuation'
 import ReportPreview from './ReportPreview'
 import Logo from './Logo'
+import { api } from '../api/client'
 
 export default function ChatWindow({
   job,
@@ -29,7 +30,7 @@ export default function ChatWindow({
   const inputRef = useRef(null)
   const isDone = job?.status === 'succeeded'
   const activeQuery = job?.query || query || 'Investment Research Query'
-  const pdfUrl = job?.job_id ? `/api/research/${encodeURIComponent(job.job_id)}/pdf` : null
+  const pdfUrl = job?.job_id ? api.pdfUrl(job.job_id) : null
 
   // Derived from the job, not a constant — the router selects per query.
   const selectedCount = (job?.selected_agents || []).length

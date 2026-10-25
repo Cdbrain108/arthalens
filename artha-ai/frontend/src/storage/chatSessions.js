@@ -5,6 +5,7 @@ import {
   uploadReportPdf as firebaseUploadReportPdf,
   getUserReports as firestoreGetUserReports,
 } from '../services/firebase'
+import { api } from '../api/client'
 
 const LOCAL_KEY = 'stock_research_sessions_v2'
 const MAX_SESSIONS = 50
@@ -99,7 +100,7 @@ export function saveSession(job, extra = {}, userId = null) {
     current_node: job?.current_node || null,
     snapshot: job ? { ...job } : extra.snapshot || null,
     pdfUrl: job?.job_id
-      ? `/api/research/${encodeURIComponent(job.job_id)}/pdf`
+      ? api.pdfUrl(job.job_id)
       : extra.pdfUrl || null,
     storagePdfUrl: extra.storagePdfUrl || null,
     updatedAt: now,
@@ -201,7 +202,7 @@ export function mergeSessions(localList = [], remoteList = [], userId = null) {
       completed_agents: r.completed_agents || prev?.completed_agents || [],
       current_node: r.current_node ?? prev?.current_node ?? null,
       snapshot: { ...(prev?.snapshot || {}), ...r },
-      pdfUrl: r.pdfUrl || prev?.pdfUrl || `/api/research/${encodeURIComponent(r.job_id)}/pdf`,
+      pdfUrl: r.pdfUrl || prev?.pdfUrl || (r.job_id ? api.pdfUrl(r.job_id) : null),
       storagePdfUrl: r.downloadUrl || r.storagePdfUrl || prev?.storagePdfUrl || null,
       updatedAt: r.updatedAt || prev?.updatedAt || new Date().toISOString(),
       createdAt: r.createdAt || prev?.createdAt || new Date().toISOString(),
