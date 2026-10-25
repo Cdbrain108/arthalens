@@ -23,68 +23,41 @@ def _envelope(data, source_title, source_url=None, ok=True, error=None):
 
 class QuoteArgs(BaseModel):
     ticker: str
-    exchange: str = "NSE"
+    exchange: str | None = None
 
 
 class HistoryArgs(BaseModel):
     ticker: str
     period: str = "1y"
-    exchange: str = "NSE"
+    exchange: str | None = None
 
 
 class VolumeArgs(BaseModel):
     ticker: str
     period: str = "3mo"
-    exchange: str = "NSE"
+    exchange: str | None = None
 
 
 class BenchmarkArgs(BaseModel):
     ticker: str
     period: str = "1y"
-    exchange: str = "NSE"
+    exchange: str | None = None
 
 
 class TechnicalsArgs(BaseModel):
     ticker: str
     period: str = "1y"
-    exchange: str = "NSE"
+    exchange: str | None = None
     windows: list[int] = [20, 50]
 
 
-TICKER_ALIASES = {
-    "TATAMOTORS": "TMCV",
-    "TATAMTRDVR": "TMCV",
-    "TATA_MOTORS": "TMCV",
-    "M&M": "M_M",
-    "L&T": "LT",
-    "BAJAJ-AUTO": "BAJAJ_AUTO",
-}
-
-
 def _suffix(ticker: str, exchange: str | None = None) -> str:
-    # Index/benchmark symbols (^NSEI, ^GSPC) and pre-suffixed tickers pass through.
-    from .base import clean_str
-    from ..llm_mock import KNOWN_COMPANIES
-    raw = (clean_str(ticker, "") or "").lstrip("$").strip().upper()
-    base = raw.replace(".NS", "").replace(".BO", "")
-    if base in TICKER_ALIASES:
-        base = TICKER_ALIASES[base]
-    exchange = clean_str(exchange, "")
-    if not exchange:
-        meta = KNOWN_COMPANIES.get(base) or KNOWN_COMPANIES.get(raw)
-        if meta and meta.get("exchange"):
-            exchange = meta["exchange"]
-        else:
-            exchange = "NSE"
-    if not base or "." in base or base.startswith("^"):
-        return base
-    ex = exchange.upper()
-    if ex in ("NASDAQ", "NYSE", "AMEX", "US", "USA"):
-        return base
-    return base + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
+    """Dynamically resolve any ticker or company name to its yfinance symbol across global exchanges."""
+    from .base import resolve_ticker_symbol
+    return resolve_ticker_symbol(ticker, exchange)
 
 
-def _get_quote(ticker: str, exchange: str = "NSE") -> dict:
+def _get_quote(ticker: str, exchange: str | None = None) -> dict:
     """Get the latest price quote for a ticker."""
     try:
         import yfinance as yf
@@ -148,9 +121,10 @@ def _get_quote(ticker: str, exchange: str = "NSE") -> dict:
         return _stooq_quote(ticker, exchange, reason=str(exc))
 
 
-def _stooq_quote(ticker: str, exchange: str, reason: str = "Yahoo quote unavailable") -> dict:
+def _stooq_quote(ticker: str, exchange: str | None = None, reason: str = "Yahoo quote unavailable") -> dict:
     """US end-of-day fallback. Never substitute a different country's listing."""
-    if exchange.upper() not in {"NASDAQ", "NYSE", "US"} or not ticker.isalpha():
+    ex = (exchange or "").upper()
+    if ex not in {"NASDAQ", "NYSE", "US"} or not ticker.isalpha():
         return _envelope({"ticker": ticker}, f"quote {ticker}", ok=False,
                          error=f"{reason}; Stooq fallback does not cover this listing")
     import csv
@@ -192,7 +166,7 @@ def _normalize_period(period: str) -> str | None:
     return _PERIOD_ALIASES.get(key.lower(), key)
 
 
-def _get_price_history(ticker: str, period: str = "1y", exchange: str = "NSE") -> dict:
+def _get_price_history(ticker: str, period: str = "1y", exchange: str | None = None) -> dict:
     """Get finite full-OHLCV price history for a ticker (NaN rows dropped)."""
     try:
         import yfinance as yf
@@ -203,7 +177,26 @@ def _get_price_history(ticker: str, period: str = "1y", exchange: str = "NSE") -
                              source_title=f"yfinance history {ticker}",
                              ok=False, error=f"invalid period '{period}'; "
                              f"valid: {sorted(_VALID_PERIODS)}")
-        df = yf.Ticker(_suffix(ticker, exchange)).history(period=period)
+        symbol = _suffix(ticker, exchange)
+        df = yf.Ticker(symbol).history(period=period)
+        if (df is None or len(df) == 0) and symbol.endswith((".NS", ".BO")):
+            try:
+                alt_symbol = ticker.split(".")[0].strip().upper()
+                alt_df = yf.Ticker(alt_symbol).history(period=period)
+                if alt_df is not None and len(alt_df) > 0:
+                    df = alt_df
+                    symbol = alt_symbol
+            except Exception:
+                pass
+        if (df is None or len(df) == 0) and not symbol.endswith((".NS", ".BO")) and "." not in symbol:
+            try:
+                alt_symbol = symbol + ".NS"
+                alt_df = yf.Ticker(alt_symbol).history(period=period)
+                if alt_df is not None and len(alt_df) > 0:
+                    df = alt_df
+                    symbol = alt_symbol
+            except Exception:
+                pass
         if df is None or len(df) == 0:
             return _envelope({"ticker": ticker, "period": period, "series": []},
                              source_title=f"yfinance history {ticker}",
@@ -232,7 +225,7 @@ def _get_price_history(ticker: str, period: str = "1y", exchange: str = "NSE") -
                          ok=False, error=str(exc))
 
 
-def _get_technicals(ticker: str, period: str = "1y", exchange: str = "NSE",
+def _get_technicals(ticker: str, period: str = "1y", exchange: str | None = None,
                     windows: list[int] | None = None) -> dict:
     """Deterministic technicals from real history: returns, SMAs, range, volatility.
 
@@ -275,7 +268,7 @@ def _get_technicals(ticker: str, period: str = "1y", exchange: str = "NSE",
                          ok=False, error=str(exc))
 
 
-def _get_volume(ticker: str, period: str = "3mo", exchange: str = "NSE") -> dict:
+def _get_volume(ticker: str, period: str = "3mo", exchange: str | None = None) -> dict:
     """Get average, latest, and direction of volume."""
     try:
         hist = get_price_history.invoke({"ticker": ticker, "period": period, "exchange": exchange})
@@ -294,11 +287,13 @@ def _get_volume(ticker: str, period: str = "3mo", exchange: str = "NSE") -> dict
                          ok=False, error=str(exc))
 
 
-def _get_benchmark_history(ticker: str, period: str = "1y", exchange: str = "NSE") -> dict:
-    benchmark = "^NSEI" if exchange.upper() == "NSE" else "^BSESN" if exchange.upper() == "BSE" else "^GSPC"
+def _get_benchmark_history(ticker: str, period: str = "1y", exchange: str | None = None) -> dict:
+    ex = (exchange or "").upper()
+    benchmark = "^NSEI" if ex == "NSE" else "^BSESN" if ex == "BSE" else "^GSPC"
     result = _get_price_history(benchmark, period=period, exchange="")
     if result.get("ok"):
         result["data"]["benchmark_for"] = ticker
+    return result
     return result
 
 

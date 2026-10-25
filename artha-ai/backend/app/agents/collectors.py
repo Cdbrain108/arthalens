@@ -19,14 +19,14 @@ def finite(value):
 
 def _resolve_ent_exchange(ent: dict) -> str | None:
     ex = ent.get('exchange')
-    if ex and str(ex).strip() and str(ex).strip().lower() != 'none':
+    if ex and str(ex).strip() and str(ex).strip().lower() not in ('none', 'null', ''):
         return str(ex).strip()
-    from ..llm_mock import KNOWN_COMPANIES
-    t = (ent.get('ticker') or '').strip().upper()
-    n = (ent.get('name') or '').strip().upper()
-    meta = KNOWN_COMPANIES.get(t) or KNOWN_COMPANIES.get(n)
-    if meta and meta.get('exchange'):
-        return meta['exchange']
+    from ..tools.base import resolve_ticker_info
+    t = (ent.get('ticker') or '').strip()
+    n = (ent.get('name') or '').strip()
+    info = resolve_ticker_info(t or n)
+    if info and info.get('exchange'):
+        return info['exchange']
     return None
 
 

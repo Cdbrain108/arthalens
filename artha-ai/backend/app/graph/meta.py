@@ -75,12 +75,14 @@ def analyze(query: str) -> QueryAnalysis:
     try:
         llm = get_structured_llm("analyzer", QueryAnalysis, attempts=2)
         analysis = llm.invoke(prompt)
-        from ..llm_mock import KNOWN_COMPANIES
+        from ..tools.base import resolve_ticker_info
         for ent in analysis.entities:
-            if not ent.exchange or ent.exchange == "None":
-                meta = KNOWN_COMPANIES.get((ent.ticker or "").strip().upper()) or KNOWN_COMPANIES.get((ent.name or "").strip().upper())
-                if meta and meta.get("exchange"):
-                    ent.exchange = meta["exchange"]
+            if not ent.exchange or ent.exchange in ("None", "null", ""):
+                info = resolve_ticker_info(ent.ticker or ent.name)
+                if info and info.get("exchange"):
+                    ent.exchange = info["exchange"]
+                if info and info.get("ticker") and not ent.ticker:
+                    ent.ticker = info["ticker"]
         return analysis
     except Exception:
         from ..llm_mock import mock_analyze

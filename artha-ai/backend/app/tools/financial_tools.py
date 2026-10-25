@@ -64,23 +64,23 @@ class FinancialsArgs(BaseModel):
     ticker: str
     statement: str = "income"
     period: str = "annual"
-    exchange: str = "NSE"
+    exchange: str | None = None
 
 
 class CompanyMetricsArgs(BaseModel):
     ticker: str
-    exchange: str = "NSE"
+    exchange: str | None = None
 
 
 class PeerMultiplesArgs(BaseModel):
     ticker: str
-    exchange: str = "NSE"
+    exchange: str | None = None
     peers: list[str] = Field(default_factory=list)
 
 
 class HistoricalMultiplesArgs(BaseModel):
     ticker: str
-    exchange: str = "NSE"
+    exchange: str | None = None
     period: str = "5y"
 
 
@@ -129,42 +129,14 @@ def _calculate_ratio(name: str, inputs: dict | str, **_kwargs) -> dict:
             "error": None}
 
 
-TICKER_ALIASES = {
-    "TATAMOTORS": "TMCV",
-    "TATAMTRDVR": "TMCV",
-    "TATA_MOTORS": "TMCV",
-    "M&M": "M_M",
-    "L&T": "LT",
-    "BAJAJ-AUTO": "BAJAJ_AUTO",
-}
-
-
 def _resolve_symbol(ticker: str, exchange: str | None = None) -> str:
-    """Append the yfinance exchange suffix (Indian listings need .NS/.BO;
-    US tickers like AAPL/NVDA are used bare). Also resolve known restructured/NSE aliases."""
-    from .base import clean_str
-    from ..llm_mock import KNOWN_COMPANIES
-    raw = (clean_str(ticker, "") or "").lstrip("$").strip().upper()
-    base = raw.replace(".NS", "").replace(".BO", "")
-    if base in TICKER_ALIASES:
-        base = TICKER_ALIASES[base]
-    exchange = clean_str(exchange, "")
-    if not exchange:
-        meta = KNOWN_COMPANIES.get(base) or KNOWN_COMPANIES.get(raw)
-        if meta and meta.get("exchange"):
-            exchange = meta["exchange"]
-        else:
-            exchange = "NSE"
-    if not base or "." in base or base.startswith("^"):
-        return base
-    ex = exchange.upper()
-    if ex in ("NASDAQ", "NYSE", "AMEX", "US", "USA"):
-        return base
-    return base + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
+    """Dynamically resolve any ticker/company to its exact yfinance symbol across global exchanges."""
+    from .base import resolve_ticker_symbol
+    return resolve_ticker_symbol(ticker, exchange)
 
 
 def _get_financials(ticker: str, statement: str = "income", period: str = "annual",
-                    exchange: str = "NSE") -> dict:
+                    exchange: str | None = None) -> dict:
     """Get normalized financial statements (income|balance|cashflow, annual|quarterly).
 
     Normalization (Framework §P): currency, units, fiscal period, consolidated vs
@@ -222,7 +194,7 @@ def _get_financials(ticker: str, statement: str = "income", period: str = "annua
                 "source": _source(f"yfinance {statement} statement {ticker}")}
 
 
-def _get_company_metrics(ticker: str, exchange: str = "NSE") -> dict:
+def _get_company_metrics(ticker: str, exchange: str | None = None) -> dict:
     """Get company-level metrics: shares outstanding, market cap, book value, EPS."""
     try:
         import yfinance as yf
@@ -286,7 +258,7 @@ def _safe_ratio(value) -> float | None:
     return number if math.isfinite(number) else None
 
 
-def _peer_row(ticker: str, exchange: str) -> dict | None:
+def _peer_row(ticker: str, exchange: str | None = None) -> dict | None:
     """One peer's multiples from provider inputs; None when unresolvable."""
     import yfinance as yf
     symbol = _resolve_symbol(ticker, exchange)
@@ -330,7 +302,7 @@ def _peer_row(ticker: str, exchange: str) -> dict | None:
     return row
 
 
-def _get_peer_multiples(ticker: str, exchange: str = "NSE",
+def _get_peer_multiples(ticker: str, exchange: str | None = None,
                         peers: list[str] | str | None = None, **_kwargs) -> dict:
     """Peer/sector multiples for contextualizing valuation (all deterministic)."""
     try:
@@ -366,7 +338,7 @@ def _get_peer_multiples(ticker: str, exchange: str = "NSE",
             "source": _source(f"yfinance peers {ticker}"), "error": None}
 
 
-def _get_historical_multiples(ticker: str, exchange: str = "NSE",
+def _get_historical_multiples(ticker: str, exchange: str | None = None,
                               period: str = "5y", **_kwargs) -> dict:
     """Historical price context + P/E history where fundamentals allow."""
     try:

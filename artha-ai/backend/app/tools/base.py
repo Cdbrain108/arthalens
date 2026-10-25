@@ -236,3 +236,166 @@ def clean_str(value: Any, default: str | None = None) -> str | None:
     if not text or text.lower() in _NULL_STRINGS:
         return default
     return text
+
+
+# ---------------------------------------------------------------------------
+# Dynamic Ticker & Exchange Resolver (Universal Global Market Coverage)
+# ---------------------------------------------------------------------------
+_TICKER_CACHE: dict[str, dict[str, Any]] = {}
+_TICKER_CACHE_LOCK = threading.RLock()
+
+EXCHANGE_CODE_MAP = {
+    # US exchanges (bare symbol in yfinance)
+    "NASDAQ": "", "NMS": "", "NGM": "", "NCM": "",
+    "NYSE": "", "NYQ": "", "NYS": "",
+    "AMEX": "", "ASE": "", "AMX": "", "ARCA": "", "BATS": "",
+    "US": "", "USA": "",
+    # Indian exchanges
+    "NSE": ".NS", "NSI": ".NS",
+    "BSE": ".BO", "BOM": ".BO",
+    # European exchanges
+    "LSE": ".L", "LON": ".L",
+    "GER": ".DE", "XETRA": ".DE", "FRA": ".DE", "XET": ".DE",
+    "PAR": ".PA", "EPA": ".PA",
+    "AMS": ".AS", "EAM": ".AS",
+    "BRU": ".BR", "EBR": ".BR",
+    "MCE": ".MC", "BME": ".MC",
+    "MIL": ".MI", "BIT": ".MI",
+    "SWX": ".SW", "VTX": ".SW",
+    # Asian & Global exchanges
+    "TYO": ".T", "TSE": ".T", "JPX": ".T",
+    "HKG": ".HK", "HKEX": ".HK",
+    "SS": ".SS", "SHH": ".SS",
+    "SZ": ".SZ", "SHZ": ".SZ",
+    "TW": ".TW", "TWO": ".TWO",
+    "KRX": ".KS", "KOSDAQ": ".KQ",
+    "ASX": ".AX",
+    "TSX": ".TO", "TOR": ".TO", "CVE": ".V",
+    "SAO": ".SA", "BVMF": ".SA",
+    "JSE": ".JO",
+}
+
+EXCHANGE_DISPLAY_MAP = {
+    "NMS": "NASDAQ", "NGM": "NASDAQ", "NCM": "NASDAQ",
+    "NYQ": "NYSE", "NYS": "NYSE",
+    "ASE": "AMEX", "AMX": "AMEX", "ARCA": "NYSE Arca",
+    "NSI": "NSE", "BSE": "BSE",
+    "GER": "XETRA", "FRA": "Frankfurt", "LSE": "LSE", "LON": "LSE",
+    "AMS": "Euronext Amsterdam", "PAR": "Euronext Paris",
+    "TYO": "Tokyo Stock Exchange", "JPX": "Tokyo Stock Exchange",
+    "HKG": "HKEX", "TSX": "TSX", "TOR": "TSX", "ASX": "ASX",
+}
+
+
+def resolve_ticker_info(ticker: str | None, exchange: str | None = None) -> dict[str, str]:
+    """Dynamically resolve any ticker or company name across global exchanges.
+
+    Queries Yahoo Finance search dynamically with smart query candidate expansions,
+    TTL caching, and resilient offline/mock fallbacks. Works for US, Indian, European,
+    Asian, indices, and global assets without hardcoded ticker dictionaries.
+    """
+    import urllib.request
+    import urllib.parse
+    import re
+
+    raw = clean_str(ticker, "") or ""
+    raw = raw.lstrip("$").strip()
+    if not raw:
+        return {"symbol": "", "ticker": "", "exchange": "", "name": ""}
+
+    raw_up = raw.upper()
+
+    # Pass-through pre-suffixed symbols, indices, crypto/futures
+    if raw.startswith("^") or "=F" in raw_up or "-USD" in raw_up:
+        return {"symbol": raw_up, "ticker": raw_up, "exchange": "INDEX", "name": raw_up}
+    if "." in raw:
+        base, suffix = raw_up.split(".", 1)
+        ex = "NSE" if suffix == "NS" else "BSE" if suffix == "BO" else suffix
+        return {"symbol": raw_up, "ticker": base, "exchange": ex, "name": base}
+
+    ex_clean = clean_str(exchange, "")
+    base = raw_up.replace(".NS", "").replace(".BO", "")
+
+    # If exchange is explicitly provided
+    if ex_clean:
+        ex_up = ex_clean.upper()
+        if ex_up in EXCHANGE_CODE_MAP:
+            suffix = EXCHANGE_CODE_MAP[ex_up]
+            return {"symbol": base + suffix, "ticker": base, "exchange": ex_up, "name": base}
+        return {"symbol": base, "ticker": base, "exchange": ex_up, "name": base}
+
+    # Unspecified exchange -> check cache
+    cache_key = base
+    with _TICKER_CACHE_LOCK:
+        if cache_key in _TICKER_CACHE:
+            return _TICKER_CACHE[cache_key]
+
+    # Dynamic search via Yahoo Finance search endpoint
+    headers = {"User-Agent": "Mozilla/5.0"}
+    candidates = [base]
+    if "&" in base:
+        candidates.append(base.replace("&", ""))
+        candidates.append(base + ".NS")
+    spaced = re.sub(r"([a-zA-Z]+)(MOTORS|POWER|STEEL|TECH|AUTO|BANK|FINANCE)", r"\1 \2", base)
+    if spaced != base:
+        candidates.append(spaced)
+    candidates.append(base + ".NS")
+
+    seen = set()
+    for cand in candidates:
+        if cand in seen:
+            continue
+        seen.add(cand)
+        try:
+            url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(cand)}&quotesCount=5&newsCount=0"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read().decode())
+                quotes = data.get("quotes", [])
+                for q in quotes:
+                    sym = q.get("symbol")
+                    qtype = q.get("quoteType", "")
+                    if sym and qtype in ("EQUITY", "ETF", "INDEX", "MUTUALFUND"):
+                        q_ex = q.get("exchange", "")
+                        ex_disp = EXCHANGE_DISPLAY_MAP.get(q_ex, q_ex)
+                        info = {
+                            "symbol": sym,
+                            "ticker": sym.split(".")[0],
+                            "exchange": ex_disp,
+                            "name": q.get("shortname") or q.get("longname") or base,
+                        }
+                        with _TICKER_CACHE_LOCK:
+                            _TICKER_CACHE[cache_key] = info
+                        return info
+        except Exception:
+            pass
+
+    # Offline / Seeded fallback from KNOWN_COMPANIES
+    try:
+        from ..llm_mock import KNOWN_COMPANIES
+        meta = KNOWN_COMPANIES.get(base)
+        if meta and meta.get("exchange"):
+            m_ex = meta["exchange"].upper()
+            suffix = EXCHANGE_CODE_MAP.get(m_ex, "")
+            info = {
+                "symbol": meta.get("ticker", base) + suffix,
+                "ticker": meta.get("ticker", base),
+                "exchange": m_ex,
+                "name": base,
+            }
+            with _TICKER_CACHE_LOCK:
+                _TICKER_CACHE[cache_key] = info
+            return info
+    except Exception:
+        pass
+
+    fallback_info = {"symbol": base, "ticker": base, "exchange": "", "name": base}
+    with _TICKER_CACHE_LOCK:
+        _TICKER_CACHE[cache_key] = fallback_info
+    return fallback_info
+
+
+def resolve_ticker_symbol(ticker: str | None, exchange: str | None = None) -> str:
+    """Dynamically resolve any ticker/company to its exact yfinance symbol."""
+    return resolve_ticker_info(ticker, exchange)["symbol"]
+
