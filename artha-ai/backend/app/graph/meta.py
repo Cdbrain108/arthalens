@@ -42,15 +42,10 @@ def _balanced_evidence(evidence, per_agent=2):
 
 
 def analyze(query: str) -> QueryAnalysis:
-    """Analyze query to extract entities, intent, horizon, and comparison mode."""
-    # Fast path: instant deterministic extraction for recognized entities and tickers (<1ms)
-    from ..llm_mock import mock_analyze
-    quick = mock_analyze(query)
-    if quick.get("entities") and quick.get("intent"):
-        return QueryAnalysis.model_validate(quick)
-
+    """Analyze query dynamically via fast LLM to extract entities, intent, horizon, and comparison mode."""
     if is_mock():
-        return QueryAnalysis.model_validate(quick)
+        from ..llm_mock import mock_analyze
+        return QueryAnalysis.model_validate(mock_analyze(query))
 
     prompt = (
         "Extract the company/entity names and tickers explicitly present in this query. "
@@ -81,13 +76,14 @@ def analyze(query: str) -> QueryAnalysis:
         llm = get_structured_llm("analyzer", QueryAnalysis, attempts=2)
         return llm.invoke(prompt)
     except Exception:
-        return QueryAnalysis.model_validate(quick)
+        from ..llm_mock import mock_analyze
+        return QueryAnalysis.model_validate(mock_analyze(query))
 
 
 def plan(query: str, analysis: QueryAnalysis) -> ResearchPlan:
-    """Design bounded research plan and select specialist agents."""
-    from ..llm_mock import mock_plan
+    """Design bounded research plan dynamically via fast LLM and select specialist agents."""
     if is_mock():
+        from ..llm_mock import mock_plan
         return ResearchPlan.model_validate(mock_plan(analysis.intent, analysis.compare_mode))
 
     if analysis.intent == "conversational" or not analysis.entities:

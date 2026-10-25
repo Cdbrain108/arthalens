@@ -510,22 +510,24 @@ export default function ArthaCopilot({
   return (
     <div className="flex h-full flex-col bg-[#111317] text-[#f1f3f4] overflow-hidden select-text">
       {/* ── TOP NAV HEADER: Back to Report & Copilot Title ── */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#16181f]/95 px-4 sm:px-6 backdrop-blur-xl z-20">
-        <div className="flex items-center gap-3">
+      <header className="flex h-12 sm:h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#16181f]/95 px-2.5 sm:px-6 backdrop-blur-xl z-20">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
             onClick={onBackToReport}
-            className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:text-emerald-300 transition cursor-pointer"
+            className="flex items-center gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl border border-white/15 bg-white/5 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-[12px] font-semibold text-white hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:text-emerald-300 transition cursor-pointer shrink-0"
           >
-            <ArrowLeft size={14} /> Back to Report
+            <ArrowLeft size={13} />
+            <span className="hidden xs:inline">Back to Report</span>
+            <span className="xs:hidden">Report</span>
           </button>
 
-          <div className="hidden sm:block h-4 w-[1px] bg-white/10" />
+          <div className="hidden sm:block h-4 w-[1px] bg-white/10 shrink-0" />
 
-          <div className="flex items-center gap-2">
-            <Logo size={24} />
-            <span className="text-[13px] font-bold text-white">Artha Copilot</span>
-            <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <Logo size={20} className="shrink-0" />
+            <span className="text-xs sm:text-[13px] font-bold text-white truncate">Artha Copilot</span>
+            <span className="hidden md:flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Report Attached
             </span>
@@ -533,7 +535,7 @@ export default function ArthaCopilot({
         </div>
 
         {/* Quick PDF Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {pdfUrl && (
             <>
               <button
@@ -546,7 +548,7 @@ export default function ArthaCopilot({
               <a
                 href={pdfUrl}
                 download={`arthalens_research_${jobId}.pdf`}
-                className="flex items-center gap-1 rounded-lg bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/30"
+                className="flex items-center gap-1 rounded-lg bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/30"
               >
                 <Download size={13} /> PDF
               </a>

@@ -44,9 +44,11 @@ def _role_model(role: str) -> str | None:
     """Resolve a role's model override (None → provider default)."""
     if _ROLE_MODELS.get(role):
         return _ROLE_MODELS[role]
-    if (settings.effective_provider == "gemini" and role in FAST_ROLES
-            and settings.gemini_model_fast):
-        return settings.gemini_model_fast
+    if role in FAST_ROLES:
+        if settings.effective_provider in ("groq", "sota") and settings.groq_model_fast:
+            return settings.groq_model_fast
+        if settings.effective_provider == "gemini" and settings.gemini_model_fast:
+            return settings.gemini_model_fast
     return None
 
 
@@ -266,7 +268,6 @@ def _groq_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatMo
         temperature=temperature,
         max_retries=1,
         timeout=8,
-        extra_body={"reasoning_format": "parsed"},
         default_headers={"X-Title": "Artha AI Copilot", "User-Agent": "Mozilla/5.0"},
     )
 
@@ -446,10 +447,15 @@ class _RobustStructured:
 
     _RETRY_AFTER = re.compile(r"retry in ([0-9.]+)\s*s", re.I)
 
-    def __init__(self, role: str, schema, attempts: int = 6):
+    def __init__(self, role: str, schema, attempts: int | None = None):
         self._role = role
         self._schema = schema
-        self._attempts = max(attempts, 6)
+        if attempts is not None:
+            self._attempts = max(1, attempts)
+        elif role in FAST_ROLES:
+            self._attempts = 2
+        else:
+            self._attempts = 3
 
     @classmethod
     def _backoff_seconds(cls, exc: Exception) -> float:
@@ -463,6 +469,9 @@ class _RobustStructured:
     def _get_base_llm(self, attempt: int) -> BaseChatModel:
         rotator = MultiProviderFallbackChatModel(role=self._role)
         factories = rotator.get_tier_factories()
+        if self._role in FAST_ROLES:
+            # Exclude slow rate-paced / sleeping providers for extraction & routing
+            factories = [(n, f) for n, f in factories if "Gemini" not in n]
         if not factories:
             return get_llm(self._role)
         name, factory = factories[(attempt - 1) % len(factories)]

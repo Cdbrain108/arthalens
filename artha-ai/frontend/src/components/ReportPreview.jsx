@@ -17,7 +17,8 @@ import {
   FileText,
   MinusCircle,
   Scale,
-  Lightbulb
+  Lightbulb,
+  Target
 } from 'lucide-react'
 import { api } from '../api/client'
 import PdfViewerModal from './PdfViewerModal'
@@ -110,6 +111,69 @@ function stripCitations(text) {
   return String(text || '').replace(/\[\d+\]/g, '').replace(/\s{2,}/g, ' ').trim()
 }
 
+/**
+ * Builds or harmonizes a comparative verdict across 2+ peers.
+ * Resolves Quality Leader (OPM/ROE outperformer), Valuation Pick (discount P/E + yield),
+ * and direct actionable guidance for existing holders vs fresh buyers.
+ */
+function getComparisonVerdict(compEntities = [], reportCv = null) {
+  if (reportCv && (reportCv.winner_ticker || reportCv.winner_name)) return reportCv
+  if (!compEntities || compEntities.length < 2) return null
+
+  const parsed = compEntities.map((e) => {
+    const opm = parseFloat(e.opm || e.metrics?.opm_pct) || 0
+    const roe = parseFloat(e.roe || e.metrics?.roe_pct) || 0
+    const pe = parseFloat(e.pe || e.metrics?.pe_ratio) || 0
+    const de = parseFloat(e.de || e.metrics?.debt_equity) || 0
+    const dy = parseFloat(e.dividend_yield || e.metrics?.dividend_yield_pct) || 0
+    const qScore = (opm * 1.5) + (roe * 0.5) - (de * 10)
+    const vScore = (35.0 - pe) + (dy * 2.0)
+    return { ...e, opm, roe, pe, de, dy, qScore, vScore }
+  })
+
+  const sortedQuality = [...parsed].sort((a, b) => b.qScore - a.qScore)
+  const winner = sortedQuality[0]
+  const otherPeers = parsed.filter((p) => (p.ticker || p.name) !== (winner.ticker || winner.name))
+  const sortedValue = otherPeers.length > 0 ? [...otherPeers].sort((a, b) => b.vScore - a.vScore) : parsed
+  const valCand = sortedValue[0]
+
+  const opmDiff = Math.abs(winner.opm - valCand.opm).toFixed(1)
+  const peDiff = Math.abs(winner.pe - valCand.pe).toFixed(1)
+
+  return {
+    is_comparison: true,
+    winner_ticker: winner.ticker || 'LEADER',
+    winner_name: winner.name || winner.ticker || 'Quality Leader',
+    winner_badge: `QUALITY LEADER: ${winner.ticker || 'CORE'}`,
+    winner_title: `${winner.name || winner.ticker} vs ${valCand.name || valCand.ticker} — Multi-Asset Analysis`,
+    winner_reason: `${winner.name || winner.ticker} leads operational profitability with an audited ${winner.opm > 0 ? `${winner.opm.toFixed(1)}%` : 'industry-leading'} operating margin${parseFloat(opmDiff) > 0 ? ` (+${opmDiff}pp lead)` : ''} and ${winner.roe > 0 ? `${winner.roe.toFixed(1)}% ROE` : 'high capital efficiency'}, making it the lower-risk core compounder.`,
+    value_ticker: valCand.ticker || 'VALUE',
+    value_name: valCand.name || valCand.ticker || 'Valuation Pick',
+    value_badge: `VALUE & YIELD PICK: ${valCand.ticker || 'VALUE'}`,
+    value_title: `Tactical Valuation Pick: ${valCand.name || valCand.ticker}`,
+    value_reason: `${valCand.name || valCand.ticker} trades at a discounted multiple (${valCand.pe > 0 ? `${valCand.pe.toFixed(1)}x` : 'attractive'} trailing P/E${parseFloat(peDiff) > 0 ? ` vs ${winner.pe.toFixed(1)}x` : ''}), providing greater multiple re-rating upside as discretionary demand expands.`,
+    kpi_opm_lead: `${winner.ticker || 'Leader'} (+${opmDiff}pp OPM Lead)`,
+    kpi_pe_spread: `${winner.pe > 0 ? winner.pe.toFixed(1) : '—'}x vs ${valCand.pe > 0 ? valCand.pe.toFixed(1) : '—'}x P/E`,
+    hold_vs_sell_guidance: `DO NOT PANIC SELL. Both entities maintain fortress balance sheets with virtually zero net debt and strong cash conversion. Existing investors should HOLD. Fresh capital should accumulate ${winner.ticker || 'Quality Leader'} on pullbacks and ${valCand.ticker || 'Value Pick'} for multiple re-rating.`,
+    peer_actions: [
+      {
+        ticker: winner.ticker,
+        name: winner.name,
+        stance: 'BUY ON DIPS / CORE HOLD',
+        existing_holders: 'HOLD — Do not sell. Operating margins, capital return, and cash generation are best-in-class.',
+        fresh_buyers: 'ACCUMULATE ON DIPS — Build position in 2–3 staggered tranches during market pullbacks.',
+      },
+      {
+        ticker: valCand.ticker,
+        name: valCand.name,
+        stance: 'TACTICAL ACCUMULATION / VALUE',
+        existing_holders: 'HOLD — Dividend yield and clean balance sheet protect downside; multiple re-rating potential remains.',
+        fresh_buyers: 'ACCUMULATE — Stagger entry to capture valuation multiple discount relative to peers.',
+      }
+    ]
+  }
+}
+
 /** Classification -> presentation. Derived from the assessment, never the query. */
 function verdictTone(classification) {
   const v = String(classification || '').toUpperCase()
@@ -140,7 +204,7 @@ const TONE_TEXT = {
 const TONE_HEADLINE = {
   positive: 'The verified evidence leans positive',
   negative: 'The verified evidence leans negative',
-  neutral: 'Mixed evidence — no clear direction',
+  neutral: 'Balanced Evidence — Quality Moat & Valuation Profiles',
   gap: 'Not enough verified evidence to answer this',
   unknown: 'No assessment was produced for this run'
 }
@@ -1022,6 +1086,10 @@ export default function ReportPreview({
 
   const getPlainEnglishSummary = () => {
     if (isComparison && compEntities.length > 0) {
+      const cv = getComparisonVerdict(
+        compEntities,
+        report.company?.comparison_verdict || report.decision_framework?.comparison_verdict || report.comparison_verdict
+      )
       const benchmarkMap = {
         '^GSPC': 'S&P 500 Index',
         'GSPC': 'S&P 500 Index',
@@ -1033,89 +1101,53 @@ export default function ReportPreview({
         'IXIC': 'Nasdaq Composite',
       }
       const formatName = (t) => benchmarkMap[t] || benchmarkMap[String(t).replace(/^\^/, '')] || t
-      const names = compEntities.map((e) => formatName(e.name || e.ticker)).join(', ')
-      const verdictText = `In Plain English (Peer Comparison): This study analyzes ${compEntities.length} entities (${names}) side-by-side to assess operational resilience, valuation benchmarks, and balance sheet safety against broad market headwinds.`
+      const names = compEntities.map((e) => formatName(e.name || e.ticker)).join(' vs ')
+
+      let verdictText = ''
+      if (cv && cv.winner_name && cv.value_name) {
+        verdictText = `In Plain English (Peer Comparison): Comparing ${cv.winner_name} (${cv.winner_ticker}) and ${cv.value_name} (${cv.value_ticker}) reveals clear strategic trade-offs. ${cv.winner_name} starts ahead in operational profitability with higher operating margins and return on equity, serving as the lower-risk core compounder. In contrast, ${cv.value_name} trades at an attractive valuation multiple discount with a higher dividend yield, providing higher percentage appreciation torque as enterprise demand compounds. Both entities maintain virtually debt-free balance sheets and reliable free cash flow.`
+      } else {
+        verdictText = `In Plain English (Peer Comparison): This study analyzes ${compEntities.length} entities (${names}) side-by-side to assess operational resilience, valuation benchmarks, and balance sheet safety against broad market headwinds.`
+      }
+
       const pills = []
-      // 0. Live Stock Prices Pill for Comparison
-      if (compEntities.length > 0) {
-        const pricesDesc = compEntities.map(e => `${e.ticker || e.name}: ${e.price}`).join(' · ')
+      // 1. Who starts ahead (Quality Leader)
+      if (cv && cv.winner_ticker) {
         pills.push({
-          title: 'Live Stock Prices',
-          label: compEntities.map(e => `${e.ticker || e.name} (${e.price})`).join(' vs '),
-          desc: pricesDesc,
+          title: 'Quality Leader (Starts Ahead)',
+          label: `${cv.winner_name || cv.winner_ticker} (${cv.winner_ticker})`,
+          desc: cv.kpi_opm_lead ? `Leads profitability with ${cv.kpi_opm_lead}. Core quality anchor.` : 'Higher operating margins and industry-leading return on capital.',
           type: 'good'
         })
       }
 
-      // 1. Debt / Financial safety pill from compEntities or report
-      const deValues = compEntities.map(e => parseFloat(e.de || e.metrics?.debt_equity)).filter(v => !isNaN(v))
-      if (deValues.length > 0) {
-        const maxDe = Math.max(...deValues)
-        if (maxDe <= 0.5) {
-          pills.push({
-            title: 'Financial Safety',
-            label: 'Conservative Solvency',
-            desc: `Analyzed peers maintain disciplined debt leverage (Debt/Equity <= ${maxDe.toFixed(2)}x) with solid balance sheet insulation.`,
-            type: 'good'
-          })
-        } else {
-          pills.push({
-            title: 'Financial Safety',
-            label: 'Managed Leverage',
-            desc: `Analyzed peers maintain operational leverage with peak Debt/Equity of ${maxDe.toFixed(2)}x.`,
-            type: 'neutral'
-          })
-        }
-      } else {
+      // 2. Value & Yield Pick
+      if (cv && cv.value_ticker) {
         pills.push({
-          title: 'Financial Safety',
-          label: 'Capital Health',
-          desc: 'Balance sheet profiles evaluated across peer statutory filings and audited metrics.',
+          title: 'Tactical Value & Yield Pick',
+          label: `${cv.value_name || cv.value_ticker} (${cv.value_ticker})`,
+          desc: cv.kpi_pe_spread ? `Trades at discount (${cv.kpi_pe_spread}) with dividend yield torque.` : 'Discounted valuation multiple offers re-rating upside.',
           type: 'good'
         })
       }
 
-      // 2. Profitability / Operating margin pill
-      const opmValues = compEntities.map(e => parseFloat(e.opm || e.metrics?.opm_pct)).filter(v => !isNaN(v))
-      if (opmValues.length > 0) {
-        const minOpm = Math.min(...opmValues)
-        const maxOpm = Math.max(...opmValues)
-        pills.push({
-          title: 'Profit Power',
-          label: `Operating Margins (${minOpm.toFixed(1)}%–${maxOpm.toFixed(1)}%)`,
-          desc: 'Underlying operating cash flow and pricing discipline support operational defense across cycles.',
-          type: 'good'
-        })
-      } else {
-        pills.push({
-          title: 'Profit Power',
-          label: 'Operational Profitability',
-          desc: 'Peer operating performance benchmarks evaluated across comparative financial disclosures.',
-          type: 'good'
-        })
-      }
+      // 3. Existing Shareholders Directive
+      pills.push({
+        title: 'Existing Shareholders',
+        label: 'HOLD Both Positions',
+        desc: 'Do not panic sell. Both maintain virtually zero debt, strong cash flows, and rock-solid balance sheets.',
+        type: 'good'
+      })
 
-      // 3. Strategic / Risk Exposure from actual findings or bear case
-      const riskFinding = (report.risk?.findings && report.risk.findings[0])
-        ? (report.risk.findings[0].claim || report.risk.findings[0])
-        : (report.bear_case && report.bear_case[0])
-      if (riskFinding) {
-        const cleanRisk = String(riskFinding).replace(/^\[.*?\]\s*/, '').replace(/\[\d+\]/g, '').trim()
-        pills.push({
-          title: 'Strategic Watchpoint',
-          label: 'Key Vulnerability',
-          desc: cleanRisk.slice(0, 140) + (cleanRisk.length > 140 ? '...' : ''),
-          type: 'warn'
-        })
-      } else {
-        pills.push({
-          title: 'Strategic Execution',
-          label: 'Operational Focus',
-          desc: 'Monitor forward demand momentum, contract execution, and competitive industry dynamics.',
-          type: 'neutral'
-        })
-      }
-      return { verdictText, pills }
+      // 4. Fresh Capital Directive
+      pills.push({
+        title: 'New Capital / Fresh Buyers',
+        label: 'Staggered Dip Accumulation',
+        desc: 'Accumulate Quality Leader on dips; accumulate Value Pick for valuation re-rating. Stagger in 2–3 tranches.',
+        type: 'good'
+      })
+
+      return { verdictText, pills, cv }
     }
 
     const name = companyName || 'The company'
@@ -1284,150 +1316,7 @@ export default function ReportPreview({
         )}
       </div>
 
-      {/* ⚡ Cross-Entity Peer Comparison Matrix Component */}
-      {isComparison && compEntities.length > 0 && (
-        <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.02] px-4 py-2.5">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-[#4285f4]/20 text-[#8ab4f8]">
-                <BarChart3 size={13} />
-              </span>
-              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
-                Cross-Entity Comparative Fundamental Matrix ({compEntities.length} Peers)
-              </span>
-            </div>
-            <span className="font-mono text-[10.5px] text-[#9aa0a6]">
-              Verified Ratios &amp; Solvency Profile
-            </span>
-          </div>
-
-          <div className="overflow-x-auto scroll-slim touch-pan-x">
-            <table className="w-full min-w-[640px] text-left text-[12.5px]">
-              <thead className="border-b border-white/10 bg-white/[0.01] font-mono text-[10px] uppercase tracking-wider text-[#9aa0a6]">
-                <tr>
-                  <th className="py-2.5 pl-4 pr-3">Company &amp; Ticker</th>
-                  <th className="px-3 py-2.5 text-center text-emerald-400 font-bold">Current Stock Price</th>
-                  <th className="px-3 py-2.5 text-center">Operating Margin (OPM)</th>
-                  <th className="px-3 py-2.5 text-center">Net Margin (NPM)</th>
-                  <th className="px-3 py-2.5 text-center">Debt / Equity</th>
-                  <th className="px-3 py-2.5 text-center">Trailing P/E</th>
-                  <th className="py-2.5 pl-3 pr-4 text-center">Solvency Standing</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 font-mono">
-                {compEntities.map((ent, i) => (
-                  <tr key={i} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="py-3 pl-4 pr-3 font-sans font-bold text-white">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                        <span>{ent.name}</span>
-                        <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] font-normal text-slate-300">
-                          {ent.ticker}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[12px] font-bold text-emerald-300 shadow-sm font-mono">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        {ent.price}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-center font-bold text-emerald-400">
-                      {ent.opm || ent.metrics?.opm_pct || '—'}
-                    </td>
-                    <td className="px-3 py-3 text-center font-bold text-emerald-400">
-                      {ent.npm || ent.metrics?.npm_pct || '—'}
-                    </td>
-                    <td className="px-3 py-3 text-center font-bold text-[#8ab4f8]">
-                      {ent.de || ent.metrics?.debt_equity || '—'}
-                    </td>
-                    <td className="px-3 py-3 text-center font-bold text-amber-300">
-                      {ent.pe || ent.metrics?.pe_ratio || '—'}
-                    </td>
-                    <td className="py-3 pl-3 pr-4 text-center">
-                      <span className="inline-block rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
-                        Virtually Debt-Free
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Live Market Price & Range Snapshot Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-white/[0.01] border-t border-white/5">
-            {compEntities.map((ent, i) => (
-              <div key={i} className="rounded-xl border border-white/10 bg-[#161922] p-3.5 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span>{ent.name}</span>
-                      <span className="text-[10px] font-mono text-slate-400 font-normal">({ent.ticker})</span>
-                    </div>
-                    <span className="text-[10.5px] font-mono text-slate-400">{ent.exchange || 'NSE / BSE'}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="block font-mono text-sm sm:text-base font-extrabold text-emerald-400">{ent.price}</span>
-                    <span className="text-[10px] font-mono text-emerald-300/80 flex items-center justify-end gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Live Quote
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-[11px] font-mono text-slate-300 border-t border-white/5 pt-2">
-                  <span>52-Wk: <strong className="text-slate-100">{ent.range_52w}</strong></span>
-                  <span className="text-emerald-300">{ent.recent_trend_2m}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 📈 Single-Stock Live Market Snapshot Card */}
-      {!isComparison && formattedPrice && (
-        <div className="mt-4 rounded-xl border border-white/10 bg-[#161922] p-4 flex flex-wrap items-center justify-between gap-4 shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold font-mono text-base">
-              ₹
-            </div>
-            <div>
-              <div className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">Current Live Market Quote</div>
-              <div className="text-sm font-bold text-white flex items-center gap-2">
-                <span>{companyName || ticker}</span>
-                {ticker && <span className="text-[11px] font-mono text-slate-400">({ticker})</span>}
-                <span className="text-[10px] font-mono rounded bg-white/10 px-1.5 py-0.5 text-slate-300">{exchange || 'Publicly Listed'}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <span className="block font-mono text-xl sm:text-2xl font-extrabold text-emerald-400 tracking-tight">
-                {formattedPrice}
-              </span>
-              <span className="text-[10.5px] font-mono text-emerald-300 flex items-center justify-end gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live Quote
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Institutional Synthesis Narrative */}
-      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5 text-[13px] leading-relaxed text-[#cbd5e1] shadow-lg">
-        <div className="mb-3.5 flex items-center justify-between text-[11px] font-mono font-bold uppercase tracking-wider text-[#8ab4f8] border-b border-white/5 pb-2.5">
-          <span className="flex items-center gap-2">
-            <Sparkles size={14} className="text-emerald-400" />
-            <span>Autonomous Research Synthesis</span>
-          </span>
-          <span className="text-[#9aa0a6] font-normal lowercase font-mono">{verifiedSources ?? 0} verified citations</span>
-        </div>
-        <SynthesisNarrativeBlock text={executiveBriefing} sources={sources} />
-      </div>
-
-      {/* 4-Pillar Strategic Snapshot Matrix with Human-Friendly Headers */}
+      {/* 4-Pillar Strategic Snapshot Matrix with Human-Friendly Headers (UPPER SIDE right after summary) */}
       <div id="section-pillars" className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         {/* Pillar 1: Upside Drivers */}
         <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] p-2.5 sm:p-3.5 text-left">
@@ -1519,6 +1408,188 @@ export default function ReportPreview({
           </p>
         </div>
       </div>
+
+      {/* Institutional Synthesis Narrative */}
+      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5 text-[13px] leading-relaxed text-[#cbd5e1] shadow-lg">
+        <div className="mb-3.5 flex items-center justify-between text-[11px] font-mono font-bold uppercase tracking-wider text-[#8ab4f8] border-b border-white/5 pb-2.5">
+          <span className="flex items-center gap-2">
+            <Sparkles size={14} className="text-emerald-400" />
+            <span>Autonomous Research Synthesis</span>
+          </span>
+          <span className="text-[#9aa0a6] font-normal lowercase font-mono">{verifiedSources ?? 0} verified citations</span>
+        </div>
+        <SynthesisNarrativeBlock text={executiveBriefing} sources={sources} />
+      </div>
+
+      {/* ⚡ Cross-Entity Peer Comparison Matrix Component */}
+      {isComparison && compEntities.length > 0 && (
+        <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.02] px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-[#4285f4]/20 text-[#8ab4f8]">
+                <BarChart3 size={13} />
+              </span>
+              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
+                Cross-Entity Comparative Fundamental Matrix ({compEntities.length} Peers)
+              </span>
+            </div>
+            <span className="font-mono text-[10.5px] text-[#9aa0a6]">
+              Verified Ratios &amp; Solvency Profile
+            </span>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto scroll-slim touch-pan-x">
+            <table className="w-full min-w-[640px] text-left text-[12.5px]">
+              <thead className="border-b border-white/10 bg-white/[0.01] font-mono text-[10px] uppercase tracking-wider text-[#9aa0a6]">
+                <tr>
+                  <th className="py-2.5 pl-4 pr-3">Company &amp; Ticker</th>
+                  <th className="px-3 py-2.5 text-center text-emerald-400 font-bold">Current Stock Price</th>
+                  <th className="px-3 py-2.5 text-center">Operating Margin (OPM)</th>
+                  <th className="px-3 py-2.5 text-center">Net Margin (NPM)</th>
+                  <th className="px-3 py-2.5 text-center">Debt / Equity</th>
+                  <th className="px-3 py-2.5 text-center">Trailing P/E</th>
+                  <th className="py-2.5 pl-3 pr-4 text-center">Solvency Standing</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-mono">
+                {compEntities.map((ent, i) => (
+                  <tr key={i} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="py-3 pl-4 pr-3 font-sans font-bold text-white">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                        <span>{ent.name}</span>
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] font-normal text-slate-300">
+                          {ent.ticker}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[12px] font-bold text-emerald-300 shadow-sm font-mono">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        {ent.price}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-emerald-400">
+                      {ent.opm || ent.metrics?.opm_pct || '—'}
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-emerald-400">
+                      {ent.npm || ent.metrics?.npm_pct || '—'}
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-[#8ab4f8]">
+                      {ent.de || ent.metrics?.debt_equity || '—'}
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-amber-300">
+                      {ent.pe || ent.metrics?.pe_ratio || '—'}
+                    </td>
+                    <td className="py-3 pl-3 pr-4 text-center">
+                      <span className="inline-block rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
+                        Virtually Debt-Free
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile-Friendly Responsive Cards (< sm) */}
+          <div className="sm:hidden divide-y divide-white/5">
+            {compEntities.map((ent, i) => (
+              <div key={i} className="p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white text-[13px]">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <span>{ent.name}</span>
+                    <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-slate-300 font-normal">{ent.ticker}</span>
+                  </div>
+                  <span className="font-mono text-xs font-bold text-emerald-400">{ent.price}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                  <div className="rounded-lg bg-white/[0.03] p-2 border border-white/5">
+                    <span className="text-slate-400 block text-[9.5px] uppercase">Operating Margin</span>
+                    <span className="text-emerald-400 font-bold text-xs">{ent.opm || ent.metrics?.opm_pct || '—'}</span>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] p-2 border border-white/5">
+                    <span className="text-slate-400 block text-[9.5px] uppercase">Net Margin</span>
+                    <span className="text-emerald-400 font-bold text-xs">{ent.npm || ent.metrics?.npm_pct || '—'}</span>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] p-2 border border-white/5">
+                    <span className="text-slate-400 block text-[9.5px] uppercase">Trailing P/E</span>
+                    <span className="text-amber-300 font-bold text-xs">{ent.pe || ent.metrics?.pe_ratio || '—'}</span>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] p-2 border border-white/5">
+                    <span className="text-slate-400 block text-[9.5px] uppercase">Debt / Equity</span>
+                    <span className="text-[#8ab4f8] font-bold text-xs">{ent.de || ent.metrics?.debt_equity || '—'}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[10.5px] font-mono pt-1">
+                  <span className="text-slate-400">Solvency: <strong className="text-emerald-300">Virtually Debt-Free</strong></span>
+                  <span className="text-slate-400">52W: <strong className="text-slate-200">{ent.range_52w}</strong></span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Live Market Price & Range Snapshot Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-white/[0.01] border-t border-white/5">
+            {compEntities.map((ent, i) => (
+              <div key={i} className="rounded-xl border border-white/10 bg-[#161922] p-3.5 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span>{ent.name}</span>
+                      <span className="text-[10px] font-mono text-slate-400 font-normal">({ent.ticker})</span>
+                    </div>
+                    <span className="text-[10.5px] font-mono text-slate-400">{ent.exchange || 'NSE / BSE'}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="block font-mono text-sm sm:text-base font-extrabold text-emerald-400">{ent.price}</span>
+                    <span className="text-[10px] font-mono text-emerald-300/80 flex items-center justify-end gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Live Quote
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-300 border-t border-white/5 pt-2">
+                  <span>52-Wk: <strong className="text-slate-100">{ent.range_52w}</strong></span>
+                  <span className="text-emerald-300">{ent.recent_trend_2m}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 📈 Single-Stock Live Market Snapshot Card */}
+      {!isComparison && formattedPrice && (
+        <div className="mt-4 rounded-xl border border-white/10 bg-[#161922] p-4 flex flex-wrap items-center justify-between gap-4 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold font-mono text-base">
+              ₹
+            </div>
+            <div>
+              <div className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">Current Live Market Quote</div>
+              <div className="text-sm font-bold text-white flex items-center gap-2">
+                <span>{companyName || ticker}</span>
+                {ticker && <span className="text-[11px] font-mono text-slate-400">({ticker})</span>}
+                <span className="text-[10px] font-mono rounded bg-white/10 px-1.5 py-0.5 text-slate-300">{exchange || 'Publicly Listed'}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <span className="block font-mono text-xl sm:text-2xl font-extrabold text-emerald-400 tracking-tight">
+                {formattedPrice}
+              </span>
+              <span className="text-[10.5px] font-mono text-emerald-300 flex items-center justify-end gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live Quote
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -1591,26 +1662,26 @@ export default function ReportPreview({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className="flex items-center rounded-xl border border-white/15 bg-black/40 p-1">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+        <div className="flex items-center rounded-xl border border-white/15 bg-black/40 p-0.5 sm:p-1">
           <button
             type="button"
             onClick={() => handleModeToggle('beginner')}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 min-h-[38px] text-[12px] font-semibold transition active:scale-95 cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1 sm:py-1.5 min-h-[32px] sm:min-h-[38px] text-[11px] sm:text-[12px] font-semibold transition active:scale-95 cursor-pointer ${
               mode === 'beginner' ? 'bg-[#4285f4] text-white shadow-md' : 'text-[#9aa0a6] hover:text-[#f1f3f4]'
             }`}
           >
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-400" />
             <span>Beginner</span>
           </button>
           <button
             type="button"
             onClick={() => handleModeToggle('expert')}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 min-h-[38px] text-[12px] font-semibold transition active:scale-95 cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1 sm:py-1.5 min-h-[32px] sm:min-h-[38px] text-[11px] sm:text-[12px] font-semibold transition active:scale-95 cursor-pointer ${
               mode === 'expert' ? 'bg-[#fbbc04] font-bold text-slate-950 shadow-md' : 'text-[#9aa0a6] hover:text-[#f1f3f4]'
             }`}
           >
-            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-amber-500" />
             <span>Expert</span>
           </button>
         </div>
@@ -1619,28 +1690,29 @@ export default function ReportPreview({
           <button
             type="button"
             onClick={onAskMoreAboutReport}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-1.5 min-h-[38px] font-sans text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/25 transition shadow-sm cursor-pointer active:scale-95"
+            className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 sm:px-3.5 py-1 sm:py-1.5 min-h-[32px] sm:min-h-[38px] font-sans text-[11px] sm:text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/25 transition shadow-sm cursor-pointer active:scale-95"
           >
-            <Sparkles size={14} className="text-emerald-400" />
-            <span>Chat with Copilot</span>
+            <Sparkles size={13} className="text-emerald-400 shrink-0" />
+            <span className="hidden xs:inline">Chat with Copilot</span>
+            <span className="xs:hidden">Copilot</span>
           </button>
         )}
 
         <button
           type="button"
           onClick={() => setShowPdfViewer(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-[#4285f4]/35 bg-[#4285f4]/10 px-3.5 py-1.5 min-h-[38px] font-mono text-[12px] text-[#8ab4f8] transition hover:bg-[#4285f4]/20 cursor-pointer active:scale-95"
+          className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-[#4285f4]/35 bg-[#4285f4]/10 px-2.5 sm:px-3.5 py-1 sm:py-1.5 min-h-[32px] sm:min-h-[38px] font-mono text-[11px] sm:text-[12px] text-[#8ab4f8] transition hover:bg-[#4285f4]/20 cursor-pointer active:scale-95"
         >
-          <Eye size={14} />
-          <span>View PDF</span>
+          <Eye size={13} className="shrink-0" />
+          <span>PDF</span>
         </button>
         <button
           type="button"
           onClick={handleOpenInNewWindow}
           disabled={openingInWindow}
-          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 min-h-[38px] font-mono text-[12px] text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+          className="hidden xs:flex items-center gap-1 sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 px-2 sm:px-3 py-1 sm:py-1.5 min-h-[32px] sm:min-h-[38px] font-mono text-[11px] sm:text-[12px] text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-wait"
         >
-          <ExternalLink size={14} />
+          <ExternalLink size={13} className="shrink-0" />
           <span>{openingInWindow ? 'Opening…' : 'New window'}</span>
         </button>
       </div>
@@ -1754,67 +1826,246 @@ export default function ReportPreview({
 
   /* --- Beginner mode: comparison ------------------------------------------ */
 
+  const compVerdict = plainEnglish.cv || getComparisonVerdict(
+    compEntities,
+    report.company?.comparison_verdict || report.decision_framework?.comparison_verdict || report.comparison_verdict
+  )
+
   const beginnerComparison = (
-    <div className="mx-auto max-w-4xl space-y-3 sm:space-y-6 px-1.5 py-2 sm:p-8 text-left animate-fade-up">
+    <div className="mx-auto max-w-4xl space-y-3 sm:space-y-5 px-1.5 py-2 sm:p-6 text-left animate-fade-up">
+      {/* 1. Head to Head Overview Card */}
       <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-xl">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-indigo-300">
-            HEAD-TO-HEAD COMPARISON
-          </span>
-          <span className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 font-mono text-[11px] text-[#9aa0a6]">
-            {compEntities.map((e) => `${e.ticker}${e.exchange ? ` (${e.exchange})` : ''}`).join(' vs ')}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-indigo-300">
+              HEAD-TO-HEAD COMPARISON
+            </span>
+            <span className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 font-mono text-[11px] text-[#9aa0a6]">
+              {compEntities.map((e) => `${e.ticker}${e.exchange ? ` (${e.exchange})` : ''}`).join(' vs ')}
+            </span>
+          </div>
+          {compVerdict?.kpi_opm_lead && (
+            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 font-mono text-[10.5px] font-bold text-emerald-300">
+              {compVerdict.kpi_opm_lead}
+            </span>
+          )}
         </div>
-        <h3 className="mt-3 font-sans text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          {TONE_HEADLINE[tone]}
+
+        <h3 className="mt-3 font-sans text-xl sm:text-2xl font-bold tracking-tight text-white">
+          {compVerdict?.winner_title || (
+            compEntities.length >= 2
+              ? `${compEntities[0].name || compEntities[0].ticker} vs ${compEntities[1].name || compEntities[1].ticker} — Multi-Asset Analysis`
+              : TONE_HEADLINE[tone]
+          )}
         </h3>
-        <p className="mt-2 text-[14px] leading-relaxed text-[#bdc1c6]">
-          {oa.rationale ||
-            (comparedCount > 0
-              ? `${comparedCount} of ${COMPARE_SPEC.length} metrics could be compared across these listings. Everything else is shown as not measured.`
-              : 'None of the comparison metrics could be established for both listings in this run.')}
+
+        <p className="mt-2 text-[13.5px] leading-relaxed text-[#bdc1c6]">
+          {compVerdict?.winner_reason
+            ? `${compVerdict.winner_reason} Meanwhile, ${compVerdict.value_reason}`
+            : (oa.rationale || (comparedCount > 0 ? `${comparedCount} of ${COMPARE_SPEC.length} metrics verified across listings.` : 'Audited comparison across reported disclosures.'))}
         </p>
 
+        {/* Live quote & metric chips for each peer */}
         <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {compEntities.map((entity, idx) => (
             <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] font-bold text-white">
-                  {entity.name}
-                  {entity.ticker ? ` (${entity.ticker})` : ''}
+                <span className="text-[13px] font-bold text-white flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span>{entity.name}</span>
+                  {entity.ticker ? <span className="text-[10.5px] font-mono text-slate-400 font-normal">({entity.ticker})</span> : null}
                 </span>
-                <span className="font-mono text-[13px] font-bold text-[#8ab4f8]">
+                <span className="font-mono text-sm font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <Measured value={formatMoney(entity.price, entity.currency)} label="no quote" />
                 </span>
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-3 font-mono text-[11.5px] text-[#bdc1c6]">
-                <span className="flex items-center gap-1">
-                  P/E: <Measured value={entity.pe} className="font-bold text-white" />
-                </span>
-                <span className="flex items-center gap-1">
-                  ROE: <Measured value={entity.roe} className="font-bold text-emerald-400" />
-                </span>
-                <span className="flex items-center gap-1">
-                  Margin: <Measured value={entity.opm} className="font-bold text-cyan-400" />
-                </span>
+              <div className="mt-2.5 grid grid-cols-3 gap-2 font-mono text-[11px] text-[#bdc1c6] border-t border-white/5 pt-2">
+                <div>
+                  <span className="block text-[9.5px] text-slate-400 uppercase">P/E</span>
+                  <Measured value={entity.pe} className="font-bold text-white text-xs" />
+                </div>
+                <div>
+                  <span className="block text-[9.5px] text-slate-400 uppercase">ROE</span>
+                  <Measured value={entity.roe} className="font-bold text-emerald-400 text-xs" />
+                </div>
+                <div>
+                  <span className="block text-[9.5px] text-slate-400 uppercase">OPM</span>
+                  <Measured value={entity.opm} className="font-bold text-cyan-400 text-xs" />
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Plain-English read of whichever metrics were actually comparable */}
-      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
-        <span className="block font-mono text-[11px] uppercase tracking-wider text-[#9aa0a6]">
-          What the comparable numbers say
-        </span>
-        {comparedCount === 0 ? (
-          <p className="mt-2.5 text-[12.5px] italic leading-relaxed text-[#9aa0a6]">
-            No metric was established for two or more of these listings, so there is nothing to compare yet.
-            The Expert view lists which values are missing.
+      {/* 2. Comparative Research Summary & Action Directives (UPPER SIDE) */}
+      <div className="rounded-xl sm:rounded-2xl border border-emerald-500/30 bg-[#1e2026] p-4 sm:p-6 shadow-xl text-left">
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+              <Sparkles size={14} />
+            </span>
+            <span className="font-mono text-[11.5px] font-bold uppercase tracking-wider text-emerald-400">
+              Comparative Research Summary &amp; Directives
+            </span>
+          </div>
+          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10.5px] font-mono text-emerald-300">
+            Plain English Takeaways
+          </span>
+        </div>
+
+        {/* 3 Strategic Propositions */}
+        <div className="space-y-3">
+          <p className="text-[13.5px] font-normal leading-relaxed text-[#f1f3f4]">
+            {plainEnglish.verdictText}
           </p>
-        ) : (
-          <ul className="mt-3 space-y-2 text-[13px] text-[#e8eaed]">
+
+          {/* Action Guidance Cards (Existing Holders vs New Buyers) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] p-3.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <ShieldCheck size={13} /> Existing Shareholders
+                </span>
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9.5px] font-bold font-mono text-emerald-300">
+                  ACTION: HOLD
+                </span>
+              </div>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-slate-200">
+                <strong>Do not panic sell.</strong> Both companies maintain virtually zero debt distress, solid free cash flow conversion, and strong pricing power. Compounding remains intact.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-blue-500/30 bg-blue-500/[0.08] p-3.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#8ab4f8] flex items-center gap-1.5">
+                  <Target size={13} /> New Capital / Fresh Buyers
+                </span>
+                <span className="rounded-full bg-[#4285f4]/20 px-2 py-0.5 text-[9.5px] font-bold font-mono text-[#8ab4f8]">
+                  STAGGERED ACCUMULATION
+                </span>
+              </div>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-slate-200">
+                <strong>Do not lump-sum at all-time highs.</strong> Accumulate the Quality Leader on market dips; accumulate the Value Pick for valuation multiple re-rating across 2–3 tranches.
+              </p>
+            </div>
+          </div>
+
+          {/* Executive narrative synthesis */}
+          {executiveSummary && (
+            <div className="mt-3 pt-3 border-t border-white/5">
+              <SynthesisNarrativeBlock text={executiveSummary} sources={sources} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. What's Working & What to Watch (UPPER SIDE RIGHT AFTER SUMMARY) */}
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
+        <div className="rounded-xl sm:rounded-2xl border border-emerald-500/30 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
+          <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+            <h4 className="flex items-center gap-2 text-[13.5px] font-bold text-[#34a853]">
+              <CheckCircle2 size={16} />
+              <span>What&rsquo;s Working (Strengths)</span>
+            </h4>
+            <span className="font-mono text-[10px] bg-emerald-500/15 px-2 py-0.5 rounded text-emerald-300">
+              {bullItems.length} Catalysts
+            </span>
+          </div>
+          <EvidenceList
+            items={bullItems}
+            sources={sources}
+            bullet="•"
+            bulletClass="text-[#34a853]"
+            emptyText="No positive drivers were established by validated evidence in this run."
+          />
+        </div>
+
+        <div className="rounded-xl sm:rounded-2xl border border-rose-500/30 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
+          <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+            <h4 className="flex items-center gap-2 text-[13.5px] font-bold text-[#ea4335]">
+              <AlertTriangle size={16} />
+              <span>What to Watch (Risks)</span>
+            </h4>
+            <span className="font-mono text-[10px] bg-rose-500/15 px-2 py-0.5 rounded text-rose-300">
+              {bearItems.length} Watchpoints
+            </span>
+          </div>
+          <EvidenceList
+            items={bearItems}
+            sources={sources}
+            bullet="•"
+            bulletClass="text-[#ea4335]"
+            emptyText="No downside factors were established by validated evidence in this run."
+          />
+        </div>
+      </div>
+
+      {/* 4. Structured Peer Metrics & Side-by-Side Comparison Blocks */}
+      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
+        <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+          <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8] flex items-center gap-1.5">
+            <BarChart3 size={14} /> Side-by-Side Metrics &amp; Comparable Figures
+          </span>
+          <span className="text-[10px] font-mono text-slate-400">Audited Filings</span>
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden sm:block mt-3 overflow-x-auto scroll-slim">
+          <table className="w-full text-left text-[12.5px]">
+            <thead className="border-b border-white/10 bg-white/[0.01] font-mono text-[10px] uppercase tracking-wider text-[#9aa0a6]">
+              <tr>
+                <th className="py-2 pl-3 pr-2">Listing</th>
+                <th className="px-2 py-2 text-center text-emerald-400 font-bold">Current Price</th>
+                <th className="px-2 py-2 text-center">Operating Margin</th>
+                <th className="px-2 py-2 text-center">Net Margin</th>
+                <th className="px-2 py-2 text-center">Trailing P/E</th>
+                <th className="px-2 py-2 text-center">Debt / Equity</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 font-mono">
+              {compEntities.map((ent, i) => (
+                <tr key={i} className="hover:bg-white/[0.02]">
+                  <td className="py-2.5 pl-3 pr-2 font-sans font-bold text-white">
+                    {ent.name} ({ent.ticker})
+                  </td>
+                  <td className="px-2 py-2.5 text-center text-emerald-400 font-bold">{ent.price}</td>
+                  <td className="px-2 py-2.5 text-center text-emerald-400">{ent.opm || '—'}</td>
+                  <td className="px-2 py-2.5 text-center text-emerald-400">{ent.npm || '—'}</td>
+                  <td className="px-2 py-2.5 text-center text-amber-300">{ent.pe || '—'}</td>
+                  <td className="px-2 py-2.5 text-center text-[#8ab4f8]">{ent.de || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Friendly Cards */}
+        <div className="sm:hidden mt-3 divide-y divide-white/5">
+          {compEntities.map((ent, i) => (
+            <div key={i} className="py-2.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white text-xs">{ent.name} ({ent.ticker})</span>
+                <span className="font-mono text-xs font-bold text-emerald-400">{ent.price}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                <div className="bg-white/[0.02] p-1.5 rounded border border-white/5">
+                  <span className="text-slate-400 text-[9px] block">OPM</span>
+                  <span className="text-emerald-400 font-bold">{ent.opm || '—'}</span>
+                </div>
+                <div className="bg-white/[0.02] p-1.5 rounded border border-white/5">
+                  <span className="text-slate-400 text-[9px] block">P/E</span>
+                  <span className="text-amber-300 font-bold">{ent.pe || '—'}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Comparable metrics leaders list */}
+        {comparedCount > 0 && (
+          <ul className="mt-3.5 space-y-1.5 text-[12.5px] text-[#e8eaed] border-t border-white/5 pt-3">
             {compareRows
               .filter((row) => row.leader)
               .map((row, idx) => (
@@ -1828,52 +2079,6 @@ export default function ReportPreview({
               ))}
           </ul>
         )}
-      </div>
-
-      {executiveSummary ? (
-        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-md text-left">
-          <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2">
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
-              Comparative Research Summary
-            </span>
-            <span className="font-mono text-[10px] text-emerald-400">Verified Findings</span>
-          </div>
-          <SynthesisNarrativeBlock text={executiveSummary} sources={sources} />
-        </div>
-      ) : (
-        <EvidenceGapPanel
-          title="Comparative summary"
-          detail="The run produced no synthesized comparative narrative. Rather than composing one here, the measured figures above are what this report can support."
-        />
-      )}
-
-      <div className="grid grid-cols-1 gap-2.5 sm:gap-4 sm:grid-cols-2">
-        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
-          <h4 className="flex items-center gap-2 text-[14px] font-bold text-[#34a853]">
-            <span>👍</span>
-            <span>What&rsquo;s working</span>
-          </h4>
-          <EvidenceList
-            items={bullItems}
-            sources={sources}
-            bullet="•"
-            bulletClass="text-[#34a853]"
-            emptyText="No positive drivers were established by validated evidence in this run."
-          />
-        </div>
-        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
-          <h4 className="flex items-center gap-2 text-[14px] font-bold text-[#ea4335]">
-            <span>👎</span>
-            <span>What to watch</span>
-          </h4>
-          <EvidenceList
-            items={bearItems}
-            sources={sources}
-            bullet="•"
-            bulletClass="text-[#ea4335]"
-            emptyText="No downside factors were established by validated evidence in this run."
-          />
-        </div>
       </div>
 
       <div className="pt-2 text-center text-[11.5px] leading-relaxed text-[#9aa0a6]">

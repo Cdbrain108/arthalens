@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     groq_api_keys: str = ""
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "openai/gpt-oss-120b"
-    groq_model_fast: str = "openai/gpt-oss-120b"
+    groq_model_fast: str = "openai/gpt-oss-20b"
     groq_model_fallback: str = "qwen/qwen3.8-27b"
 
     # --- Mistral AI ---

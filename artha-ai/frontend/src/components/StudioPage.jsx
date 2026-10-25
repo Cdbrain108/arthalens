@@ -2150,9 +2150,8 @@ export default function StudioPage({
         )}
       </div>
 
-      {/* Quick jump back to chat — rendered at the studio root (outside the scroll
-          container) so the mobile dock stays pinned to the bottom edge and never
-          overlaps or scrolls with the report content. Floating pill from sm up. */}
+      {/* Quick jump back to chat — rendered as a non-intrusive floating pill on all screens,
+          avoiding covering the bottom mobile screen or content. */}
       {activeView === 'report' && (
         <button
           type="button"
@@ -2162,11 +2161,11 @@ export default function StudioPage({
             color: '#ffffff',
             boxShadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
           }}
-          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-2 border-t border-[#6ee7b7]/50 px-4 pt-3 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-auto sm:rounded-full sm:border sm:border-[#6ee7b7] sm:px-5 sm:py-3 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xl"
+          className="fixed right-3.5 bottom-3.5 sm:right-6 sm:bottom-6 z-40 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full border border-[#6ee7b7]/80 px-3.5 py-2 sm:px-5 sm:py-3 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xl backdrop-blur-md"
           title="Chat with Artha Copilot about this report"
           aria-label="Chat with Artha Copilot about this report"
         >
-          <Sparkles size={16} className="text-white animate-pulse" />
+          <Sparkles size={15} className="text-white animate-pulse" />
           <span className="text-white font-bold tracking-wide">Chat with Copilot →</span>
         </button>
       )}
