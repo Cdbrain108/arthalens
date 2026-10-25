@@ -265,12 +265,10 @@ def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) 
             temp_html = Path(f.name)
         cmd = [
             browser_exe,
-            "--headless=new",
+            "--headless",
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-gpu",
-            "--single-process",
-            "--no-zygote",
             "--disable-dev-shm-usage",
             "--disable-software-rasterizer",
             "--disable-extensions",
@@ -278,7 +276,7 @@ def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) 
             f"--print-to-pdf={output_path.resolve()}",
             temp_html.resolve().as_uri(),
         ]
-        subprocess.run(cmd, capture_output=True, text=True, timeout=45)
+        subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         return output_path.exists() and output_path.stat().st_size > 5000
     except Exception as e:
         logger.warning("Browser PDF generation failed: %s", e)
@@ -307,23 +305,24 @@ def render_pdf(report: ReportJSON, job_id: str) -> str:
 
     html_content = render_html(report, charts=charts)
 
-    # 1. On Windows or when Chromium is present, use headless Chrome/Edge directly (fast & pixel-perfect)
+    # 1. On Linux / Cloud Run containers with Pango/Cairo, WeasyPrint is native & ultra-fast (~1s)
     import sys
-    browser = _find_chromium_browser()
-    if browser:
-        if _render_pdf_browser(html_content, path, browser):
-            logger.info("Rendered publication-grade PDF using %s for %s", browser, job_id)
-            return str(path)
-
-    # 2. Try WeasyPrint on Linux / environments with GTK
     if sys.platform != "win32":
         try:
             from weasyprint import HTML
             HTML(string=html_content, base_url=str(_TEMPLATES)).write_pdf(str(path))
             if path.exists() and path.stat().st_size > 5000:
+                logger.info("Rendered publication-grade PDF using WeasyPrint for %s", job_id)
                 return str(path)
         except Exception as exc:
             logger.info("WeasyPrint renderer unavailable (%s)", exc)
+
+    # 2. Try headless Chromium / Chrome / Edge
+    browser = _find_chromium_browser()
+    if browser:
+        if _render_pdf_browser(html_content, path, browser):
+            logger.info("Rendered publication-grade PDF using %s for %s", browser, job_id)
+            return str(path)
 
     # 3. Pure-python fallback (fpdf2) if neither WeasyPrint nor Chromium is available
     logger.warning("Browser PDF engine unavailable; using fpdf2 fallback", extra={"job_id": job_id})
