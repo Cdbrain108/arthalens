@@ -103,6 +103,19 @@ def next_inception_key() -> str:
     return keys[_next_rr_index("inception") % len(keys)]
 
 
+def groq_keys() -> list[str]:
+    """Usable Groq keys."""
+    return list(settings.groq_key_list)
+
+
+def next_groq_key() -> str:
+    """Round-robin across Groq keys."""
+    keys = groq_keys()
+    if not keys:
+        raise RuntimeError("groq provider selected but no usable key is set")
+    return keys[_next_rr_index("groq") % len(keys)]
+
+
 def next_openrouter_key() -> str:
     """Round-robin across keys: adjacent constructions get different keys."""
     keys = openrouter_keys()
@@ -216,6 +229,20 @@ def _inception_chat(model: str | None = None, temperature: float = 0.0) -> BaseC
     )
 
 
+def _groq_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(
+        model=model or settings.groq_model,
+        api_key=next_groq_key(),
+        base_url=settings.groq_base_url,
+        temperature=temperature,
+        max_retries=1,
+        timeout=8,
+        extra_body={"reasoning_format": "parsed"},
+        default_headers={"X-Title": "Artha AI Copilot", "User-Agent": "Mozilla/5.0"},
+    )
+
+
 def _openrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
@@ -255,15 +282,14 @@ def get_llm(role: str = "specialist", temperature: float = 0.0) -> BaseChatModel
         raise RuntimeError(
             "Mock mode: no LLM configured. Callers must branch on "
             "llm.is_mock() and use app.llm_mock helpers instead.")
+    if provider in ("groq", "sota"):
+        # Prioritize ultra-fast Groq LPU with reasoning (~0.8s)
+        if groq_keys():
+            groq_m = model or settings.groq_model
+            return _groq_chat(groq_m, temperature)
     if provider == "sota":
-        # SOTA Dynamic Routing:
-        # Synthesis & Challenger roles require high-depth reasoning (VyceAI Claude Sonnet 4.6 or DeepSeek V4)
-        if role in ("synthesizer", "challenger") and _usable_key(settings.vyce_api_key):
-            try:
-                return _vyce_chat(settings.vyce_model_synthesis, temperature)
-            except Exception:
-                pass
-        # Extraction / specialist roles prioritize ultra-fast VyceAI -> Gemini -> OpenRouter -> Nvidia NIM
+        if settings.inception_key_list:
+            return _inception_chat(model or settings.inception_model, temperature)
         if _usable_key(settings.vyce_api_key):
             return _vyce_chat(model or settings.vyce_model, temperature)
         if gemini_keys():
@@ -272,9 +298,9 @@ def get_llm(role: str = "specialist", temperature: float = 0.0) -> BaseChatModel
             return _openrouter_chat(model or settings.openrouter_model, temperature)
         if settings.nvidia_key_list:
             return _nvidia_chat(model or settings.nvidia_model, temperature)
-        if settings.inception_key_list:
-            return _inception_chat(model or settings.inception_model, temperature)
-        return _vyce_chat(model or settings.vyce_model, temperature)
+        return _inception_chat(model or settings.inception_model, temperature)
+    if provider == "groq":
+        return _groq_chat(model or settings.groq_model, temperature)
     if provider == "vyce":
         return _vyce_chat(model or settings.vyce_model, temperature)
     if provider == "nvidia":
@@ -304,11 +330,10 @@ class _RobustStructured:
     """Structured invoke that survives provider flakiness.
 
     In SOTA mode, attempts cycle across the best available high-speed tiers:
-    Attempt 1: VyceAI (deepseek-v4-flash, ~4-5s)
-    Attempt 2: Nvidia NIM (nemotron-3.5-lightning-30b-a3b, ~0.8s)
-    Attempt 3: InceptionLabs (mercury-2.5 ultra-fast reasoning, ~4-6s)
-    Attempt 4: OpenRouter (Nemotron / Gemma free fleet)
-    Attempt 5: Gemini Tier 1 (gemini-flash-latest)
+    Attempt 1: Groq (openai/gpt-oss-120b & qwen3.8-27b on LPUs, ~0.8s)
+    Attempt 2: InceptionLabs (mercury-2.5 ultra-fast diffusion LLM, ~2s)
+    Attempt 3: VyceAI (deepseek-v4-flash)
+    Attempt 4: OpenRouter / Gemini
     """
 
     _RETRY_AFTER = re.compile(r"retry in ([0-9.]+)\s*s", re.I)
@@ -329,16 +354,23 @@ class _RobustStructured:
 
     def _get_base_llm(self, attempt: int) -> BaseChatModel:
         provider = settings.effective_provider
+        if provider == "groq":
+            groq_m = _role_model(self._role) or settings.groq_model
+            return _groq_chat(groq_m)
+
         if provider == "sota":
             tier_factories = []
+            if groq_keys():
+                tier_factories.append(lambda: _groq_chat(settings.groq_model))
+                tier_factories.append(lambda: _groq_chat(settings.groq_model))
+            if settings.inception_key_list:
+                tier_factories.append(lambda: _inception_chat())
             if _usable_key(settings.vyce_api_key):
                 tier_factories.append(lambda: _vyce_chat())
             if settings.nvidia_key_list:
                 tier_factories.append(lambda: _nvidia_chat())
             if gemini_keys():
                 tier_factories.append(lambda: _gemini_chat(_role_model(self._role) or settings.gemini_model))
-            if settings.inception_key_list:
-                tier_factories.append(lambda: _inception_chat())
             if openrouter_keys():
                 models = settings.openrouter_model_chain
                 m = models[(attempt - 1) % len(models)]
@@ -395,6 +427,7 @@ class _RobustStructured:
         raw_text = resp.content if hasattr(resp, "content") else str(resp)
 
         clean_text = raw_text.strip()
+        clean_text = re.sub(r"<think>[\s\S]*?</think>", "", clean_text, flags=re.I).strip()
         m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", clean_text)
         if m:
             clean_text = m.group(1).strip()
@@ -419,6 +452,7 @@ class _RobustStructured:
                     if result is not None:
                         return result
                 except Exception as extract_err:
+                    last_error = extract_err
                     logger.debug("Prompt extraction failed (%s)", extract_err)
 
                 # Fallback to with_structured_output only on Gemini (which supports native AFC)

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840">
+  <rect width="1200" height="840" fill="#090F19"/>
+  <g font-family="DejaVu Sans, Arial, sans-serif">
+    <text x="56" y="54" fill="#99AEC5" font-size="13" letter-spacing="2">ARTHAAI / BULLS EYE</text>
+    <text x="1144" y="54" text-anchor="end" fill="#45E0C0" font-size="11" letter-spacing="2">SIGNAL APERTURE</text>
+    <path d="M56 80h1088" stroke="#26374E"/>
+    <rect x="56" y="116" width="354" height="354" rx="36" fill="#0D1726" stroke="#26374E"/>
+    <g xmlns="http://www.w3.org/2000/svg" transform="translate(121 181) scale(3.5)" fill="none">
+  <title id="hero-title">ArthaAI — Signal Aperture</title>
+  <desc id="hero-desc">An open blue-to-mint target surrounds an angular A, with a diamond insight at the northeast opening.</desc>
+  <defs>
+    <linearGradient id="hero-orbit" x1="9" y1="54" x2="49" y2="8" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5B8CFF" />
+      <stop offset="1" stop-color="#45E0C0" />
+    </linearGradient>
+  </defs>
+  <path d="M32 3.5a28.5 28.5 0 1 0 28.5 28.5 2.5 2.5 0 0 0-5 0A23.5 23.5 0 1 1 32 8.5a2.5 2.5 0 0 0 0-5Z" fill="url(#hero-orbit)" />
+  <path d="M18 44 32 19 46 44" stroke="#EDF5FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M25 34h14" stroke="#45E0C0" stroke-width="5" stroke-linecap="round" />
+  <path d="m52 5 7 7-7 7-7-7Z" fill="#45E0C0" />
+</g>
+    <g xmlns="http://www.w3.org/2000/svg" transform="translate(454 154) scale(1.125)" fill="none">
+  <title id="wordmark-title">ArthaAI · Bulls Eye</title>
+  <desc id="wordmark-desc">Signal Aperture mark beside the ArthaAI wordmark. Bulls Eye — research beyond the noise.</desc>
+  <defs>
+    <linearGradient id="wordmark-orbit" x1="9" y1="54" x2="49" y2="8" gradientUnits="userSpaceOnUse"><stop stop-color="#5B8CFF" /><stop offset="1" stop-color="#45E0C0" /></linearGradient>
+  </defs>
+  <g transform="translate(12 20) scale(1.625)">
+    <path d="M32 3.5a28.5 28.5 0 1 0 28.5 28.5 2.5 2.5 0 0 0-5 0A23.5 23.5 0 1 1 32 8.5a2.5 2.5 0 0 0 0-5Z" fill="url(#wordmark-orbit)" />
+    <path d="M18 44 32 19 46 44" stroke="#EDF5FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M25 34h14" stroke="#45E0C0" stroke-width="5" stroke-linecap="round" />
+    <path d="m52 5 7 7-7 7-7-7Z" fill="#45E0C0" />
+  </g>
+  <text x="145" y="77" font-family="Inter, DejaVu Sans, Arial, sans-serif" font-size="58" font-weight="600" letter-spacing="-2.8" fill="#EDF5FF">Artha<tspan fill="#45E0C0">AI</tspan></text>
+  <text x="148" y="104" font-family="Inter, DejaVu Sans, Arial, sans-serif" font-size="10" font-weight="600" letter-spacing="2.3" fill="#99AEC5">BULLS EYE / EQUITY RESEARCH</text>
+</g>
+    <text x="473" y="362" fill="#EDF5FF" font-size="24">Research beyond the noise.</text>
+    <text x="473" y="401" fill="#99AEC5" font-size="14">An open target. An ascending A. A focused insight.</text>
+    <text x="473" y="427" fill="#99AEC5" font-size="14">Built for the evidence-first research workspace.</text>
+    <rect x="56" y="514" width="350" height="208" rx="18" fill="#101B2C" stroke="#26374E"/>
+    <rect x="425" y="514" width="350" height="208" rx="18" fill="#F1F5F9"/>
+    <rect x="794" y="514" width="350" height="208" rx="18" fill="#DDE6F0"/>
+    <g xmlns="http://www.w3.org/2000/svg" transform="translate(179 552) scale(1.625)" fill="none">
+  <title id="dark-title">ArthaAI — Signal Aperture</title>
+  <desc id="dark-desc">An open blue-to-mint target surrounds an angular A, with a diamond insight at the northeast opening.</desc>
+  <defs>
+    <linearGradient id="dark-orbit" x1="9" y1="54" x2="49" y2="8" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5B8CFF" />
+      <stop offset="1" stop-color="#45E0C0" />
+    </linearGradient>
+  </defs>
+  <path d="M32 3.5a28.5 28.5 0 1 0 28.5 28.5 2.5 2.5 0 0 0-5 0A23.5 23.5 0 1 1 32 8.5a2.5 2.5 0 0 0 0-5Z" fill="url(#dark-orbit)" />
+  <path d="M18 44 32 19 46 44" stroke="#EDF5FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M25 34h14" stroke="#45E0C0" stroke-width="5" stroke-linecap="round" />
+  <path d="m52 5 7 7-7 7-7-7Z" fill="#45E0C0" />
+</g>
+    <g xmlns="http://www.w3.org/2000/svg" transform="translate(548 552) scale(1.625)" fill="none">
+  <title id="light-title">ArthaAI — Signal Aperture, light background</title>
+  <desc id="light-desc">A blue and teal open target, navy A and northeast diamond.</desc>
+  <defs>
+    <linearGradient id="light-orbit" x1="9" y1="54" x2="49" y2="8" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#315ED8" />
+      <stop offset="1" stop-color="#087F72" />
+    </linearGradient>
+  </defs>
+  <path d="M32 3.5a28.5 28.5 0 1 0 28.5 28.5 2.5 2.5 0 0 0-5 0A23.5 23.5 0 1 1 32 8.5a2.5 2.5 0 0 0 0-5Z" fill="url(#light-orbit)" />
+  <path d="M18 44 32 19 46 44" stroke="#102139" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M25 34h14" stroke="#087F72" stroke-width="5" stroke-linecap="round" />
+  <path d="m52 5 7 7-7 7-7-7Z" fill="#087F72" />
+</g>
+    <g xmlns="http://www.w3.org/2000/svg" transform="translate(917 552) scale(1.625)" fill="none">
+  <title id="mono-title">ArthaAI — Signal Aperture, black</title>
+  <g stroke="#102139" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 6a26 26 0 1 0 26 26" />
+    <path d="M18 44 32 19 46 44M25 34h14" />
+  </g>
+  <path d="m52 5 7 7-7 7-7-7Z" fill="#102139" />
+</g>
+    <text x="231" y="698" text-anchor="middle" fill="#99AEC5" font-size="10" letter-spacing="2">DARK INTERFACE</text>
+    <text x="600" y="698" text-anchor="middle" fill="#51647C" font-size="10" letter-spacing="2">LIGHT / PRINT</text>
+    <text x="969" y="698" text-anchor="middle" fill="#51647C" font-size="10" letter-spacing="2">SINGLE COLOUR</text>
+    <circle cx="65" cy="778" r="8" fill="#5B8CFF"/><text x="83" y="782" fill="#99AEC5" font-size="11">SIGNAL BLUE</text>
+    <circle cx="227" cy="778" r="8" fill="#45E0C0"/><text x="245" y="782" fill="#99AEC5" font-size="11">INSIGHT MINT</text>
+    <circle cx="397" cy="778" r="8" fill="#EDF5FF"/><text x="415" y="782" fill="#99AEC5" font-size="11">ICE</text>
+    <text x="1144" y="782" text-anchor="end" fill="#99AEC5" font-size="11">Custom vector identity / SVG + PNG</text>
+  </g>
+</svg>

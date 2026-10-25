@@ -1141,7 +1141,7 @@ def _build_comparison_verdict(comp_data):
     }
 
 
-def _build_action_decision(company, metrics, classification, price_val=None):
+def _build_action_decision(company, metrics, classification, price_val=None, query_str=None):
     ticker = company.get("ticker") or ""
     if not ticker or ticker in ("EQUITY", "UNSPECIFIED"):
         return {
@@ -1153,7 +1153,7 @@ def _build_action_decision(company, metrics, classification, price_val=None):
             "fresh_buyers": "Specify a stock ticker to evaluate fresh capital deployment and DCF scenarios.",
             "long_term_directive": "Research requires statutory filings of a specific listed company.",
             "short_term_directive": "Identify a ticker to evaluate momentum, range, and operational execution.",
-            "sell_triggers": "Exit rules depend on the target company's audited margins and debt leverage."
+            "sell_triggers": "EXACT RULES FOR WHEN TO SELL: Exit rules depend on the target company's audited margins and debt leverage."
         }
     prof = PEER_PROFILES.get(ticker, {})
     name = company.get("name") or prof.get("name", ticker)
@@ -1176,37 +1176,102 @@ def _build_action_decision(company, metrics, classification, price_val=None):
         or "bank" in prof.get("industry", "").lower()
     )
 
+    q_lower = (query_str or "").lower()
+    is_sell_query = any(k in q_lower for k in [
+        "should i sell", "when to sell", "can i sell", "sell it", "sell this", "sell that",
+        "sell stock", "sell shares", "sell whatever", "sell or hold", "exit position", "exit now",
+        "book profit", "profit booking", "trim position", "trim shares", "liquidate", "dump", "cut loss"
+    ]) and not any(k in q_lower for k in ["should i buy", "can i buy", "what to buy", "stocks to buy", "buy or sell"])
+
+    is_buy_query = any(k in q_lower for k in [
+        "should i buy", "can i buy", "buy it", "buy this", "buy that", "whether to buy",
+        "buy stock", "buy shares", "good time to buy", "entry point", "which to buy",
+        "what to buy", "stocks to buy", "performing well", "maximum profit", "max profit",
+        "low price", "less price", "undervalued", "invest in", "can i invest"
+    ]) and not is_sell_query
+
     if is_banking:
         crar = prof.get("crar", "17.5%")
         net_npa = prof.get("net_npa", "0.40%")
         nim = prof.get("nim", "4.0%")
         roa = prof.get("roa", "2.1%")
-        headline = f"ACTION VERDICT: KEEP HOLDING / ACCUMULATE ON PULLBACKS — {ticker}"
-        badge = "HOLD / ACCUMULATE ON DIPS"
-        lt_dir = f"LONG-TERM (3–5+ YEARS): High-Quality Financial Compounding. With return on assets of ~{roa} and nationwide branch scale, this is an anchor asset for long-term wealth creation."
-        st_dir = "NEXT 6–12 MONTHS: Steady Credit Growth. Double-digit retail and SME loan expansion supports earnings even as deposit interest rates normalize."
-        verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The bank operates with rock-solid financial health: strong capital cushion (CRAR {crar}), healthy lending margins (NIM {nim}), and industry-low bad loans (Net NPA {net_npa}). Panic selling during market mood swings is strongly discouraged."
-        existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The bank is highly profitable, safely capitalized well above regulatory capital mandates, and steadily growing its loan book. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
-        fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
-        sell_triggers = "EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Bad loans jump sharply with Net NPA exceeding 1.5% for two quarters in a row; (2) Net Interest Margin (NIM) drops permanently below 3.0%; or (3) Management faces severe regulatory penalties or governance violations."
+
+        if is_sell_query:
+            headline = f"ACTION EVALUATION: SELL DISCIPLINE & PROFIT-TAKING GUIDE — {ticker}"
+            badge = "SELL / TRIM EVALUATION"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): Don't panic and dump all your shares. {name} is a strong, highly profitable bank with high capital reserves (CRAR {crar}) and low bad loans (Net NPA {net_npa}). However, selling or trimming 20% to 30% of your shares is sensible if this one stock makes up more than 15–20% of your total savings or if you need cash in the next 6 to 12 months."
+            existing_holders = f"TRIM POSITION & POCKET GAINS (Portfolio Balancing): If {ticker} represents more than 15–20% of your total savings, systematically sell 25% to 30% of your shares to lock in profits and reduce single-stock risk. If it is already a sensible, smaller part of your portfolio, hold your core shares with peace of mind."
+            fresh_buyers = "PAUSE NEW PURCHASES (Wait For Dips): Hold off on investing a big lump sum right now. It is much smarter to wait for market pullbacks or credit cycle adjustments to get a better bargain price."
+            sell_triggers = "EXACT RULES FOR WHEN TO SELL: Sell or exit immediately if: (1) Bad loans jump sharply with Net NPA exceeding 1.5% for two straight quarters; (2) Lending profit margin (NIM) drops permanently below 3.0%; or (3) Severe regulatory penalties or corporate governance issues occur."
+        elif is_buy_query:
+            headline = f"ACTION EVALUATION: BUY / CAPITAL ACCUMULATION FOR MAXIMUM LONG-TERM PROFIT — {ticker}"
+            badge = "BUY / ACCUMULATION CANDIDATE"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): Buying for long-term profit is supported by strong profitability (~{roa} ROA), fortress capital reserves (CRAR {crar}), and very low bad loans (Net NPA {net_npa}). To get the best entry price and avoid buying at a short-term peak, invest your money in 2 or 3 smaller batches on market dips instead of all at once."
+            existing_holders = f"HOLD & ACCUMULATE ON PULLBACKS: Existing shareholders can systematically hold and add small amounts during market pullbacks, keeping total single-bank exposure under 15–20% of your portfolio."
+            fresh_buyers = "BUY IN 2–3 BATCHES (Smart Entry Strategy): Divide your fresh investment capital into 2–3 tranches. Deploy the first tranche at current levels and accumulate subsequent tranches during market pullback consolidation to secure a favorable average entry price."
+            sell_triggers = "EXACT RULES FOR WHEN TO SELL: Your long-term investment is safe unless: (1) Bad loans rise with Net NPA crossing 1.5% for two consecutive quarters; (2) NIM drops below 3.0%; or (3) Major regulatory sanctions arise."
+        else:
+            headline = f"ACTION VERDICT: 360° DECISION MATRIX (BUY · HOLD · SELL) — {ticker}"
+            badge = "BUY / HOLD / SELL FRAMEWORK"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): {name} is a high-quality, profitable bank with strong capital (CRAR {crar}) and low bad loans (Net NPA {net_npa}). If you already own it, keeping your shares is the smart, low-stress move. If you want to buy, do so in 2–3 small batches on dips. If it makes up too much of your wealth (>15–20%), take some profit off the table."
+            existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The bank is highly profitable, safely capitalized well above regulatory requirements, and growing steadily. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
+            fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
+            sell_triggers = "EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Bad loans jump sharply with Net NPA exceeding 1.5% for two quarters in a row; (2) Net Interest Margin (NIM) drops permanently below 3.0%; or (3) Management faces severe regulatory penalties or governance violations."
+
+        lt_dir = f"LONG-TERM (3–5+ YEARS): Proven Wealth Compounder. Strong return on assets (~{roa} ROA) and nationwide branch scale make this a safe anchor for multi-year wealth compounding."
+        st_dir = "NEXT 6–12 MONTHS: Steady Credit Growth. Steady retail and business lending expansion protects earnings even as interest rates fluctuate."
+
     elif is_turnaround:
-        headline = f"ACTION DIRECTIVE: HOLD CAUTIOUSLY / BUY SLOWLY IN PIECES · {ticker}"
-        badge = "TACTICAL TURNAROUND"
+        if is_sell_query:
+            headline = f"ACTION EVALUATION: SELL DISCIPLINE & PROFIT-TAKING GUIDE · {ticker}"
+            badge = "TACTICAL TURNAROUND EXIT REVIEW"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): {name} is an active turnaround situation. While it still generates real operating profit ({opm}) with manageable debt (D/E {de}), taking profit or trimming your shares is fully justified if profit recovery is stalling or if you want to shift your money into safer, more reliable compounders."
+            existing_holders = "TRIM POSITION & PROTECT CAPITAL: If you are sitting on a profit or if this stock exceeds 10% of your portfolio, sell 30% to 50% into recent rallies. Do not let a turnaround bet become too big a chunk of your savings."
+            fresh_buyers = "AVOID BUYING RIGHT NOW: Wait until upcoming quarterly earnings confirm that profit margins are genuinely improving before putting fresh money at risk."
+            sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Exit immediately if: (1) Real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking year-over-year; or (3) Accounting red flags or governance scandals emerge."
+        elif is_buy_query:
+            headline = f"ACTION EVALUATION: TACTICAL TURNAROUND BUY FOR FUTURE UPSIDE · {ticker}"
+            badge = "TACTICAL VALUE / RECOVERY BUY"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): Buying {name} is a tactical value recovery play. Operating margin stands at {opm} with manageable debt (D/E {de}). If leadership succeeds in restoring profit margins, the stock could rebound strongly. Invest only a small amount of risk-tolerant money."
+            existing_holders = "HOLD & MONITOR CLOSELY: Keep existing shares with a safety stop-loss, adding more only when the company proves margin acceleration in quarterly earnings."
+            fresh_buyers = "BUY SMALL IN STAGES: Keep this position under 5% to 8% of your total savings. Invest in 2 to 3 small tranches after quarterly reports confirm profit stability."
+            sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Cut position if: (1) Operating profit drops below {sell_margin:.1f}% for two quarters in a row; or (2) Total sales decline year-over-year."
+        else:
+            headline = f"ACTION DIRECTIVE: HOLD CAUTIOUSLY / BUY SLOWLY IN PIECES · {ticker}"
+            badge = "TACTICAL TURNAROUND"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): Holding your shares is the smart, low-stress move. The company generates real operating profits ({opm} operating profit from sales) and maintains manageable leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
+            existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The company is solidly profitable and pays regular cash dividends. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
+            fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
+            sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Their real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking compared to last year; or (3) Management gets caught in unethical practices or fraud."
+
         lt_dir = f"LONG-TERM (2–4 YEARS): Patient Turnaround Bet. Suited only if you are willing to wait for new leadership to fix profit margins from {opm} back toward historical levels."
         st_dir = f"NEXT 6–12 MONTHS: Sideways Movement. Do not expect quick profits until the company proves real margin recovery in upcoming quarterly earnings."
-        verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The company generates real operating profits ({opm} operating profit from sales) and maintains manageable leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
-        existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The company is solidly profitable and pays regular cash dividends. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
-        fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
-        sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Their real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking compared to last year; or (3) Management gets caught in unethical practices or fraud."
+
     else:
-        headline = f"ACTION VERDICT: KEEP HOLDING / BUY ON DIPS — {ticker}"
-        badge = "HOLD / ACCUMULATE ON DIPS"
+        if is_sell_query:
+            headline = f"ACTION EVALUATION: SELL DISCIPLINE & PROFIT-TAKING GUIDE — {ticker}"
+            badge = "SELL / TRIM EVALUATION"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): Don't panic and sell everything. {name} is a premier, virtually debt-free company (Debt/Equity {de}x) with outstanding profit margins ({opm}). However, taking some profit off the table (selling 20% to 30% of your position) makes complete sense if: (1) This one stock makes up more than 15–20% of your total savings; (2) You need the cash in the next 6 to 12 months; or (3) You want to lock in profits after a massive multi-year run."
+            existing_holders = f"TRIM POSITION & POCKET GAINS (Portfolio Balancing): If {ticker} accounts for more than 15–20% of your total wealth, trim 25–35% of your position to lock in compounding gains and lower concentration risk. If within balanced portfolio sizing, hold your core shares with active trailing risk limits."
+            fresh_buyers = "PAUSE NEW PURCHASES (Wait For Dips): Hold off on putting in a big lump sum right now. It is much smarter to wait for market pullbacks or consolidation dips so you can buy at a better bargain price."
+            sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Sell or exit immediately if: (1) Real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking compared to last year; or (3) Management gets caught in accounting fraud or unethical behavior."
+        elif is_buy_query:
+            headline = f"ACTION EVALUATION: BUY / CAPITAL ACCUMULATION FOR MAXIMUM LONG-TERM PROFIT — {ticker}"
+            badge = "BUY / ACCUMULATION CANDIDATE"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): Buying for long-term profit compounding is supported by audited operating margins ({opm}) and virtually zero debt (Debt/Equity {de}x). Outstanding return on equity ({roe}) and high cash flow make it a premier compounder. To capture maximum profit and avoid buying at a short-term top, buy in 2 or 3 smaller batches on market dips instead of all at once."
+            existing_holders = f"HOLD & ACCUMULATE ON PULLBACKS: Existing shareholders can systematically add to positions during market pullbacks while keeping single-stock exposure under 15–20% of total portfolio."
+            fresh_buyers = "BUY IN 2–3 BATCHES (Smart Entry Strategy): Divide your intended capital into 2–3 tranches. Deploy the first tranche at current levels and accumulate subsequent tranches during market pullback consolidation to secure a low weighted average entry price."
+            sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Long-term thesis remains fully valid unless: (1) Operating profit margin drops below {sell_margin:.1f}% for 2 consecutive quarters; (2) Revenue starts contracting YoY; or (3) Governance issues arise."
+        else:
+            headline = f"ACTION VERDICT: 360° DECISION MATRIX (BUY · HOLD · SELL) — {ticker}"
+            badge = "BUY / HOLD / SELL FRAMEWORK"
+            verdict_summary = f"The Short Answer for {name} ({ticker}): Holding your shares is the smart, low-stress move. The company generates real operating profits ({opm} operating profit from sales) and maintains conservative leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
+            existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The company is solidly profitable, safe from debt distress, and pays regular cash dividends. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
+            fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
+            sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Their real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking compared to last year; or (3) Management gets caught in unethical practices or fraud."
+
         lt_dir = "LONG-TERM (3–5+ YEARS): Proven Wealth Compounder. High profit margins, conservative debt profile, and long-term customer contracts make this a very safe asset to hold."
         st_dir = "NEXT 6–12 MONTHS: Steady Consolidation. Stock prices may move sideways temporarily while clients review their budgets, but your investment is safe."
-        verdict_summary = f"For {name} ({ticker}), holding your shares is the smart, low-stress move. The company generates real operating profits ({opm} operating profit from sales) and maintains conservative leverage (Debt/Equity {de}). Panic selling during market mood swings is strongly discouraged."
-        existing_holders = f"KEEP HOLDING (Do Not Panic Sell): If you already own {ticker}, keep your shares. The company is solidly profitable, safe from debt distress, and pays regular cash dividends. Only sell a portion if this single stock makes up more than 15–20% of your total savings."
-        fresh_buyers = "BUY SLOWLY IN STAGES (Do Not Buy All At Once): If you want to invest new cash, do not dump a lump sum in today. Divide your money into 2 or 3 smaller purchases and buy during market pullback days to get a better average price."
-        sell_triggers = f"EXACT RULES FOR WHEN TO SELL: Sell only if: (1) Their real operating profit drops below {sell_margin:.1f}% for two quarters in a row; (2) Total company sales start shrinking compared to last year; or (3) Management gets caught in unethical practices or fraud."
 
     return {
         "is_action_query": True,
@@ -1518,7 +1583,11 @@ def _build_single_peer_benchmarks(ticker):
     }
 
 
-def _build_decision_framework(company_name, classification, is_comparison=False, comp_data=None, comparison_verdict=None, action_decision=None, discovery_portfolio=None):
+def _build_decision_framework(company_name, classification, is_comparison=False, comp_data=None, comparison_verdict=None, action_decision=None, discovery_portfolio=None, query_str=None):
+    q_lower = (query_str or "").lower()
+    is_sell_query = any(k in q_lower for k in ["sell", "exit", "book profit", "trim", "liquidat", "dump", "cut loss"]) and not any(k in q_lower for k in ["buy", "invest", "entry"])
+    is_buy_query = any(k in q_lower for k in ["buy", "invest", "entry", "cheap", "undervalued", "max profit", "maximum profit", "performing well"]) and not is_sell_query
+
     if discovery_portfolio:
         t1_stocks = [s["name"] for s in discovery_portfolio["tiers"][0].get("stocks", [])] if discovery_portfolio.get("tiers") else ["Quality Leaders"]
         t2_stocks = [s["name"] for s in discovery_portfolio["tiers"][1].get("stocks", [])] if len(discovery_portfolio.get("tiers", [])) > 1 else ["Tactical Value"]
@@ -1527,10 +1596,16 @@ def _build_decision_framework(company_name, classification, is_comparison=False,
         return {
             "base_stance": discovery_portfolio.get("headline"),
             "discovery_portfolio": discovery_portfolio,
+            "buy_when": [
+                f"Deploy fresh capital into Tier 1 Compounders ({t1_str}) for multi-year capital compounding.",
+                f"Allocate secondary capital into Tier 2 Tactical Hypergrowth ({t2_str}) for multiple re-rating upside.",
+                "Stagger new entries across 2–3 market pullback days rather than buying at temporary market peaks.",
+                "Preserve 10% dry powder cash buffer in liquid funds for systematic dip buying."
+            ],
             "hold_when": [
-                f"Deploy into Tier 1 Compounders ({t1_str}) for multi-year capital appreciation.",
-                f"Allocate to Tier 2 Tactical Hypergrowth ({t2_str}) for secular growth and multiple re-rating.",
-                "Preserve 10% dry powder cash buffer for staggered deployment on market dips.",
+                f"You hold Tier 1 Compounders ({t1_str}) within a multi-year horizon.",
+                "Corporate earnings power and return on equity remain resilient across market cycles.",
+                "Balance-sheet debt obligations remain conservative with high cash conversion.",
                 "Review portfolio balance semi-annually based on audited corporate disclosures."
             ],
             "reduce_when": [
@@ -1557,6 +1632,12 @@ def _build_decision_framework(company_name, classification, is_comparison=False,
             return {
                 "base_stance": base,
                 "comparison_verdict": comparison_verdict,
+                "buy_when": [
+                    f"Stagger purchases across {names} during market pullbacks when valuation trades at reasonable multiples.",
+                    "Capital Adequacy (CRAR > 16%) and Net NPA (< 0.5%) remain well within regulatory fortress standards.",
+                    "Retail loan book and low-cost CASA deposit mobilization expand sequentially.",
+                    "Deploy fresh capital in 2–3 staggered tranches to optimize cost basis."
+                ],
                 "hold_when": [
                     f"You hold core allocations across {names} within a multi-year horizon.",
                     "Net Interest Margins (NIM) remain resilient against deposit cost repricing.",
@@ -1577,6 +1658,12 @@ def _build_decision_framework(company_name, classification, is_comparison=False,
         return {
             "base_stance": base,
             "comparison_verdict": comparison_verdict,
+            "buy_when": [
+                f"Stagger fresh capital accumulation into top-performing peers ({names}) during valuation consolidation.",
+                "Operating margins remain defended against input cost inflation with clean cash flow conversion (>80%).",
+                "Order bookings, contract renewals, and volume expansion remain intact.",
+                "Balance sheet maintains conservative leverage (<0.25x D/E) with no debt distress."
+            ],
             "hold_when": [
                 f"You hold core allocations across {names} within a multi-year horizon.",
                 "Operating margins remain resilient against cost and inflationary pressures.",
@@ -1598,6 +1685,12 @@ def _build_decision_framework(company_name, classification, is_comparison=False,
         return {
             "base_stance": action_decision.get("headline"),
             "action_decision": action_decision,
+            "buy_when": [
+                action_decision.get("fresh_buyers"),
+                action_decision.get("long_term_directive"),
+                "Valuation multiple trades at reasonable levels relative to operational earnings growth.",
+                "Deploying new capital using staggered 2–3 tranches on market pullback days to maximize IRR."
+            ],
             "hold_when": [
                 action_decision.get("existing_holders"),
                 action_decision.get("long_term_directive"),
@@ -1618,6 +1711,12 @@ def _build_decision_framework(company_name, classification, is_comparison=False,
     name = company_name or "the company"
     return {
         "base_stance": f"Maintain a disciplined equity stance on {name} based on audited balance-sheet strength, capital return profile, and predictable operational execution.",
+        "buy_when": [
+            f"Accumulate {name} on market pullbacks when valuation multiple trades near historical support.",
+            "Operating margin remains defended against sector margin compression.",
+            "Balance-sheet leverage is conservative with clean cash-flow backing.",
+            "Deploying fresh capital in 2–3 staggered tranches to maximize long-term IRR."
+        ],
         "hold_when": [
             f"You hold {name} within a multi-year investment horizon.",
             "Operating margins (OPM) remain protected against industry margin compression.",
@@ -2110,7 +2209,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
     if not metrics and company.get("ticker"):
         metrics, _, _ = _measurements(evidence, company.get("ticker"))
 
-    action_decision = _build_action_decision(company, metrics, classification) if (is_action_query or not is_comparison) else None
+    action_decision = _build_action_decision(company, metrics, classification, query_str=query_str) if (is_action_query or not is_comparison) else None
     discovery_portfolio = _build_discovery_portfolio() if is_discovery_query else None
 
     if action_decision:
@@ -2203,13 +2302,17 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
         r.executive_summary = "\n\n".join(p for p in summary_paragraphs if p)
     elif action_decision:
         c_name = company.get("name") or "The company"
+        clean_bull = (bull_str or 'Robust operating cash generation and disciplined capital allocation').rstrip('.').rstrip(';').strip()
+        clean_bull = re.sub(r';?\s*Trailing\s+PE\s+of\s*$', '', clean_bull, flags=re.I).strip()
+        clean_bear = (bear_str or 'Broader sector macroeconomic fluctuations and competitive dynamics').rstrip('.').rstrip(';').strip()
+
         summary_paragraphs = [
             f"Plain English Executive Summary: {action_decision.get('verdict_summary')}",
             f"• WHAT EXISTING SHAREHOLDERS SHOULD DO: {action_decision.get('existing_holders')}",
             f"• WHAT NEW INVESTORS SHOULD DO: {action_decision.get('fresh_buyers')}",
             f"• TIME HORIZON EXPECTATION: {action_decision.get('long_term_directive')} {action_decision.get('short_term_directive')}",
             f"• {action_decision.get('sell_triggers')}",
-            f"• WHAT TO WATCH (STRENGTHS VS RISKS): Business Strengths: {bull_str or 'Robust operating cash generation and disciplined capital allocation'}. Watchpoints: {bear_str or 'Broader sector macroeconomic fluctuations and competitive dynamics'}."
+            f"• WHAT TO WATCH (STRENGTHS VS RISKS): Business Strengths: {clean_bull}. Watchpoints: {clean_bear}."
         ]
         r.executive_summary = "\n\n".join(p for p in summary_paragraphs if p)
     elif discovery_portfolio:
@@ -2354,7 +2457,8 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
             r.decision_framework = _build_decision_framework(
                 company.get("name"), classification, is_comparison=is_comparison,
                 comp_data=comp_data, comparison_verdict=comparison_verdict,
-                action_decision=action_decision, discovery_portfolio=discovery_portfolio
+                action_decision=action_decision, discovery_portfolio=discovery_portfolio,
+                query_str=query_str
             )
             r.valuation_scenarios = _build_valuation_scenarios(price_val, pe_val, currency_val, is_comparison=is_comparison, comp_data=comp_data)
             r.monitoring_indicators = _build_monitoring_indicators(company.get("name"))

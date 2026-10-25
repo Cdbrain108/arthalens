@@ -25,10 +25,73 @@ def _file_to_base64_uri(path: Path) -> str:
         return ""
 
 
+import re
+from markupsafe import Markup, escape
+
+
+def bold_synthesis_headings(text: str) -> Markup:
+    if not text:
+        return Markup("")
+    cleaned_text = re.sub(r"\.{2,}", ".", str(text))
+    lines = cleaned_text.strip().split("\n")
+    out = []
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        is_bullet = line.startswith(("•", "*", "-"))
+        content = line.lstrip("•*- ").strip() if is_bullet else line
+        escaped = str(escape(content))
+
+        # 1. Bold primary lead-in heading (and optional secondary directive right after it) at the start of the line
+        escaped = re.sub(
+            r"^([A-Z][A-Za-z0-9\s/&()\-–—+“”\"',]{2,75}?):\s*([A-Z][A-Za-z0-9\s/&()\-–—+]{2,55}:)?",
+            lambda m: (
+                f'<strong style="color: #0f172a; font-weight: 800;">{m.group(1)}:</strong>'
+                + (f' <strong style="color: #1e3a8a; font-weight: 700;">{m.group(2)}</strong>' if m.group(2) else ' ')
+            ),
+            escaped,
+            count=1,
+        )
+
+        # 2. Bold inline sub-headings within the paragraph (e.g., NEXT 6–12 MONTHS:, Business Strengths:, Watchpoints:, Sell only if:)
+        escaped = re.sub(
+            r"(?<!>)\b(NEXT\s+\d+[–\-]\d+\s+MONTHS|LONG-TERM\s*\([^)]+\)|SHORT-TO-MEDIUM\s+TERM|Business Strengths|Watchpoints|Sell only if):",
+            r'<strong style="color: #0f172a; font-weight: 700;">\1:</strong>',
+            escaped,
+        )
+
+        if is_bullet:
+            out.append(
+                f'<p class="synthesis-bullet" style="margin: 0 0 3px 0;"><strong style="color: #0f172a; font-weight: 800;">•</strong> {escaped}</p>'
+            )
+        else:
+            out.append(f'<p style="margin: 0 0 3px 0;">{escaped}</p>')
+    return Markup("\n".join(out))
+
+
+def bold_inline_directive(text: str) -> Markup:
+    if not text:
+        return Markup("")
+    cleaned = re.sub(r"^EXACT RULES FOR WHEN TO SELL:\s*", "", str(text).strip())
+    escaped = str(escape(cleaned))
+    escaped = re.sub(
+        r"^([A-Z][A-Za-z0-9\s/&()\-–—+]{2,55}?):",
+        r'<strong style="color: #0f172a; font-weight: 800;">\1:</strong>',
+        escaped,
+        count=1,
+    )
+    return Markup(escaped)
+
+
 def render_html(report: ReportJSON, charts=None) -> str:
     env = Environment(loader=FileSystemLoader(str(_TEMPLATES)), autoescape=select_autoescape(["html", "j2"]))
+    env.filters["bold_headings"] = bold_synthesis_headings
+    env.filters["bold_directive"] = bold_inline_directive
     name = "news_report.html.j2" if report.overall_assessment.get("report_type") == "news" else "report.html.j2"
-    brand_dir = Path(__file__).resolve().parents[3] / "frontend/public/brand"
+    internal_brand = Path(__file__).parent / "brand"
+    external_brand = Path(__file__).resolve().parents[3] / "frontend/public/brand"
+    brand_dir = internal_brand if internal_brand.exists() else external_brand
     logo_uri = _file_to_base64_uri(brand_dir / "logo-dark.png") or _file_to_base64_uri(brand_dir / "logo-dark.svg")
     bull_uri = _file_to_base64_uri(brand_dir / "bull.png")
     bear_uri = _file_to_base64_uri(brand_dir / "bear.png")
@@ -56,7 +119,9 @@ def _render_pdf_fallback(report: ReportJSON, path: str) -> str:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
-    logo = Path(__file__).resolve().parents[3] / "frontend/public/brand/logo-mark.png"
+    internal_logo = Path(__file__).parent / "brand" / "logo-mark.png"
+    external_logo = Path(__file__).resolve().parents[3] / "frontend/public/brand/logo-mark.png"
+    logo = internal_logo if internal_logo.exists() else external_logo
     if logo.exists():
         pdf.image(str(logo), x=pdf.l_margin, y=pdf.get_y(), w=16)
         pdf.ln(18)
@@ -158,7 +223,13 @@ def _render_pdf_fallback(report: ReportJSON, path: str) -> str:
     return path
 
 
+_CACHED_BROWSER = None
+
 def _find_chromium_browser() -> str | None:
+    global _CACHED_BROWSER
+    if _CACHED_BROWSER is not None:
+        return _CACHED_BROWSER
+
     import shutil
     import os
     candidates = [
@@ -173,11 +244,14 @@ def _find_chromium_browser() -> str | None:
     ]
     for c in candidates:
         if c and Path(c).is_file():
-            return str(c)
+            _CACHED_BROWSER = str(c)
+            return _CACHED_BROWSER
     for name in ("chrome.exe", "chrome", "google-chrome", "msedge.exe", "msedge", "chromium"):
         p = shutil.which(name)
         if p:
-            return p
+            _CACHED_BROWSER = p
+            return _CACHED_BROWSER
+    _CACHED_BROWSER = None
     return None
 
 
@@ -199,7 +273,7 @@ def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) 
             f"--print-to-pdf={output_path.resolve()}",
             str(temp_html.resolve()),
         ]
-        subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        subprocess.run(cmd, capture_output=True, text=True, timeout=20)
         return output_path.exists() and output_path.stat().st_size > 5000
     except Exception as e:
         logger.warning("Browser PDF generation failed: %s", e)
@@ -228,21 +302,23 @@ def render_pdf(report: ReportJSON, job_id: str) -> str:
 
     html_content = render_html(report, charts=charts)
 
-    # 1. Try WeasyPrint (standard on Linux / environments with GTK)
-    try:
-        from weasyprint import HTML
-        HTML(string=html_content, base_url=str(_TEMPLATES)).write_pdf(str(path))
-        if path.exists() and path.stat().st_size > 5000:
-            return str(path)
-    except Exception as exc:
-        logger.info("WeasyPrint renderer unavailable (%s); attempting high-resolution browser engine", exc)
-
-    # 2. Try Headless Chromium (Edge / Chrome, native and pixel-perfect on Windows/macOS/Linux)
+    # 1. On Windows or when Chromium is present, use headless Chrome/Edge directly (fast & pixel-perfect)
+    import sys
     browser = _find_chromium_browser()
     if browser:
         if _render_pdf_browser(html_content, path, browser):
             logger.info("Rendered publication-grade PDF using %s for %s", browser, job_id)
             return str(path)
+
+    # 2. Try WeasyPrint on Linux / environments with GTK
+    if sys.platform != "win32":
+        try:
+            from weasyprint import HTML
+            HTML(string=html_content, base_url=str(_TEMPLATES)).write_pdf(str(path))
+            if path.exists() and path.stat().st_size > 5000:
+                return str(path)
+        except Exception as exc:
+            logger.info("WeasyPrint renderer unavailable (%s)", exc)
 
     # 3. Pure-python fallback (fpdf2) if neither WeasyPrint nor Chromium is available
     logger.warning("Browser PDF engine unavailable; using fpdf2 fallback", extra={"job_id": job_id})

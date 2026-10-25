@@ -76,17 +76,62 @@ export default function App() {
     }
   }, [job, query])
 
-  // Restore running or last viewed research on startup or mobile tab reload
+  // Keep track of THIS tab's active research session in sessionStorage (isolated per tab)
   useEffect(() => {
+    if (job?.job_id && !job.job_id.startsWith('chat_')) {
+      try {
+        sessionStorage.setItem('artha_tab_job_id', job.job_id)
+        sessionStorage.setItem('artha_tab_query', query || job.query || '')
+        sessionStorage.removeItem('artha_new_research')
+        localStorage.setItem('artha_last_viewed_job_id', job.job_id)
+      } catch {}
+    }
+  }, [job, query])
+
+  // Restore active research session on page reload ONLY IF THIS TAB had an active session before reload.
+  // Note: sessionStorage is isolated per browser tab. A brand new browser tab has empty sessionStorage,
+  // so a new tab opens 100% clean and will never resurrect an older report from another tab.
+  const hasRestoredSessionRef = useRef(false)
+  useEffect(() => {
+    if (running || job || hasRestoredSessionRef.current) return
     let cancelled = false
+
     try {
       if (sessionStorage.getItem('artha_new_research') === 'true') {
         return
       }
+
+      // 1. Check if THIS specific tab had an active session before reload
+      const tabJobId = sessionStorage.getItem('artha_tab_job_id')
+      if (tabJobId && ['chat', 'report'].includes(currentPage)) {
+        hasRestoredSessionRef.current = true
+        const tabQuery = sessionStorage.getItem('artha_tab_query')
+        if (tabQuery && !query) setQuery(tabQuery)
+
+        api
+          .getStatus(tabJobId)
+          .then((statusSnapshot) => {
+            if (cancelled) return
+            if (statusSnapshot && statusSnapshot.job_id) {
+              const matchedSession = (sessions || []).find((s) => s.job_id === tabJobId)
+              restore({
+                ...matchedSession?.snapshot,
+                ...statusSnapshot,
+                report: statusSnapshot.report || matchedSession?.snapshot?.report || null,
+                storagePdfUrl: matchedSession?.storagePdfUrl || null,
+              })
+            }
+          })
+          .catch(() => {})
+        return
+      }
+
+      // 2. Check if an active (non-terminal) background research job was interrupted by crash/reload
       const savedActive = localStorage.getItem('artha_active_job')
       if (savedActive) {
         const parsed = JSON.parse(savedActive)
         if (parsed?.job_id && Date.now() - (parsed.savedAt || 0) < 2 * 60 * 60 * 1000) {
+          hasRestoredSessionRef.current = true
           if (parsed.query) setQuery(parsed.query)
           api
             .getStatus(parsed.job_id)
@@ -102,35 +147,14 @@ export default function App() {
                 localStorage.removeItem('artha_active_job')
               } catch {}
             })
-          return
         }
       }
-      const lastViewedId = localStorage.getItem('artha_last_viewed_job_id')
-      if (lastViewedId && window.location.hash === '#chat') {
-        api
-          .getStatus(lastViewedId)
-          .then((statusSnapshot) => {
-            if (cancelled) return
-            if (statusSnapshot && statusSnapshot.job_id) {
-              restore(statusSnapshot)
-            }
-          })
-          .catch(() => {})
-      }
     } catch {}
+
     return () => {
       cancelled = true
     }
-  }, [restore, navigate])
-
-  // Track active job ID so reloads on #chat preserve the active view
-  useEffect(() => {
-    if (job?.job_id && !job.job_id.startsWith('chat_')) {
-      try {
-        localStorage.setItem('artha_last_viewed_job_id', job.job_id)
-      } catch {}
-    }
-  }, [job])
+  }, [currentPage, restore, navigate, sessions, running, job, query])
 
   // Guard beforeunload during active generation
   useEffect(() => {
@@ -162,39 +186,6 @@ export default function App() {
     }
   }, [user?.uid, user?.guest])
 
-  // Restore latest completed research session on page reload when visiting #chat or #report
-  const hasRestoredCompletedSessionRef = useRef(false)
-  useEffect(() => {
-    if (running || job || hasRestoredCompletedSessionRef.current) return
-    if (!['chat', 'report'].includes(currentPage)) return
-    if (!sessions || sessions.length === 0) return
-
-    const latestResearchSession = sessions.find((s) => s.job_id && !s.job_id.startsWith('chat_')) || sessions[0]
-    if (!latestResearchSession) return
-
-    hasRestoredCompletedSessionRef.current = true
-    if (latestResearchSession.query && !query) {
-      setQuery(latestResearchSession.query)
-    }
-
-    if (latestResearchSession.job_id && !latestResearchSession.job_id.startsWith('chat_')) {
-      api
-        .getStatus(latestResearchSession.job_id)
-        .then((snapshot) => {
-          if (snapshot && snapshot.job_id) {
-            restore(snapshot)
-          } else if (latestResearchSession.snapshot) {
-            restore(latestResearchSession.snapshot)
-          }
-        })
-        .catch(() => {
-          if (latestResearchSession.snapshot) {
-            restore(latestResearchSession.snapshot)
-          }
-        })
-    }
-  }, [currentPage, running, job, sessions, query, restore])
-
 
   // Save completed jobs locally and to Firestore under active account
   useEffect(() => {
@@ -213,6 +204,7 @@ export default function App() {
       if (running) return
       try {
         sessionStorage.removeItem('artha_new_research')
+        sessionStorage.setItem('artha_tab_query', trimmed)
       } catch {}
       setQuery(trimmed)
       navigate('chat')
@@ -221,6 +213,9 @@ export default function App() {
       }
       // Conversational/conceptual queries stay in Copilot without launching backend LangGraph
       if (detectQueryType(trimmed) === 'conversational') {
+        try {
+          sessionStorage.removeItem('artha_tab_job_id')
+        } catch {}
         reset()
         return
       }
@@ -248,6 +243,8 @@ export default function App() {
       try {
         sessionStorage.removeItem('artha_new_research')
         if (session.job_id) {
+          sessionStorage.setItem('artha_tab_job_id', session.job_id)
+          sessionStorage.setItem('artha_tab_query', session.query || '')
           localStorage.setItem('artha_last_viewed_job_id', session.job_id)
         }
       } catch {}
@@ -257,10 +254,18 @@ export default function App() {
         reset()
         return
       }
+      const savedSnapshot = session.snapshot || session
       api
         .getStatus(session.job_id)
-        .then(restore)
-        .catch(() => restore(session.snapshot || session))
+        .then((statusSnapshot) =>
+          restore({
+            ...savedSnapshot,
+            ...statusSnapshot,
+            report: statusSnapshot?.report || savedSnapshot?.report || null,
+            storagePdfUrl: session.storagePdfUrl || savedSnapshot?.storagePdfUrl || null,
+          })
+        )
+        .catch(() => restore(savedSnapshot))
     },
     [navigate, reset, restore, running]
   )
@@ -268,9 +273,12 @@ export default function App() {
   const handleNewResearch = useCallback(() => {
     if (running) return
     try {
+      sessionStorage.removeItem('artha_tab_job_id')
+      sessionStorage.removeItem('artha_tab_query')
+      sessionStorage.removeItem('artha_tab_copilot_messages')
+      sessionStorage.setItem('artha_new_research', 'true')
       localStorage.removeItem('artha_active_job')
       localStorage.removeItem('artha_last_viewed_job_id')
-      sessionStorage.setItem('artha_new_research', 'true')
     } catch {}
     reset()
     setQuery('')

@@ -22,26 +22,49 @@ export default function ReportReady({ job, onReset, user }) {
     setPdfState({ jobId })
     setCloudSynced(false)
 
-    api.getPdf(jobId, { signal: controller.signal }).then((blob) => {
-      if (!active) return
-      url = URL.createObjectURL(blob)
-      setPdfState({ jobId, url, blob })
+    // Fetch via getPdfData (JSON base64) so browser download managers like IDM never intercept in-app reports
+    const fetchPdf = async () => {
+      try {
+        const data = await api.getPdfData(jobId, { signal: controller.signal })
+        if (!active) return
+        if (!data?.base64) throw new Error('PDF payload was empty')
+        
+        const binaryString = atob(data.base64)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' })
+        url = URL.createObjectURL(blob)
+        setPdfState({ jobId, url, blob, rawBytes: bytes })
 
-      // Persist to Firebase Cloud Storage if user is signed in
-      if (user?.uid && !user.guest) {
-        persistReportPdfToStorage(user.uid, jobId, blob, {
-          title: job.query || 'Stock Research Report',
-          query: job.query || '',
-          conversationId: jobId,
-        }).then((res) => {
-          if (active && res?.downloadUrl) {
-            setCloudSynced(true)
-          }
-        }).catch(() => {})
+        // Persist to Firebase Cloud Storage if user is signed in
+        if (user?.uid && !user.guest) {
+          persistReportPdfToStorage(user.uid, jobId, blob, {
+            title: job.query || 'Stock Research Report',
+            query: job.query || '',
+            conversationId: jobId,
+          }).then((res) => {
+            if (active && res?.downloadUrl) {
+              setCloudSynced(true)
+            }
+          }).catch(() => {})
+        }
+      } catch (err) {
+        if (!active) return
+        // Resilient fallback to binary getPdf if pdf-data isn't supported
+        try {
+          const blob = await api.getPdf(jobId, { signal: controller.signal })
+          if (!active) return
+          url = URL.createObjectURL(blob)
+          setPdfState({ jobId, url, blob })
+        } catch (fallbackErr) {
+          if (active) setPdfState({ jobId, error: err.message || fallbackErr.message })
+        }
       }
-    }).catch((error) => {
-      if (active) setPdfState({ jobId, error: error.message })
-    })
+    }
+
+    fetchPdf()
 
     return () => {
       active = false
@@ -152,6 +175,8 @@ export default function ReportReady({ job, onReset, user }) {
         <PdfViewerModal
           jobId={jobId}
           pdfUrl={pdf?.url}
+          pdfBytes={pdf?.rawBytes}
+          pdfBlob={pdf?.blob}
           onClose={() => setShowPdfModal(false)}
           onSwitchToReport={() => {
             setShowPdfModal(false)

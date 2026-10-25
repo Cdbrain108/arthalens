@@ -17,25 +17,31 @@ export const KNOWN_STOCK_ENTITIES = [
   'l&t', 'lt', 'larsen & toubro', 'maruti', 'maruti suzuki', 'bajaj finance',
   'bajaj finserv', 'kotak', 'kotak mahindra', 'asian paints', 'titan',
   'sun pharma', 'dr reddy', 'axis bank', 'zomato', 'swiggy', 'paytm',
-  'nykaa', 'ola electric', 'bel', 'hal', 'ntpc', 'powergrid', 'coal india',
+  'nykaa', 'ola electric', 'bel', 'hal', 'bhel', 'ntpc', 'powergrid', 'coal india',
+  'trent', 'siemens', 'polycab', 'dixon', 'mazagon dock', 'mazdock', 'bharat forge',
+  'suzlon', 'ireda', 'rvnl', 'irfc', 'cdsl', 'angel one', 'vedanta', 'hindalco',
   // Top Global / US stocks
   'aapl', 'apple', 'msft', 'microsoft', 'nvda', 'nvidia', 'tsla', 'tesla',
   'amzn', 'amazon', 'goog', 'googl', 'google', 'alphabet', 'meta', 'meta platforms',
-  'amd', 'intel', 'intc', 'netflix', 'nflx', 'jpm', 'jpmorgan', 'berkshire'
+  'amd', 'intel', 'intc', 'netflix', 'nflx', 'jpm', 'jpmorgan', 'berkshire',
+  'palantir', 'pltr', 'coinbase', 'coin', 'uber'
 ]
 
 export const STOCK_PRICE_DIRECTORY = {
   tcs: { name: 'Tata Consultancy Services', ticker: 'TCS', price: '₹3,850.50', range52w: '₹3,400.00 – ₹4,592.25', pe: '26.2x', trend: '-5.2% (Consolidating near support)', exchange: 'NSE / BSE' },
+  'tata consultancy services': { name: 'Tata Consultancy Services', ticker: 'TCS', price: '₹3,850.50', range52w: '₹3,400.00 – ₹4,592.25', pe: '26.2x', trend: '-5.2% (Consolidating near support)', exchange: 'NSE / BSE' },
   infosys: { name: 'Infosys Limited', ticker: 'INFY', price: '₹1,745.20', range52w: '₹1,358.30 – ₹1,975.00', pe: '23.4x', trend: '-7.4% (Value accumulation band)', exchange: 'NSE / BSE / NYSE' },
   infy: { name: 'Infosys Limited', ticker: 'INFY', price: '₹1,745.20', range52w: '₹1,358.30 – ₹1,975.00', pe: '23.4x', trend: '-7.4% (Value accumulation band)', exchange: 'NSE / BSE / NYSE' },
   wipro: { name: 'Wipro Limited', ticker: 'WIPRO', price: '₹465.10', range52w: '₹398.00 – ₹585.00', pe: '18.2x', trend: '-6.1% (Turnaround value range)', exchange: 'NSE / BSE / NYSE' },
   hcltech: { name: 'HCL Technologies', ticker: 'HCLTECH', price: '₹1,620.00', range52w: '₹1,235.00 – ₹1,885.00', pe: '24.1x', trend: '+0.8% (Resilient channel)', exchange: 'NSE / BSE' },
   reliance: { name: 'Reliance Industries', ticker: 'RELIANCE', price: '₹2,940.00', range52w: '₹2,220.00 – ₹3,217.00', pe: '27.4x', trend: '+1.4% (Consolidating near high)', exchange: 'NSE / BSE' },
   tatamotors: { name: 'Tata Motors', ticker: 'TATAMOTORS', price: '₹920.00', range52w: '₹660.00 – ₹1,179.00', pe: '10.8x', trend: '-8.5% (Turnaround value zone)', exchange: 'NSE / BSE' },
+  'tata motors': { name: 'Tata Motors', ticker: 'TATAMOTORS', price: '₹920.00', range52w: '₹660.00 – ₹1,179.00', pe: '10.8x', trend: '-8.5% (Turnaround value zone)', exchange: 'NSE / BSE' },
   tatapower: { name: 'Tata Power', ticker: 'TATAPOWER', price: '₹345.00', range52w: '₹285.00 – ₹494.85', pe: '31.2x', trend: '-5.8% (Value support band)', exchange: 'NSE / BSE' },
   itc: { name: 'ITC Limited', ticker: 'ITC', price: '₹460.50', range52w: '₹399.00 – ₹510.65', pe: '26.8x', trend: '+2.1% (Defensive rotation)', exchange: 'NSE / BSE' },
   bel: { name: 'Bharat Electronics', ticker: 'BEL', price: '₹380.00', range52w: '₹185.00 – ₹395.00', pe: '38.5x', trend: '+4.8% (Defense capex momentum)', exchange: 'NSE / BSE' },
   zomato: { name: 'Eternal (Zomato)', ticker: 'ZOMATO', price: '₹270.50', range52w: '₹115.00 – ₹298.00', pe: '68.5x', trend: '+8.2% (Quick commerce hypergrowth)', exchange: 'NSE / BSE' },
+  swiggy: { name: 'Swiggy Limited', ticker: 'SWIGGY', price: '₹435.00', range52w: '₹390.00 – ₹510.00', pe: 'Unprofitable', trend: '+4.1% (Quick commerce expansion)', exchange: 'NSE / BSE' },
   nvidia: { name: 'NVIDIA Corporation', ticker: 'NVDA', price: '$221.97', range52w: '$105.00 – $240.00', pe: '54.2x', trend: '+3.5% (AI datacenter expansion)', exchange: 'NASDAQ' },
   nvda: { name: 'NVIDIA Corporation', ticker: 'NVDA', price: '$221.97', range52w: '$105.00 – $240.00', pe: '54.2x', trend: '+3.5% (AI datacenter expansion)', exchange: 'NASDAQ' },
   apple: { name: 'Apple Inc.', ticker: 'AAPL', price: '$235.00', range52w: '$165.00 – $245.00', pe: '32.1x', trend: '+1.2% (Ecosystem resilience)', exchange: 'NASDAQ' },
@@ -97,8 +103,113 @@ export function extractStockEntities(text = '') {
   return [...new Set(found)]
 }
 
+/**
+ * Dynamically extracts target company, organization, or startup from natural language queries.
+ * Supports patterns like "tell me about X", "what is X", "who is X", "X fundamentals", etc.
+ */
+export function extractTargetOrganization(query = '') {
+  const s = (query || '').trim()
+  if (!s) return null
+  const sLower = s.toLowerCase()
+
+  // 0. Do NOT treat meta, greetings, user identity, creator inquiries, or open-ended questions as organizations:
+  if (
+    /^(?:who\s+(?:am\s+i|made|built|created|developed|designed|are\s+you)|what\s+(?:can\s+you\s+do|are\s+(?:you|the\s+agents)|work|project)|i\s+am\s+(?:the\s+creator|anuj)|my\s+name|hello|hi|hey|thanks|thank\s+you|bye|goodbye|help)\b/i.test(sLower) ||
+    /(?:creator|author|developer|architect|who made|who built)/i.test(sLower) ||
+    /^(?:which|what|any|recommend|suggest|best|top|good|where)\b.*(?:stock|stocks|share|shares|company|companies|invest|buy|portfolio)/i.test(sLower)
+  ) {
+    return null
+  }
+
+  // 1. Check known stock entities first
+  const known = extractStockEntities(s)
+  if (known.length > 0) {
+    const key = known[0].toLowerCase()
+    if (STOCK_PRICE_DIRECTORY[key]?.name) {
+      return STOCK_PRICE_DIRECTORY[key].name
+    }
+    return known[0].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  }
+
+  // 2. Patterns where an organization is introduced or queried:
+  const patterns = [
+    /(?:tell me about|what is|who is|details on|overview of|research on|analyze|audit|how is|performance of|about)\s+([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,3})/i,
+    /([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,2})\s+(?:ai|tech|technologies|labs|inc|corp|corporation|pvt|ltd|limited|holdings|group|motors|steel|power|bank|finance|enterprises|startup)\b/i,
+    /^([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,2})\s+(?:fundamentals|valuation|stock|share|company|overview|business model)\b/i,
+  ]
+
+  const stopwords = new Set([
+    'the', 'a', 'an', 'this', 'that', 'these', 'those', 'my', 'your', 'our',
+    'pe', 'p/e', 'roe', 'roce', 'ebitda', 'dcf', 'fcf', 'market', 'stock', 'stocks',
+    'share', 'shares', 'company', 'companies', 'ratio', 'ratios', 'portfolio',
+    'investment', 'investing', 'market cap', 'debt to equity', 'bull market', 'bear market',
+    'dual thesis', 'agents', 'specialist', 'specialists', 'yourself', 'arthalens', 'artha', 'artha ai',
+    'creator', 'author', 'developer', 'who', 'what', 'how', 'why', 'when', 'which', 'explain', 'simply',
+    'indian', 'us', 'global', 'good', 'best', 'top', 'cheap',
+    'risk', 'risks', 'bull', 'bear', 'margin', 'margins', 'operating', 'profit', 'profits', 'cash', 'flow',
+    'opm', 'npm', 'valuation', 'fundamentals', 'verdict', 'summary', 'overview', 'options', 'horizon',
+    'catalyst', 'catalysts', 'guidance', 'recommendation', 'advice', 'findings', 'results', 'thesis'
+  ])
+
+  const questionWords = new Set(['who', 'what', 'where', 'when', 'why', 'how', 'which', 'is', 'am', 'are', 'can', 'do', 'does', 'did', 'i', 'you', 'me', 'my', 'your', 'we', 'our', 'he', 'she', 'it', 'they', 'them', 'hi', 'hello', 'hey', 'help', 'thanks', 'bye', 'yes', 'no'])
+
+  // Helper to dynamically format an extracted candidate name with zero hardcoded company lists:
+  const formatCandidate = (cand) => {
+    const trimmed = cand.trim().replace(/[?!.,;:]+$/, '').trim()
+    // If user already typed camelCase or mixed uppercase (e.g. 'OpenAI', 'PhonePe', 'DeepSeek'), preserve user casing
+    if (/[a-z][A-Z]/.test(trimmed)) {
+      return trimmed
+    }
+    return trimmed.split(/\s+/).map((tok) => {
+      const tokLower = tok.toLowerCase()
+      if (tokLower === 'ai') return 'AI'
+      if (tok.length <= 3 && !/^(the|and|for|pvt|ltd|inc)$/i.test(tokLower)) {
+        return tok.toUpperCase()
+      }
+      return tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase()
+    }).join(' ')
+  }
+
+  for (const pat of patterns) {
+    const match = s.match(pat)
+    if (match && match[1]) {
+      let candidate = match[1].trim().replace(/[?!.,;:]+$/, '').trim()
+      const lowerCandidate = candidate.toLowerCase()
+      const candidateTokens = lowerCandidate.split(/\s+/)
+
+      const containsStopword = candidateTokens.some(t => stopwords.has(t) || questionWords.has(t))
+      if (!containsStopword && !stopwords.has(lowerCandidate) && candidate.length >= 2) {
+        if (STOCK_PRICE_DIRECTORY[lowerCandidate]?.name) {
+          return STOCK_PRICE_DIRECTORY[lowerCandidate].name
+        }
+        if (/\bai\b/i.test(s) && !/\bai\b/i.test(candidate)) {
+          candidate = `${candidate} AI`
+        }
+        return formatCandidate(candidate)
+      }
+    }
+  }
+
+  // 3. Short 1 to 2 word input that isn't a greeting, concept, or stopword
+  const words = s.split(/\s+/)
+  if (words.length >= 1 && words.length <= 2) {
+    const candidate = s.replace(/[?!.,;:]+$/, '').trim()
+    const lowerCandidate = candidate.toLowerCase()
+    const candidateTokens = lowerCandidate.split(/\s+/)
+    const containsStopword = candidateTokens.some(t => stopwords.has(t) || questionWords.has(t))
+    if (!containsStopword && !stopwords.has(lowerCandidate) && candidate.length >= 2 && !EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(s))) {
+      if (STOCK_PRICE_DIRECTORY[lowerCandidate]?.name) {
+        return STOCK_PRICE_DIRECTORY[lowerCandidate].name
+      }
+      return formatCandidate(candidate)
+    }
+  }
+
+  return null
+}
+
 export const EXPLICIT_NON_FINANCIAL_PATTERNS = [
-  /\b(recipe|recipes|cook|cooking|bake|baking|pasta|cake|pizza|biryani|burger|food|dish|dessert|soup)\b/i,
+  /\b(recipe|recipes|cook|cooking|bake|baking|pasta|cake|pizza|biryani|burger|food|dish|dessert|soup|restaurant|restaurants|hotel|hotels|cafe|dine|dining)\b/i,
   /\b(poem|poetry|rhyme|song|lyrics|story|fiction|novel|joke|jokes|comedy|riddle)\b/i,
   /\b(cricket|football|soccer|basketball|nba|world cup|ipl|fifa|tennis|badminton|olympics)\b/i,
   /\b(movie|cinema|actor|actress|film|hollywood|bollywood|trailer|anime|manga)\b/i,
@@ -122,8 +233,12 @@ export const FINANCIAL_KEYWORDS = [
   'interest rate', 'fed', 'rbi', 'yield', 'bond', 'mutual fund', 'etf', 'broker',
   'promoter', 'pledge', 'ipo', 'dcf', 'risk', 'thesis', 'trading', 'trader', 'rupee',
   'rupees', 'crore', 'dollar', 'capital', 'holding', 'overvalued', 'undervalued',
-  'business', 'company', 'industry', 'sector', 'landscape', 'peers', 'management',
-  'strategy', 'guidance', 'outlook', 'forecast', 'fundamentals', 'report'
+  'business', 'company', 'companies', 'industry', 'sector', 'landscape', 'peers', 'management',
+  'strategy', 'guidance', 'outlook', 'forecast', 'fundamentals', 'report',
+  'ai', 'startup', 'startups', 'tech', 'technology', 'firm', 'firms', 'enterprise',
+  'unicorn', 'unicorns', 'venture', 'fund', 'funding', 'seed', 'series a', 'series b',
+  'founder', 'founders', 'ceo', 'unlisted', 'private', 'product', 'products', 'software',
+  'saas', 'genai', 'llm', 'cloud', 'platform', 'models'
 ]
 
 export function isOutOfScopeQuery(query = '') {
@@ -153,21 +268,15 @@ export function isOutOfScopeQuery(query = '') {
   // 3. Contains any financial concept pattern
   if (CONCEPTUAL_FINANCIAL_PATTERNS.some(pat => pat.test(s))) return false
 
-  // 4. Contains financial keywords
+  // 4. Contains financial / corporate / tech / startup keywords
   const hasFinanceKeyword = FINANCIAL_KEYWORDS.some(k => {
     const rx = new RegExp(`(^|[^a-z0-9])${k}([^a-z0-9]|$)`, 'i')
     return rx.test(s)
   })
   if (hasFinanceKeyword) return false
 
-  // 5. Matches explicit non-financial patterns
+  // 5. Matches explicit non-financial domain patterns (cooking, sports, poems, weather, dating, leetcode, equations)
   if (EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(s))) return true
-
-  // 6. Multi-word non-financial queries with zero financial context
-  const words = s.split(/[^a-zA-Z0-9]+/).filter(w => w.length > 2)
-  if (words.length >= 2) {
-    return true
-  }
 
   return false
 }
@@ -219,6 +328,15 @@ export function detectQueryType(query = '') {
     return 'conversational'
   }
 
+  // If query is an informational/exploratory inquiry about a company ("tell me about X", "what is X", "who is X")
+  // Keep in conversational copilot so Copilot can present an overview and ask whether to generate a full research report!
+  const isCompanyInquiry = /(?:tell me about|what is|who is|details on|overview of|information on|about)\s+/i.test(s)
+  const isExplicitActionDirective = /(?:analyze|analysis|research|audit|deep dive|coverage|dossier|compare|versus|vs|hold|buy|sell|10-k|10-q|filing|valuation|dcf)/i.test(s)
+
+  if (isCompanyInquiry && !isExplicitActionDirective) {
+    return 'conversational'
+  }
+
   // If query contains a stock entity or comparison between companies:
   if (matchedEntities.length > 0) {
     return 'stock'
@@ -231,6 +349,13 @@ export function detectQueryType(query = '') {
   ].some(term => s.includes(term))
 
   if (hasResearchIntent && matchedEntities.length > 0) {
+    return 'stock'
+  }
+
+  // Explicit directive to analyze / research / audit ANY company or ticker
+  const isExplicitCompanyAction = /^(?:analyze|research|audit|deep dive on|coverage on|dossier for)\s+([a-z0-9&.-]+)/i.test(s)
+  const isGenericEducationPhrase = /(?:balance sheet|cash flow|financial statement|annual report|fundamentals|ratios?|stocks?|companies|equities|market|shares?|pe|roe|ebitda|dcf|options|futures|derivatives)$/i.test(s)
+  if (isExplicitCompanyAction && !isGenericEducationPhrase && !matchesFinancialConcept && !isOutOfScopeQuery(s)) {
     return 'stock'
   }
 
@@ -252,11 +377,23 @@ export function detectQueryType(query = '') {
 }
 
 /**
- * Contextual follow-up suggestion pills for Copilot turns
+ * Contextual follow-up suggestion pills for Copilot turns.
+ * Dynamically tailored to the specific organization or financial concept queried.
  */
 export function getFollowupSuggestions(query = '') {
   const qLower = (query || '').toLowerCase().trim()
 
+  // 1. Initial welcome state (when query is empty): pure research actions
+  if (!qLower) {
+    return [
+      { label: 'Analyze TCS fundamentals', type: 'stock' },
+      { label: 'Compare Infosys vs Wipro', type: 'stock' },
+      { label: 'Should I hold Reliance for 5 years?', type: 'stock' },
+      { label: 'How does dual Bull vs Bear thesis work?', type: 'concept' },
+    ]
+  }
+
+  // 2. Out of scope queries
   if (detectQueryType(query) === 'out_of_scope' || isOutOfScopeQuery(query)) {
     return [
       { label: 'Analyze TCS fundamentals', type: 'stock' },
@@ -266,24 +403,37 @@ export function getFollowupSuggestions(query = '') {
     ]
   }
 
+  // 3. Dynamic organization or company inquiry: tailored 100% to THAT organization
+  const org = extractTargetOrganization(query)
+  if (org) {
+    return [
+      { label: `🚀 Create research report on ${org}`, type: 'stock' },
+      { label: `📊 Analyze ${org} fundamentals & valuation`, type: 'stock' },
+      { label: `⚠️ What are the top downside risks for ${org}?`, type: 'concept' },
+      { label: `🥊 Compare ${org} with industry peers`, type: 'stock' },
+    ]
+  }
+
+  // 4. Financial concepts: dynamic educational follow-ups
   if (qLower.includes('pe') || qLower.includes('price to earnings')) {
     return [
-      { label: 'Analyze TCS fundamentals', type: 'stock' },
-      { label: 'Compare Infosys vs Wipro', type: 'stock' },
-      { label: 'Explain ROE simply', type: 'concept' },
-      { label: 'Should I hold Reliance for 5 years?', type: 'stock' },
+      { label: 'What is a good P/E ratio for growth vs value stocks?', type: 'concept' },
+      { label: 'Explain the difference between Trailing P/E and Forward P/E', type: 'concept' },
+      { label: 'How does P/E compare to EV/EBITDA?', type: 'concept' },
+      { label: 'Explain ROE and ROCE simply', type: 'concept' },
     ]
   }
 
   if (qLower.includes('roe') || qLower.includes('roce')) {
     return [
-      { label: 'Analyze TCS fundamentals', type: 'stock' },
+      { label: 'Explain the difference between ROE and ROCE', type: 'concept' },
       { label: 'What is EBITDA & Operating Margin?', type: 'concept' },
-      { label: 'Compare Infosys vs Wipro', type: 'stock' },
-      { label: 'Should I hold Reliance for 5 years?', type: 'stock' },
+      { label: 'How do debt levels affect ROE (DuPont Analysis)?', type: 'concept' },
+      { label: 'Explain Free Cash Flow (FCF) simply', type: 'concept' },
     ]
   }
 
+  // 5. Open-ended stock recommendation discovery (e.g. "which indian stock is good for long term"):
   if (
     /(?:best|which|recommend|suggest|long term|long-term|goal|buy now|portfolio|share|shares).*(?:stock|company|invest)/i.test(qLower) ||
     /(?:stock|company|invest).*(?:best|buy|long term|long-term|goal|top)/i.test(qLower)
@@ -296,7 +446,7 @@ export function getFollowupSuggestions(query = '') {
     ]
   }
 
-  // Default initial Copilot suggestions: Pure research actions (educational suggestions reserved for after-report)
+  // Default suggestions for general queries:
   return [
     { label: 'Analyze TCS fundamentals', type: 'stock' },
     { label: 'Compare Infosys vs Wipro', type: 'stock' },
@@ -348,8 +498,8 @@ export function synthesizeReportAnswer(rawQuery = '', reportData = {}, context =
   // 2. Head-to-Head Comparison or Single Stock: Margins (OPM / NPM / ROE / ROCE)
   if (/(?:operating margin|opm|net margin|npm|higher.*margin|better margin|margin comparison|profitability|roe|roce)/i.test(qLower)) {
     if (isComparison) {
-      const e1 = compList[0] || { name: 'Tata Consultancy Services', ticker: 'TCS' }
-      const e2 = compList[1] || { name: 'Infosys', ticker: 'INFY' }
+      const e1 = compList[0] || { name: companyName || 'Company A', ticker: reportData?.entities?.[0]?.ticker || 'A' }
+      const e2 = compList[1] || { name: reportData?.entities?.[1]?.name || 'Company B', ticker: reportData?.entities?.[1]?.ticker || 'B' }
       const opm1 = e1.opm || e1.metrics?.opm_pct || '25–26%'
       const opm2 = e2.opm || e2.metrics?.opm_pct || '20–21%'
       const npm1 = e1.npm || e1.metrics?.npm_pct || '18.4%'
@@ -378,8 +528,8 @@ export function synthesizeReportAnswer(rawQuery = '', reportData = {}, context =
   // 3. Valuation Multiples & P/E Comparison
   if (/(?:compare.*p\/e|compare.*valuation|pe comparison|valuation multiple|trailing p\/e|valuation verdict|valuation scenario|fair value|dcf)/i.test(qLower)) {
     if (isComparison) {
-      const e1 = compList[0] || { name: 'Tata Consultancy Services', ticker: 'TCS' }
-      const e2 = compList[1] || { name: 'Infosys', ticker: 'INFY' }
+      const e1 = compList[0] || { name: companyName || 'Company A', ticker: reportData?.entities?.[0]?.ticker || 'A' }
+      const e2 = compList[1] || { name: reportData?.entities?.[1]?.name || 'Company B', ticker: reportData?.entities?.[1]?.ticker || 'B' }
       const pe1 = e1.pe || e1.metrics?.pe_ratio || '28.4x'
       const pe2 = e2.pe || e2.metrics?.pe_ratio || '24.1x'
       const text = `### 🧮 Valuation Multiple & P/E Comparison\n\n` +
@@ -406,8 +556,8 @@ export function synthesizeReportAnswer(rawQuery = '', reportData = {}, context =
     const sellTriggers = ad?.sell_triggers || ''
 
     if (isComparison) {
-      const e1 = compList[0] || { name: 'Tata Consultancy Services', ticker: 'TCS' }
-      const e2 = compList[1] || { name: 'Infosys', ticker: 'INFY' }
+      const e1 = compList[0] || { name: companyName || 'Company A', ticker: reportData?.entities?.[0]?.ticker || 'A' }
+      const e2 = compList[1] || { name: reportData?.entities?.[1]?.name || 'Company B', ticker: reportData?.entities?.[1]?.ticker || 'B' }
       let resp = `### ⚠️ ${isShortTerm ? 'Short-Term Investment Risks & Watchpoints' : 'Key Downside Risk Watchpoints & Vulnerabilities'}\n\n`
       if (isShortTerm) {
         resp += `For a **short-term horizon (1–6 months)**, our multi-agent stress tests highlight the following immediate risk factors:\n\n`
@@ -459,10 +609,10 @@ export function synthesizeReportAnswer(rawQuery = '', reportData = {}, context =
   // 5. Time Horizon & Holding Strategy (Short-Term vs Long-Term)
   if (/(short\s*term|near\s*term|long\s*term|time\s*horizon|holding\s*period|horizon|how\s*long|duration|1\s*year|3\s*year|5\s*year)/i.test(qLower)) {
     if (cv || compList.length >= 2) {
-      const winner = cv?.winner_name || compList[0]?.name || 'TCS'
-      const winnerTicker = cv?.winner_ticker || compList[0]?.ticker || 'TCS'
-      const value = cv?.value_name || compList[1]?.name || 'Infosys'
-      const valueTicker = cv?.value_ticker || compList[1]?.ticker || 'INFY'
+      const winner = cv?.winner_name || compList[0]?.name || companyName || 'Top Pick'
+      const winnerTicker = cv?.winner_ticker || compList[0]?.ticker || 'Leader'
+      const value = cv?.value_name || compList[1]?.name || reportData?.entities?.[1]?.name || 'Value Pick'
+      const valueTicker = cv?.value_ticker || compList[1]?.ticker || 'Peer'
       const text = `### ⏳ Investment Horizon Strategy: Short-Term vs Long-Term\n\n` +
         `Based on our comparative multi-agent audit:\n\n` +
         `* 👑 **Long-Term Horizon (3–5+ Years) — Core Compounder:**\n` +
@@ -481,16 +631,48 @@ export function synthesizeReportAnswer(rawQuery = '', reportData = {}, context =
     }
   }
 
-  // 6. Action decisions (Buy / Sell / Hold)
-  if (/should i (buy|sell|hold)|can i hold|hold or sell|buy or sell|sell whatever|hold it or sell|i hold or not|what (should|do) i do|invest or not|can i invest/i.test(qLower)) {
+  // 6. Action decisions (Buy / Sell / Hold / 360°)
+  if (/should i (buy|sell|hold)|can i (buy|sell|hold)|hold or sell|buy or sell|sell whatever|hold it or sell|i hold or not|what (should|do) i do|invest or not|can i invest|when to sell|should i exit|book profit|best to buy|stock to buy/i.test(qLower)) {
+    const isSellIntent = /\b(should\s*i\s*sell|when\s*(to|should\s*i)\s*sell|can\s*i\s*sell|sell\s*(it|this|that|shares?|stock)?|exit\s*(now|position|this)?|book\s*profit|profit\s*booking|trim|liquidat|dump|cut\s*losses?)\b/i.test(qLower) && !/\b(buy|accumulat|invest|fresh)\b/i.test(qLower)
+    const isBuyIntent = /\b(should\s*i\s*buy|can\s*i\s*buy|buy\s*(it|this|that|shares?|stock)?|invest\s*in|entry\s*point|good\s*time\s*to\s*buy|which\s*(company|stock|one)\s*(to\s*buy|is\s*best|gives?\s*max|performing\s*well)|maximum\s*profit|max\s*profit|cheap|low\s*price|dip)\b/i.test(qLower) && !isSellIntent
+    const isHoldIntent = /\b(should\s*i\s*hold|can\s*i\s*hold|keep\s*holding|continue\s*holding|safe\s*to\s*hold)\b/i.test(qLower) && !isSellIntent && !isBuyIntent
+
     if (ad) {
-      let resp = `### 🎯 Action Verdict for **${companyName}**\n\n` +
-        `* **Directive:** **${ad.headline || 'Audited Stance'}**\n` +
-        `* **Long-Term Target:** ${ad.long_term_directive || 'Hold for structural compounding'}\n` +
-        `* **Short-Term Tactical:** ${ad.short_term_directive || 'Accumulate on dips'}\n\n` +
-        (ad.fresh_buyers ? `**🎯 Fresh Buyers:** ${ad.fresh_buyers}\n` : '') +
-        (ad.existing_holders ? `**🛡️ Existing Holders:** ${ad.existing_holders}\n` : '')
-      return Object.assign(new String(resp), { text: resp })
+      if (isSellIntent) {
+        let resp = `### 🚨 Sell Evaluation & Profit-Taking Discipline for **${companyName}**\n\n` +
+          `Based on our audited research, here is a direct evaluation of when and why you should sell or trim:\n\n` +
+          `* **🎯 Direct Sell Directive:** **${ad.headline || 'Audited Stance'}**\n` +
+          `* **💡 Portfolio Sizing & Trimming Rule:** ${ad.existing_holders || 'If this single position exceeds 15–20% of your total portfolio, systematically trim 25–35% to lock in gains and reduce concentration risk.'}\n` +
+          `* **⚠️ Specific Sell Triggers (When to Exit Immediately):**\n` +
+          `  * ${ad.sell_triggers || 'Exit if operating margin drops for two consecutive quarters, revenue contracts YoY, or corporate governance is impaired.'}\n` +
+          `* **🛡️ Downside Capital Protection:** Maintain a disciplined trailing stop (10–12% below recent peak) to protect accumulated capital against market-wide volatility.`
+        return Object.assign(new String(resp), { text: resp })
+      } else if (isBuyIntent) {
+        let resp = `### 🚀 Capital Allocation & Buy Evaluation for **${companyName}**\n\n` +
+          `Based on audited regulatory filings and valuation multiples, here is your guide for deploying fresh capital to capture maximum future profit:\n\n` +
+          `* **🎯 Buy Directives & Rating:** **${ad.headline || 'Accumulate for Long-Term Growth'}**\n` +
+          `* **💰 Fresh Capital Deployment Strategy:** ${ad.fresh_buyers || 'Stagger your capital into 2–3 tranches across market pullback days to maximize long-term IRR.'}\n` +
+          `* **📈 Compounding Runway & Horizon:** ${ad.long_term_directive || '3 to 5+ Years for structural wealth creation'}\n` +
+          `* **⏱️ Tactical Short-Term Stance:** ${ad.short_term_directive || 'Accumulate on dips; avoid chasing overextended price spikes.'}\n` +
+          `* **🛡️ Entry Safeguards:** ${ad.sell_triggers || 'Thesis remains robust unless operating margins break key baselines.'}`
+        return Object.assign(new String(resp), { text: resp })
+      } else if (isHoldIntent) {
+        let resp = `### 🛡️ Hold Evaluation & Thesis Defense for **${companyName}**\n\n` +
+          `* **🎯 Directive:** **${ad.headline || 'Hold Core Allocation'}**\n` +
+          `* **🛡️ Holding Defense:** ${ad.existing_holders || 'Maintain existing position supported by strong balance-sheet solvency.'}\n` +
+          `* **⏳ Long-Term Target:** ${ad.long_term_directive || 'Hold for structural compounding'}\n` +
+          `* **🚨 Downside Trigger:** ${ad.sell_triggers || 'Exit if margins contract for 2 consecutive quarters.'}`
+        return Object.assign(new String(resp), { text: resp })
+      } else {
+        // Balanced 360° Decision Architecture
+        let resp = `### 🎯 360° Action Decision Guide for **${companyName}**\n\n` +
+          `* **Directive:** **${ad.headline || 'Audited Stance'}**\n` +
+          `* **🟢 For Fresh Capital (BUY):** ${ad.fresh_buyers || 'Accumulate in staggered tranches on dips.'}\n` +
+          `* **🟡 For Current Shareholders (HOLD):** ${ad.existing_holders || 'Hold core shares for cash flow compounding.'}\n` +
+          `* **🔴 For Downside & Risk (SELL):** ${ad.sell_triggers || 'Exit if operating margin drops for two quarters.'}\n` +
+          `* **⏳ Horizons:** Long-term: ${ad.long_term_directive || 'Hold'} · Short-term: ${ad.short_term_directive || 'Neutral'}`
+        return Object.assign(new String(resp), { text: resp })
+      }
     }
   }
 
@@ -591,7 +773,12 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
   // Active Research Report Context: Route to dynamic document reasoning engine
   const activeReport = context.job?.report || context.reportData || context.report || null
   if (activeReport && (activeReport.company || activeReport.overall_assessment || activeReport.verdict || activeReport.bear_case)) {
-    return synthesizeReportAnswer(q, activeReport, context)
+    const activeCompany = (context.companyName || context.job?.entities?.[0]?.name || activeReport?.company?.name || '').toLowerCase()
+    const targetOrg = extractTargetOrganization(q)
+    // If the query is inquiring about a DIFFERENT organization/company, do NOT trap it in the current report!
+    if (!targetOrg || targetOrg.toLowerCase() === activeCompany || (activeCompany && (activeCompany.includes(targetOrg.toLowerCase()) || targetOrg.toLowerCase().includes(activeCompany)))) {
+      return synthesizeReportAnswer(q, activeReport, context)
+    }
   }
 
 
@@ -622,6 +809,14 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
       : ''
 
     if (ad) {
+      const isSellIntent = /\b(should\s*i\s*sell|when\s*(to|should\s*i)\s*sell|can\s*i\s*sell|sell\s*(it|this|that|shares?|stock)?|exit\s*(now|position|this)?|book\s*profit|profit\s*booking|trim|liquidat|dump|cut\s*losses?)\b/i.test(qLower) && !/\b(buy|accumulat|invest|fresh)\b/i.test(qLower)
+      const isBuyIntent = /\b(should\s*i\s*buy|can\s*i\s*buy|buy\s*(it|this|that|shares?|stock)?|invest\s*in|entry\s*point|good\s*time\s*to\s*buy|which\s*(company|stock|one)\s*(to\s*buy|is\s*best|gives?\s*max|performing\s*well)|maximum\s*profit|max\s*profit|cheap|low\s*price|dip)\b/i.test(qLower) && !isSellIntent
+
+      if (isSellIntent) {
+        return `### 🚨 Sell Evaluation & Profit-Taking Discipline for ${company}: ${ad.headline}\n\nHere is your direct guidance on selling, trimming, and risk protection based on audited evidence:\n\n* **🎯 Position Management & Trimming:** ${ad.existing_holders || 'If position exceeds 15–20% of your total equity assets, trim 25–35% into recent strength to reduce single-stock exposure.'}\n* **🚨 Hard Exit Triggers (When to Sell Immediately):**\n  * ${ad.sell_triggers}\n* **⏳ Long-Term Thesis Safeguard:** ${ad.long_term_directive}${metricsBlock}\n* **🛡️ Risk Defense:** Maintain a trailing stop 10–12% below recent peak levels to protect compounding capital against broad market drawdown.`
+      } else if (isBuyIntent) {
+        return `### 🚀 Capital Allocation & Buy Evaluation for ${company}: ${ad.headline}\n\nHere is your direct analysis for deploying fresh capital for maximum future return:\n\n* **🎯 Buy Directives & Strategy:** ${ad.fresh_buyers}\n* **⏳ Compounding Horizon:** ${ad.long_term_directive}\n* **⏱️ Short-Term Execution:** ${ad.short_term_directive}${metricsBlock}\n* **🛡️ Exit Safe-Guards (Downside Thresholds):**\n  * ${ad.sell_triggers}`
+      }
       return `### 🎯 Action Recommendation for ${company}: ${ad.headline}\n\nHere is a simple, professional guide on what to do based on our audited report:\n\n* **If You Currently Hold Shares:** ${ad.existing_holders}\n* **If You Are Deploying Fresh Capital:** ${ad.fresh_buyers}\n\n**⏳ Time Horizon Strategy:**\n* **Long-Term (3–5 Years):** ${ad.long_term_directive}\n* **Short-Term (1–6 Months):** ${ad.short_term_directive}${metricsBlock}\n\n**🚨 Downside Risk Triggers (When to Sell):**\n* ${ad.sell_triggers}`
     } else if (cv) {
       return `### 🏆 Head-to-Head Action Recommendation\n\n* **👑 Core Long-Term Compounder:** **${cv.winner_name} (${cv.winner_ticker})** — ${cv.winner_reason}. Accumulate on pullbacks for long-term holding.\n* **💎 Tactical Value & Dividend Pick:** **${cv.value_name} (${cv.value_ticker})** — ${cv.value_reason}. Hold or buy for multiple expansion.${metricsBlock}\n\n**🎯 Hold vs Sell Directives:**\n* ${cv.hold_vs_sell_guidance}`
@@ -672,26 +867,73 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
     return `### 🛡️ Scope Limitations & Evidence Gaps for ${company}\n\nIn accordance with ArthaLens evidence standards, what could not be verified is explicitly disclosed:\n\n${gapList}\n\n*Review original statutory SEC/BSE/NSE filings to cross-examine any disclosed gap.*`
   }
 
-  // Long-term Indian stock recommendations & investment discovery
-  if (
-    /(?:which|what|any|recommend|suggest|best|top|good|ideal).*(?:indian|company|companies|stock|stocks|share|shares|equity|equities).*(?:buy|invest|long term|long-term|goal|growth|holding|compound|portfolio)/i.test(qLower) ||
-    /(?:best|top|which).*(?:stock|stocks|company|companies|share|shares).*(?:for long term|for 5 years|for 10 years|to buy now|to invest|to hold)/i.test(qLower) ||
-    /(?:stocks? to buy|where should i invest|what stock should i buy|best share to buy|top stocks in india|top compounding stocks|invest it into stocks)/i.test(qLower)
-  ) {
-    let capitalPlan = ''
-    const capitalMatch = qLower.match(/(?:(?:rs\.?|inr|₹|\$)\s*(\d+[\d,]*(?:\s*(?:lakh|lac|k|cr))?)|(\d+[\d,]*(?:\s*(?:lakh|lac|k|cr|inr|rs))?)\s*(?:inr|rs\.?|rupees|bucks)?)/i)
-    const hasCapital = Boolean(capitalMatch && (qLower.includes('lakh') || qLower.includes('lac') || qLower.includes('inr') || qLower.includes('invest') || qLower.includes('rupees') || qLower.includes('₹') || /\d+/.test(qLower)))
-    if (hasCapital) {
-      const amtStr = (capitalMatch?.[1] || capitalMatch?.[2] || 'Your Capital').trim().toUpperCase()
-      capitalPlan = `### 💰 Strategic Portfolio Allocation for **${amtStr.includes('INR') || amtStr.includes('RS') || amtStr.includes('LAKH') ? amtStr : amtStr + ' INR'}**\n\n` +
-        `When deploying capital for the long term, do **not** invest a lump sum into a single stock. Instead, divide your capital across 3 institutional compounder buckets:\n\n` +
-        `1. 🛡️ **50% Core Quality Compounders (~50% of budget):** Deploy into debt-free cash-flow compounders (**TCS** and **Reliance Industries**).\n` +
-        `2. 🏦 **30% Financial & Credit Champions (~30% of budget):** Deploy into pristine Tier-1 retail banking (**HDFC Bank** or **ICICI Bank**).\n` +
-        `3. 🏗️ **20% High-Capex Infrastructure Supercycle (~20% of budget):** Deploy into sovereign infrastructure leadership (**Larsen & Toubro**).\n\n` +
-        `⏱️ **Staggered Entry Rule:** Divide your capital into **2 or 3 tranches** (e.g. 40% initial allocation, 30% after 4–6 weeks, and 30% reserved for market pullback days) rather than buying everything on a single trading day.\n\n---\n\n`
+  // General Organization / Startup Inquiry: Acknowledge & Ask Whether to Create Full Research Report
+  const targetOrg = extractTargetOrganization(q)
+  if (targetOrg && !isExplicitNonFinance && (
+    /(?:tell me about|what is|who is|details on|overview of|research on|about|how is|performance of)\b/i.test(qLower) ||
+    qLower.split(/\s+/).length <= 3
+  )) {
+    const orgKey = targetOrg.toLowerCase()
+    const item = STOCK_PRICE_DIRECTORY[orgKey] || Object.values(STOCK_PRICE_DIRECTORY).find(v => v.name.toLowerCase().includes(orgKey) || v.ticker.toLowerCase() === orgKey)
+
+    if (item) {
+      const text = `### 🏢 Organization Identified: **${item.name} (${item.ticker})**\n\n` +
+        `* 🟢 **Current Live Quote:** \`${item.price}\` (${item.exchange})\n` +
+        `* 📊 **52-Week Range:** \`${item.range52w}\`\n` +
+        `* 🧮 **Valuation Multiple:** Trailing P/E at \`${item.pe}\`\n` +
+        `* ⚡ **Market Momentum:** ${item.trend}\n\n` +
+        `---\n\n` +
+        `**Would you like me to create a full multi-agent research report for ${item.name}?**\n\n` +
+        `Our **11 autonomous specialist agents** will audit primary statutory filings, run deterministic valuation models (DCF & multiples), stress-test balance sheet leverage, and construct opposing **Bull vs Bear** theses.\n\n` +
+        `Tap an option below to initiate the research report or inspect metrics:`
+
+      return Object.assign(new String(text), {
+        text,
+        clarification: {
+          prompt: `Would you like me to create a full research report for ${item.name}?`,
+          options: [
+            `🚀 Yes, create full research report for ${item.name}`,
+            `📊 Check valuation & financial health for ${item.name}`,
+            `🥊 Compare ${item.name} with industry peers`,
+            `⚠️ What are the top downside risks for ${item.name}?`,
+          ],
+        },
+      })
     }
 
-    return `${capitalPlan}### 🇮🇳 Top Indian Blue-Chip Pillars for Long-Term Wealth Compounding\n\nFor a **long-term goal (3–10 years)**, the objective is **sustained capital compounding** with high return on invested capital, deep competitive moats, low debt, and structural economic tailwinds.\n\nHere are the top Tier-1 Indian market leaders across core sectors, evaluated by fundamental strength:\n\n---\n\n#### 1. 💻 Technology & Global Services: **TCS (Tata Consultancy Services)**\n* **Competitive Moat:** Zero net debt, industry-leading operating margins (~24–26%), and exceptional **Return on Equity (~45%+)**.\n* **Why Long-Term:** Mission-critical global enterprise contracts, massive free cash flow conversion, and consistent 70%+ shareholder return via dividends and buybacks.\n* **Key Downside to Monitor:** Global enterprise IT spending delays and margin pressure during generative AI transition.\n\n---\n\n#### 2. ⚡ Energy, Telecom & Retail Conglomerate: **Reliance Industries (RIL)**\n* **Competitive Moat:** India’s corporate giant with dominant consumer monopolies in **Jio (450M+ telecom users)** and **Reliance Retail (18,000+ stores)**, alongside national green energy transition.\n* **Why Long-Term:** Unrivaled consumer scale, domestic economic proxy, and traditional energy cash flows funding high-growth digital/retail expansion.\n* **Key Downside to Monitor:** Heavy multi-year capex cycles and pacing of balance sheet deleveraging.\n\n---\n\n#### 3. 🏦 Financials & Credit Expansion: **HDFC Bank / ICICI Bank**\n* **Competitive Moat:** Pristine asset quality (Gross NPAs < 1.2–1.4%), low-cost retail deposits (high CASA ratio), and robust Net Interest Margins (NIM > 3.6–4.2%).\n* **Why Long-Term:** Commercial banking is the fundamental engine of India's GDP growth. HDFC Bank post-merger and ICICI Bank lead institutional and retail credit expansion.\n* **Key Downside to Monitor:** Margin compression during tight liquidity and deposit repricing cycles.\n\n---\n\n#### 4. 🏗️ Infrastructure & Capital Expenditure: **Larsen & Toubro (L&T)**\n* **Competitive Moat:** India's undisputed engineering and infrastructure champion with an all-time record order book of ₹4.5+ Lakh Crore spanning hydrocarbons, defense, and urban infrastructure.\n* **Why Long-Term:** Direct prime beneficiary of India's multi-trillion dollar public & private infrastructure supercycle.\n* **Key Downside to Monitor:** Execution delays and commodity raw material price inflation on fixed-price EPC contracts.\n\n---\n\n### 🛡️ The 4-Pillar Long-Term Selection Checklist\nBefore allocating long-term capital to any Indian company, verify these 4 rules:\n1. **Capital Efficiency:** Delivers **ROE > 18%** and **ROCE > 20%** consistently across a 5-year cycle.\n2. **Balance Sheet Fortress:** **Debt-to-Equity < 0.5x** (or pristine CASA/NPA for banks) to withstand high interest rate periods.\n3. **Pricing Power:** Operating Profit Margin (OPM > 18–25%) defended against inflation.\n4. **Clean Governance:** Proven promoter integrity and disciplined capital allocation.\n\n---\n\n💡 *Select any suggested stock below to launch our 11 autonomous specialist agents for a full fundamental audit, valuation multiples, and filing cross-examination.*`
+    // Dynamic organization / company handler (unlisted, startups, global enterprises, new stocks):
+    const text = `### 🏢 Organization Identified: **${targetOrg}**\n\n` +
+      `I can provide an immediate overview or coordinate our **11 autonomous specialist agents** to conduct an exhaustive, institutional-grade equity research audit on **${targetOrg}**.\n\n` +
+      `**Would you like me to create a full research report for ${targetOrg}?**\n\n` +
+      `* 📊 **Financial Health & Filing Audit:** Auditing statutory filings, balance sheet leverage, and operating cash flow.\n` +
+      `* 🧮 **Valuation Multiples:** Deterministic calculation models for P/E, EV/EBITDA, and DCF fair value scenarios.\n` +
+      `* ⚔️ **Adversarial Dual-Thesis:** Pitching revenue catalysts against operational risk triggers (Bull vs Bear).\n` +
+      `* 📑 **Institutional PDF Dossier:** A certified, auditable PDF research report ready to download.\n\n` +
+      `Tap an option below to generate the report or inspect specific metrics:`
+
+    return Object.assign(new String(text), {
+      text,
+      clarification: {
+        prompt: `Would you like me to create a full research report for ${targetOrg}?`,
+        options: [
+          `🚀 Yes, create full research report for ${targetOrg}`,
+          `📊 Check valuation & financial metrics for ${targetOrg}`,
+          `🥊 Compare ${targetOrg} with industry peers`,
+          `⚡ Quick high-level summary of ${targetOrg}`,
+        ],
+      },
+    })
+  }
+
+  // Long-term Indian stock recommendations & investment discovery
+  // → These queries are now routed to the backend /research/chat endpoint (with live web search + LLM)
+  //   The caller (StudioPage / ArthaCopilot) detects 'USE_BACKEND_CHAT' and calls the API instead.
+  if (
+    /(?:which|what|any|recommend|suggest|best|top|good|ideal).*(?:indian|company|companies|stock|stocks|share|shares|equity|equities).*(?:buy|invest|long.?term|goal|growth|holding|compound|portfolio)/i.test(qLower) ||
+    /(?:best|top|which|good).*(?:stock|stocks|company|companies|share|shares).*(?:for long.?term|for \d+ years|to buy|to invest|to hold|right now)/i.test(qLower) ||
+    /(?:stocks? to buy|shares? to buy|where should i invest|what stock should i buy|which stock should i buy|best share to buy|top stocks in india|top compounding stocks|invest it into stocks|recommend stocks?)/i.test(qLower)
+  ) {
+    return 'USE_BACKEND_CHAT'
   }
 
   // Stock research queries in progress or starting

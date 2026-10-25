@@ -25,9 +25,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(BASE_DIR / ".env"),
                                       env_file_encoding="utf-8", extra="ignore")
 
-    # Model gateway: "sota" | "vyce" | "nvidia" | "inception" | "gemini" | "openrouter" | "agentrouter" | "mock"
-    # SOTA dynamically routes across Tier 1 (VyceAI + Nvidia), Tier 2 (InceptionLabs + OpenRouter), Tier 3 (Gemini Tier 1)
-    model_provider: str = "sota"
+    # Model gateway: "groq" | "sota" | "vyce" | "nvidia" | "inception" | "gemini" | "openrouter" | "agentrouter" | "mock"
+    model_provider: str = "groq"
 
     # --- SOTA Tier 1: VyceAI ---
     vyce_api_key: str | None = None
@@ -44,6 +43,12 @@ class Settings(BaseSettings):
     inception_api_keys: str = ""
     inception_base_url: str = "https://api.inceptionlabs.ai/v1"
     inception_model: str = "mercury-2.5"
+
+    # --- SOTA Tier 1: Groq (Ultra-Fast LPUs, ~0.8s) ---
+    groq_api_keys: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "openai/gpt-oss-120b"
+    groq_model_fast: str = "openai/gpt-oss-120b"
 
     gemini_api_key: str | None = None
     # Extra Gemini keys (comma-separated) round-robin with the primary for
@@ -97,7 +102,7 @@ class Settings(BaseSettings):
 
     # Runtime
     agent_timeout_s: int = 240
-    agent_concurrency: int = 4
+    agent_concurrency: int = 12
     max_agent_retries: int = 2
 
     # SEC EDGAR requires a User-Agent with app name + contact email for
@@ -130,6 +135,11 @@ class Settings(BaseSettings):
         return list(dict.fromkeys(k.strip() for k in self.inception_api_keys.split(",") if _usable_key(k.strip())))
 
     @property
+    def groq_key_list(self) -> list[str]:
+        """Usable Groq keys de-duplicated in configured order."""
+        return list(dict.fromkeys(k.strip() for k in self.groq_api_keys.split(",") if _usable_key(k.strip())))
+
+    @property
     def gemini_key_list(self) -> list[str]:
         """Usable Gemini keys, primary first, then extras (de-duplicated)."""
         extras = [k.strip() for k in self.gemini_backup_keys.split(",") if k.strip()]
@@ -151,10 +161,12 @@ class Settings(BaseSettings):
     def effective_provider(self) -> str:
         """Resolve the real provider: fall back to mock when no usable key is set."""
         if self.model_provider == "sota":
-            if (self.nvidia_key_list or _usable_key(self.vyce_api_key) or
-                    self.inception_key_list or _usable_key(self.openrouter_api_key) or
+            if (self.groq_key_list or self.inception_key_list or self.nvidia_key_list or
+                    _usable_key(self.vyce_api_key) or _usable_key(self.openrouter_api_key) or
                     self.gemini_key_list):
                 return "sota"
+            return "mock"
+        if self.model_provider == "groq" and not self.groq_key_list:
             return "mock"
         if self.model_provider == "vyce" and not _usable_key(self.vyce_api_key):
             return "mock"

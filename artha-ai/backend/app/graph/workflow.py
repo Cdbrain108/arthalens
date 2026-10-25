@@ -30,8 +30,9 @@ def build_research_graph(checkpointer: Any = None):
                 delta = await getattr(nodes, f'node_{name}')(state)
             if name == 'analyze_query':
                 emit('analysis', {key: delta.get(key) for key in ('intent', 'entities', 'compare_mode')})
-            elif name == 'apply_routing_policy':
-                emit('agents', delta.get('selected_agents', []))
+            elif name in ('create_plan', 'apply_routing_policy'):
+                if delta.get('selected_agents'):
+                    emit('agents', delta.get('selected_agents', []))
             elif name == 'build_report':
                 emit('report', delta.get('report'))
             return delta

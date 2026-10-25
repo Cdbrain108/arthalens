@@ -1,6 +1,6 @@
 // Bulls Eye API client.
-const rawBase = (import.meta?.env?.VITE_API_URL || '').replace(/\/+$/, '')
-const BASE = rawBase ? `${rawBase}/api` : '/api'
+const rawBase = (import.meta?.env?.VITE_API_URL || '').trim().replace(/\/+$/, '')
+const BASE = rawBase ? (rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`) : '/api'
 
 async function request(path, options = {}, responseType = 'json') {
   const headers = { ...(options.headers || {}) }
@@ -51,7 +51,9 @@ export const api = {
     })
   },
   getPdf: (jobId, options) => request(`/research/${encodeURIComponent(jobId)}/pdf`, options, 'blob'),
+  getPdfData: (jobId, options) => request(`/research/${encodeURIComponent(jobId)}/pdf-data`, options),
   pdfUrl: (jobId, download = false) => `${BASE}/research/${encodeURIComponent(jobId)}/pdf${download ? '?download=1' : ''}`,
+  chartUrl: (jobId, chart) => `${BASE}/research/${encodeURIComponent(jobId)}/charts/${encodeURIComponent(chart)}`,
   getHistory: () => request('/research/history'),
   getAgents: () => request('/agents'),
   uploadDocument: (file, meta = {}) => {
@@ -69,5 +71,9 @@ export const api = {
       return body
     })
   },
-  pdfUrl: (jobId) => `${BASE}/research/${encodeURIComponent(jobId)}/pdf`,
+  copilotChat: (message, history = [], jobId = null) =>
+    request('/research/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history, job_id: jobId }),
+    }),
 }

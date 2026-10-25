@@ -83,16 +83,18 @@ def create_plan(state: dict) -> dict:
     analysis = _QA(
         entities=state["entities"], intent=state["intent"],
         time_horizon=state.get("time_horizon"), compare_mode=state.get("compare_mode", False))
+    
     if is_mock():
         plan_d = mock_plan(analysis.intent, analysis.compare_mode)
         plan_obj = _RP(**plan_d)
     else:
         try:
-            plan_obj = meta.plan(state["query"], analysis)
+            plan_obj = meta.plan(state.get("query", ""), analysis)
             plan_d = plan_obj.model_dump()
         except Exception:
             plan_d = mock_plan(analysis.intent, analysis.compare_mode)
             plan_obj = _RP(**plan_d)
+
     selected = enforce_policy(analysis, plan_obj)  # deterministic policy guardrail
     return {**_stamp(state, "create_plan"),
             "research_plan": {**plan_d, "selected_agents": selected},

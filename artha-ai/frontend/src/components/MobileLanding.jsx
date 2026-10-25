@@ -1044,6 +1044,33 @@ export default function MobileLanding({
           </p>
         </footer>
       </section>
+
+      {/* Floating 'Start Research →' Pill Button (Mobile Only, shown on sections without inline research buttons) */}
+      {activeSectionIdx !== 0 && activeSectionIdx !== 3 && !navOpen && (
+        <button
+          type="button"
+          onClick={() => {
+            if (onResume) {
+              onResume()
+            } else if (onStart) {
+              onStart('')
+            } else {
+              window.location.hash = '#chat'
+            }
+          }}
+          style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: '#ffffff',
+            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
+          }}
+          className="fixed right-4 bottom-5 z-40 flex items-center justify-center gap-2 rounded-full border border-[#6ee7b7] px-4 py-2.5 text-xs font-bold text-white shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer animate-fade-in sm:hidden"
+          title="Start Research with Artha AI Copilot"
+          aria-label="Start Research with Artha AI Copilot"
+        >
+          <Sparkles size={15} className="text-white animate-pulse" />
+          <span className="text-white font-bold tracking-wide">Start Research →</span>
+        </button>
+      )}
     </div>
   )
 }

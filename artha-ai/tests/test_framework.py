@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 from app.tools.financial_tools import RATIO_FORMULAS, calculate_ratio
 from app.graph.routing import enforce_policy
-from app.schemas.models import QueryAnalysis, ResearchPlan
+from app.schemas.models import Entity, QueryAnalysis, ResearchPlan
 from app.validation.pipeline import run_validation
 
 
@@ -17,7 +17,7 @@ def test_ratios_are_deterministic():
 
 
 def test_routing_policy_price_move():
-    a = QueryAnalysis(entities=[], intent="price_move")
+    a = QueryAnalysis(entities=[Entity(name="TCS", ticker="TCS")], intent="price_move")
     plan = ResearchPlan(steps=[], selected_agents=["valuation", "market", "news"])
     selected = enforce_policy(a, plan)
     assert "market" in selected and "news" in selected
@@ -25,10 +25,17 @@ def test_routing_policy_price_move():
 
 
 def test_routing_policy_long_term_minimums():
-    a = QueryAnalysis(entities=[], intent="long_term", time_horizon="5y")
+    a = QueryAnalysis(entities=[Entity(name="TCS", ticker="TCS")], intent="long_term", time_horizon="5y")
     plan = ResearchPlan(steps=[], selected_agents=["news"])
     selected = set(enforce_policy(a, plan))
     assert {"financial", "valuation", "market", "news", "risk", "growth"} <= selected
+
+
+def test_routing_policy_returns_no_agents_without_a_resolved_entity():
+    """Unresolved companies must not trigger a full specialist run."""
+    a = QueryAnalysis(entities=[], intent="long_term", time_horizon="5y")
+    plan = ResearchPlan(steps=[], selected_agents=["market", "news"])
+    assert enforce_policy(a, plan) == []
 
 
 def test_validation_flags_missing_provenance():

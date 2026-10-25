@@ -11,7 +11,15 @@ export function formatInlineMarkdown(text = '') {
 export default function CopilotMarkdown({ content }) {
   if (!content) return null
 
-  const lines = content.split('\n')
+  // Ensure every bullet mark or capitalized section starts on a brand-new line
+  const normalized = String(content)
+    .replace(/\s*•\s*/g, '\n• ')
+    .replace(/\s*\*\s*([A-Z][A-Z\s]{2,}:)/g, '\n• $1')
+    .replace(/\s*(WHAT\s+(?:EXISTING|NEW)\s+[^:]+:)/g, '\n• $1')
+    .replace(/\s*(TIME\s+HORIZON\s+[^:]+:)/g, '\n• $1')
+    .replace(/\s*(EXACT\s+RULES\s+[^:]+:)/g, '\n• $1')
+
+  const lines = normalized.split('\n')
   const elements = []
   let tableRows = []
   let inTable = false
@@ -130,10 +138,18 @@ export default function CopilotMarkdown({ content }) {
 
     // Bullet points
     if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-      const bulletText = trimmed.replace(/^([*-•])\s+/, '')
+      let bulletText = trimmed.replace(/^([*-•])\s+/, '')
+      const colonIdx = bulletText.indexOf(':')
+      if (colonIdx !== -1 && colonIdx < 60) {
+        const potentialHeading = bulletText.substring(0, colonIdx).trim()
+        const rest = bulletText.substring(colonIdx + 1).trim()
+        if (!potentialHeading.startsWith('**')) {
+          bulletText = `**${potentialHeading}:** ${rest}`
+        }
+      }
       const formatted = formatInlineMarkdown(bulletText)
       elements.push(
-        <div key={`bullet-${i}`} className="flex items-start gap-2 pl-1.5 text-[13px] text-[#e8eaed] leading-relaxed my-0.5">
+        <div key={`bullet-${i}`} className="flex items-start gap-2 pl-1.5 text-[13px] text-[#e8eaed] leading-relaxed my-1">
           <span className="text-emerald-400 font-bold text-sm leading-none mt-1 select-none">•</span>
           <span dangerouslySetInnerHTML={{ __html: formatted }} />
         </div>
@@ -141,8 +157,17 @@ export default function CopilotMarkdown({ content }) {
       continue
     }
 
-    // Regular paragraph
-    const formatted = formatInlineMarkdown(trimmed)
+    // Regular paragraph — auto-bold leading section headings like "Plain English Executive Summary:"
+    let paraText = trimmed
+    const colonIdx = paraText.indexOf(':')
+    if (colonIdx !== -1 && colonIdx < 50) {
+      const potentialHeading = paraText.substring(0, colonIdx).trim()
+      const rest = paraText.substring(colonIdx + 1).trim()
+      if (!potentialHeading.startsWith('**') && (potentialHeading === potentialHeading.toUpperCase() || /^[A-Z][a-zA-Z\s]+$/.test(potentialHeading))) {
+        paraText = `**${potentialHeading}:** ${rest}`
+      }
+    }
+    const formatted = formatInlineMarkdown(paraText)
     elements.push(
       <p
         key={`p-${i}`}

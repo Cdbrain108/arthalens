@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from app.graph import runner, stages
 from app.graph import specialists as graph_specialists
 from app.graph.routing import ALL_AGENTS, ROUTING_TABLE, enforce_policy
-from app.schemas.models import AgentResult, QueryAnalysis, ResearchPlan, ReportJSON
+from app.schemas.models import AgentResult, Entity, QueryAnalysis, ResearchPlan, ReportJSON
 
 
 @pytest.fixture(autouse=True)
@@ -73,8 +73,8 @@ def render(template: str, state: dict) -> str:
 @pytest.mark.parametrize("intent", list(ROUTING_TABLE))
 @pytest.mark.parametrize("compare_mode", [False, True])
 def test_routing_cap_never_drops_required_agents(intent, compare_mode):
-    analysis = QueryAnalysis(entities=[], intent=intent, time_horizon="5y",
-                             compare_mode=compare_mode)
+    analysis = QueryAnalysis(entities=[Entity(name="TCS", ticker="TCS")], intent=intent,
+                             time_horizon="5y", compare_mode=compare_mode)
     plan = ResearchPlan(steps=[], selected_agents=ALL_AGENTS)
     selected = set(enforce_policy(analysis, plan))
     assert ROUTING_TABLE[intent]["min"] <= selected

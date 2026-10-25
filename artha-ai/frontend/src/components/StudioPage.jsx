@@ -26,11 +26,12 @@ import {
   Layers,
   HelpCircle,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react'
 import LiveAgentStream from './LiveAgentStream'
 import ArthaReasoningBlock from './ArthaReasoningBlock'
 import ResearchProcessGraph from './ResearchProcessGraph'
-import ReportPreview from './ReportPreview'
+import ReportPreview, { SynthesisNarrativeBlock } from './ReportPreview'
 import Sidebar from './Sidebar'
 import PdfViewerModal from './PdfViewerModal'
 import Logo from './Logo'
@@ -47,6 +48,8 @@ import {
   detectQueryType,
   getCopilotResponse,
   getFollowupSuggestions,
+  extractTargetOrganization,
+  extractStockEntities,
 } from '../utils/queryRouter'
 
 // Display names for the backend's routing intents. Mirrors ROUTING_TABLE in
@@ -158,6 +161,35 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
               }}
             />
 
+            {/* Live Web Search Badge */}
+            {msg.searchUsed && (
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-1 w-fit">
+                <Search size={12} className="text-emerald-400 shrink-0" />
+                <span>Live Web Search Grounded</span>
+              </div>
+            )}
+
+            {/* Live Web Sources */}
+            {hasFinishedTyping && Array.isArray(msg.sources) && msg.sources.length > 0 && (
+              <div className="pt-2 border-t border-white/5 text-[11px] text-slate-400">
+                <span className="font-semibold text-slate-300">Live Sources:</span>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {msg.sources.slice(0, 4).map((src, sIdx) => (
+                    <a
+                      key={sIdx}
+                      href={src.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-emerald-500/40 hover:text-emerald-300 transition text-[11px] max-w-[280px]"
+                    >
+                      <ExternalLink size={10} className="shrink-0 text-slate-400" />
+                      <span className="truncate">{src.title || src.url}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Interactive Clarification Card (Options & Custom Response) */}
             {msg.clarification && (
               <div className="mt-3.5 rounded-2xl border border-emerald-500/35 bg-emerald-950/25 p-3.5 sm:p-4 backdrop-blur-md animate-fade-in shadow-inner text-left">
@@ -220,20 +252,31 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
                   Suggested Research Actions →
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {msg.suggestions.map((sug) => {
-                    const isStock = sug.type === 'stock' || detectQueryType(sug.label) === 'stock'
-                    const Icon = isStock ? TrendingUp : BookOpen
-                    const iconColor = isStock ? '#34a853' : '#ea4335'
+                  {msg.suggestions.map((sug, sIdx) => {
+                    const sugObj = typeof sug === 'string' ? { label: sug, type: 'stock' } : sug
+                    const sugLabel = sugObj.label || String(sug)
+                    const isCompare = sugObj.isCompareAll || sugLabel.toLowerCase().startsWith('compare all')
+                    const isStock = sugObj.type === 'stock' || detectQueryType(sugLabel) === 'stock'
+                    const Icon = isCompare ? Layers : (isStock ? TrendingUp : BookOpen)
+                    const iconColor = isCompare ? '#38bdf8' : (isStock ? '#34a853' : '#ea4335')
                     return (
                       <button
-                        key={sug.label}
+                        key={sugLabel || sIdx}
                         type="button"
-                        onClick={() => onAction(sug.label)}
-                        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 min-h-[42px] text-left text-[12px] sm:text-[12.5px] text-[#bdc1c6] transition hover:bg-white/10 hover:text-white hover:border-white/20 group cursor-pointer active:scale-[0.98]"
+                        onClick={() => onAction(sugLabel)}
+                        className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 min-h-[42px] text-left text-[12px] sm:text-[12.5px] transition group cursor-pointer active:scale-[0.98] ${
+                          isCompare
+                            ? 'col-span-full border-sky-500/35 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 hover:border-sky-500/50 hover:text-white shadow-sm'
+                            : 'border-white/10 bg-white/5 text-[#bdc1c6] hover:bg-white/10 hover:text-white hover:border-white/20'
+                        }`}
                       >
                         <Icon size={14} style={{ color: iconColor }} className="shrink-0 group-hover:scale-110 transition-transform" />
-                        <span className="truncate">{sug.label}</span>
-                        {isStock && (
+                        <span className="truncate">{sugLabel}</span>
+                        {isCompare ? (
+                          <span className="ml-auto text-[9.5px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-mono font-semibold">
+                            Compare All Agents
+                          </span>
+                        ) : isStock && (
                           <span className="ml-auto text-[9.5px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
                             LangGraph
                           </span>
@@ -360,10 +403,10 @@ function InlineReportBriefCard({ job, pdfUrl, onViewPdf, onOpenReport, researchM
         </div>
       </div>
 
-      {/* Executive Summary */}
+      {/* Executive Summary in structured card deck */}
       {report.executive_summary && (
-        <div className="text-[13px] leading-relaxed text-slate-200 bg-white/[0.02] border border-white/5 rounded-xl p-3.5">
-          <p>{report.executive_summary}</p>
+        <div className="pt-1">
+          <SynthesisNarrativeBlock text={report.executive_summary} sources={report.sources || []} />
         </div>
       )}
 
@@ -529,7 +572,7 @@ function StudioTopHeader({
         <button
           type="button"
           onClick={onBackToStart}
-          className="flex h-9 w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-3 text-[12px] font-semibold text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
+          className="flex h-10 w-10 sm:h-9 sm:w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-3 text-[12px] font-semibold text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
           aria-label="Back to home"
           title="Back to home"
         >
@@ -556,7 +599,7 @@ function StudioTopHeader({
               setActiveView?.('chat')
             }}
             disabled={running || submitting}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer min-h-[34px] active:scale-95 ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer min-h-[38px] active:scale-95 ${
               running || submitting
                 ? 'opacity-40 cursor-not-allowed text-slate-400'
                 : activeView === 'chat'
@@ -584,7 +627,7 @@ function StudioTopHeader({
           <button
             type="button"
             onClick={() => setActiveView?.('report')}
-            className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-300 cursor-pointer relative min-h-[34px] active:scale-95 ${
+            className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-300 cursor-pointer relative min-h-[38px] active:scale-95 ${
               running || submitting
                 ? 'bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 border border-emerald-400/80 text-emerald-300 ring-1 ring-emerald-400/50 shadow-[0_0_22px_rgba(16,185,129,0.5)] animate-pulse'
                 : activeView === 'report'
@@ -643,7 +686,7 @@ function StudioTopHeader({
           type="button"
           onClick={onNewResearch}
           disabled={running}
-          className="flex h-9 w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-2.5 text-[11.5px] font-medium text-[#f1f3f4] transition hover:bg-white/10 disabled:opacity-40 cursor-pointer active:scale-95"
+          className="flex h-10 w-10 sm:h-9 sm:w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-2.5 text-[11.5px] font-medium text-[#f1f3f4] transition hover:bg-white/10 disabled:opacity-40 cursor-pointer active:scale-95"
           title="Start new research"
           aria-label="Start new research"
         >
@@ -654,7 +697,7 @@ function StudioTopHeader({
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="flex h-9 w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 text-slate-300 hover:text-white sm:px-2.5 cursor-pointer active:scale-95"
+          className="flex h-10 w-10 sm:h-9 sm:w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 text-slate-300 hover:text-white sm:px-2.5 cursor-pointer active:scale-95"
           title="Past research history"
           aria-label="Past research history"
         >
@@ -667,7 +710,7 @@ function StudioTopHeader({
             type="button"
             onClick={onViewPdf}
             disabled={!isDone || running}
-            className={`flex h-9 items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
+            className={`flex h-10 sm:h-9 items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
               isDone
                 ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
                 : 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed opacity-50'
@@ -687,11 +730,11 @@ function StudioTopHeader({
           <button
             type="button"
             onClick={onOpenAuth}
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer active:scale-95 shadow-sm"
+            className="flex h-10 sm:h-9 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer active:scale-95 shadow-sm"
             title="Sign in to your account"
           >
             <LogIn size={14} />
-            <span className="inline text-xs">Sign In</span>
+            <span className="hidden min-[400px]:inline text-xs">Sign In</span>
           </button>
         ) : (
           <div className="relative">
@@ -699,7 +742,7 @@ function StudioTopHeader({
               type="button"
               onClick={() => setProfileOpen((prev) => !prev)}
               title={`Signed in as ${user?.displayName || user?.name || user?.email || 'Researcher'}`}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
+              className="flex h-10 w-10 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
             >
               {userInitials}
             </button>
@@ -899,6 +942,9 @@ export default function StudioPage({
       setCompletedQaIds(new Set())
       setFetchedReport(null)
       setFollowupText('')
+      try {
+        sessionStorage.removeItem('artha_tab_copilot_messages')
+      } catch {}
       setCopilotMessages([
         {
           id: 'a_welcome',
@@ -929,15 +975,20 @@ export default function StudioPage({
     return () => { active = false }
   }, [currentJobId, job?.status, job?.report])
 
-  const effectiveReport = job?.report || effectiveJob?.report || fetchedReport || null
-  const isDone = (job?.status === 'succeeded') || (effectiveJob?.status === 'succeeded')
-  const canAskReport = isDone && Boolean(currentJobId) && typeof onAskReport === 'function'
+  const isNewResearchActive = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('artha_new_research') === 'true'
+  const effectiveReport = !isNewResearchActive ? (job?.report || effectiveJob?.report || fetchedReport || null) : null
+  const hydratedJob = (!isNewResearchActive && (job || effectiveJob))
+    ? { ...(job || effectiveJob), report: effectiveReport || (job || effectiveJob)?.report || null }
+    : null
+  const isDone = !isNewResearchActive && ((job?.status === 'succeeded') || (effectiveJob?.status === 'succeeded'))
+  const canAskReport = isDone && Boolean(currentJobId) && Boolean(effectiveReport) && !isNewResearchActive && typeof onAskReport === 'function'
   const isLoggedIn = Boolean(user && !user.guest && user.uid && !String(user.uid).startsWith('guest_'))
-  const pdfUrl = currentJobId ? api.pdfUrl(currentJobId) : null
+  const sessionStoragePdfUrl = sessions?.find((s) => s.job_id === currentJobId)?.storagePdfUrl || job?.storagePdfUrl || null
+  const pdfUrl = sessionStoragePdfUrl || (currentJobId ? api.pdfUrl(currentJobId) : null)
 
   // Persistent Q&A messages per research job
   const [qaMessages, setQaMessages] = useState(() => {
-    if (typeof localStorage === 'undefined' || !currentJobId) return []
+    if (typeof localStorage === 'undefined' || !currentJobId || isNewResearchActive) return []
     try {
       const saved = localStorage.getItem(`artha_qa_${currentJobId}`)
       return saved ? JSON.parse(saved) : []
@@ -983,8 +1034,22 @@ export default function StudioPage({
 
   // ─── Conversational Copilot Multi-Turn Messages State ────────────────────
   const [copilotMessages, setCopilotMessages] = useState(() => {
-    if (activeQuery) {
+    if (typeof sessionStorage !== 'undefined' && !isNewResearchActive) {
+      try {
+        const saved = sessionStorage.getItem('artha_tab_copilot_messages')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed
+          }
+        }
+      } catch {}
+    }
+    if (activeQuery && !isNewResearchActive) {
       const isStock = detectQueryType(activeQuery) === 'stock'
+      const copilotResp = getCopilotResponse(activeQuery, user)
+      const text = typeof copilotResp === 'object' && copilotResp?.text ? copilotResp.text : String(copilotResp || '')
+      const clarification = typeof copilotResp === 'object' ? copilotResp?.clarification : null
       return [
         { id: 'u_init', role: 'user', text: activeQuery },
         {
@@ -992,7 +1057,8 @@ export default function StudioPage({
           role: 'assistant',
           text: isStock
             ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
-            : getCopilotResponse(activeQuery, user),
+            : text,
+          clarification: isStock ? null : clarification,
           suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
         },
       ]
@@ -1007,10 +1073,23 @@ export default function StudioPage({
     ]
   })
 
+  // Synchronize Copilot messages to tab sessionStorage so reload keeps the chat history
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined' || isNewResearchActive) return
+    try {
+      if (copilotMessages && copilotMessages.length > 1) {
+        sessionStorage.setItem('artha_tab_copilot_messages', JSON.stringify(copilotMessages))
+      }
+    } catch {}
+  }, [copilotMessages, isNewResearchActive])
+
   // Synchronize external query transitions into Copilot thread
   useEffect(() => {
-    if (activeQuery) {
+    if (activeQuery && !isNewResearchActive) {
       const isStock = detectQueryType(activeQuery) === 'stock'
+      const copilotResp = getCopilotResponse(activeQuery, user)
+      const text = typeof copilotResp === 'object' && copilotResp?.text ? copilotResp.text : String(copilotResp || '')
+      const clarification = typeof copilotResp === 'object' ? copilotResp?.clarification : null
       setCopilotMessages((prev) => {
         if (prev.length > 1 && prev.some((m) => m.role === 'user' && m.text === activeQuery)) {
           return prev
@@ -1022,13 +1101,14 @@ export default function StudioPage({
             role: 'assistant',
             text: isStock
               ? `### 🚀 Dispatched Autonomous Research: **${activeQuery}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining regulatory filings, calculating peer valuation metrics, and stress-testing operational margins.\n\n*Monitor live agent reasoning and filing verification in the live specialist stream below.*`
-              : getCopilotResponse(activeQuery, user),
+              : text,
+            clarification: isStock ? null : clarification,
             suggestions: isStock ? [] : getFollowupSuggestions(activeQuery),
           },
         ]
       })
     }
-  }, [activeQuery])
+  }, [activeQuery, isNewResearchActive])
 
   // Automatically announce report completion with tailored inquiry examples directly into Copilot thread
   const hasAnnouncedCompletionRef = useRef(null)
@@ -1117,7 +1197,7 @@ export default function StudioPage({
     setQaMessages((messages) => [...messages, { role: 'user', text: q }])
 
     const qLower = q.toLowerCase()
-    const targetJob = job || effectiveJob
+    const targetJob = hydratedJob || job || effectiveJob
     const company = targetJob?.report?.company?.name || targetJob?.entities?.[0]?.name || activeQuery || 'the audited company'
 
     // 1. Friendly conversational greetings / identity queries
@@ -1199,7 +1279,15 @@ export default function StudioPage({
           job: targetJob,
           history: priorHistory,
         })
-        if (typeof copilotResult === 'object' && copilotResult?.text) {
+        if (copilotResult === 'USE_BACKEND_CHAT') {
+          try {
+            const chatRes = await api.copilotChat(q, priorHistory, resolvedJobId)
+            answerText = chatRes.answer || ''
+            sources = chatRes.sources || []
+          } catch (_) {
+            answerText = `### ⚠️ Copilot Temporarily Unavailable\n\nUnable to reach the research server. Please try again.`
+          }
+        } else if (typeof copilotResult === 'object' && copilotResult?.text) {
           answerText = copilotResult.text
           if (copilotResult.clarification) {
             clarification = copilotResult.clarification
@@ -1303,9 +1391,12 @@ export default function StudioPage({
         },
       ])
       try {
+        sessionStorage.removeItem('artha_tab_job_id')
+        sessionStorage.removeItem('artha_tab_query')
+        sessionStorage.removeItem('artha_tab_copilot_messages')
+        sessionStorage.setItem('artha_new_research', 'true')
         localStorage.removeItem('artha_last_viewed_job_id')
         localStorage.removeItem('artha_active_job')
-        sessionStorage.setItem('artha_new_research', 'true')
       } catch {}
       onNewResearch?.()
       if (!isTouchDevice()) {
@@ -1333,39 +1424,55 @@ export default function StudioPage({
     chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [qaMessages?.length, copilotMessages?.length, isDone, askingReport, isGenerating])
 
-  const handleCopilotAction = (rawText) => {
-    const text = (rawText || '').trim()
+  const handleCopilotAction = async (rawText) => {
+    let text = (rawText || '').trim()
+      .replace(/^🚀\s*(?:Yes,\s*)?(?:generate|create)\s+(?:in-depth\s+|full\s+)?(?:multi-agent\s+)?(?:research\s+)?report\s+(?:on|for)\s+/i, 'Analyze ')
+      .replace(/^⚖️\s*Compare\s+All\s+(?:in\s+a\s+Multi-Stock\s+Audit\s+)?\(?([^)]+)\)?/i, 'Compare $1')
+      .replace(/^📰\s*Audit\s+Latest\s+Contract\s+News\s+&\s+Order\s+Book\s+Catalysts/i, 'Indian stocks with huge contracts and order book catalysts 2025')
+      .replace(/^🎯\s*Explore\s+Undervalued\s+Small-Caps\s+with\s+High\s+Growth\s+Potential/i, 'Which Indian small cap stocks have huge contracts and high growth potential?')
+      .replace(/^📊\s*Check\s+(?:valuation\s+&\s+key\s+financial\s+metrics|valuation\s+&\s+financial\s+(?:health|metrics))\s+for\s+/i, 'What are the valuation metrics and financial health of ')
+      .replace(/^🥊\s*Compare\s+/i, 'Compare ')
+      .replace(/^⚡\s*(?:Just\s+give\s+me\s+a\s+)?quick\s+(?:high-level\s+)?summary\s+of\s+/i, 'Give me a quick financial overview of ')
+      .replace(/^⚠️\s*(?:What\s+are\s+the\s+)?(?:top\s+)?downside\s+risks\s+for\s+/i, 'What are the top downside risks for ')
+      .trim()
     if (!text || isGenerating) return
 
-    // If a report is already available, check if the clicked suggestion or prompt is about this report
-    if (isDone && currentJobId) {
+    // If a report is already available and active in this tab, check if the clicked suggestion or prompt is about this report
+    if (canAskReport && currentJobId) {
       const qLower = text.toLowerCase()
-      const isNewStock = (() => {
-        if (/^(hi|hello|hey|who are you|who r u|what are you|help|introduce)/i.test(qLower)) return false
-        if (/what is|explain|define|how to|meaning of/i.test(qLower)) return false
-        if (/(?:which.*(?:better|winner|pick)|should i (?:hold|buy|sell)|can i hold|hold or sell|what to do|summarize|verdict|risks|downside|opm|margin|p\/e|pe|valuation|horizon|catalyst|findings)/i.test(qLower)) return false
+      const isExplicitReportFollowup = /(?:in this report|between these two|of these two|between them|in the report|from the report|this company)/i.test(qLower)
+      const isMarketDiscovery = (
+        /(?:which|what|any|recommend|suggest|best|top|good|ideal).*(?:indian|company|companies|stock|stocks|share|shares|equity|equities).*(?:buy|invest|long.?term|short.?term|goal|growth|holding|compound|portfolio|contract|cheap|penny|multibagger|potential|future)/i.test(qLower) ||
+        /(?:best|top|which|good|cheap).*(?:stock|stocks|company|companies|share|shares).*(?:for long.?term|for short.?term|for \d+ years|to buy|to invest|to hold|right now|in future)/i.test(qLower) ||
+        /(?:stocks? to buy|shares? to buy|where should i invest|what stock should i buy|which stock should i buy|best share to buy|top stocks in india|top compounding stocks|invest it into stocks|recommend stocks?|cheap stocks|hidden gems|small cap)/i.test(qLower)
+      ) && !isExplicitReportFollowup
 
-        const currentTickers = (job?.entities || []).map((ent) => (ent.ticker || '').toLowerCase()).filter(Boolean)
-        const currentNames = (job?.entities || []).map((ent) => (ent.name || '').toLowerCase()).filter(Boolean)
+      if (!isMarketDiscovery) {
+        const isNewStock = (() => {
+          if (/^(hi|hello|hey|who are you|who r u|what are you|help|introduce)/i.test(qLower)) return false
+          if (/what is|explain|define|how to|meaning of/i.test(qLower)) return false
+          if (/(?:which.*(?:better|winner|pick)|should i (?:hold|buy|sell)|can i hold|hold or sell|what to do|summarize|verdict|risks|downside|opm|margin|p\/e|pe|valuation|horizon|catalyst|findings)/i.test(qLower)) return false
 
-        const type = detectQueryType(text)
-        if (type === 'stock') {
-          const words = qLower.split(/[\s,vs\-\/]+/)
-          const mentionsNewEntity = words.some((w) =>
-            ['reliance', 'nvidia', 'nvda', 'apple', 'aapl', 'microsoft', 'msft', 'tesla', 'tsla', 'wipro', 'hdfc', 'sbi', 'itc', 'tata', 'tatamotors', 'meta', 'google', 'googl', 'amazon', 'amzn', 'l&t', 'icici'].includes(w) &&
-            !currentTickers.includes(w) && !currentNames.some((n) => n.includes(w))
-          )
-          if (mentionsNewEntity || (words.includes('compare') && !currentTickers.every((t) => qLower.includes(t)))) {
-            return true
+          const currentTickers = (job?.entities || []).map((ent) => (ent.ticker || '').toLowerCase()).filter(Boolean)
+          const currentNames = (job?.entities || []).map((ent) => (ent.name || '').toLowerCase()).filter(Boolean)
+
+          const targetOrg = extractTargetOrganization(text)
+          const targetEntities = extractStockEntities(text)
+          if (targetOrg || targetEntities.length > 0) {
+            const isCurrent = (targetOrg && (currentNames.some(n => n.toLowerCase().includes(targetOrg.toLowerCase()) || targetOrg.toLowerCase().includes(n.toLowerCase())) || currentTickers.some(t => t.toLowerCase() === targetOrg.toLowerCase()))) ||
+              (targetEntities.length > 0 && targetEntities.every(e => currentTickers.includes(e.toLowerCase()) || currentNames.some(n => n.toLowerCase().includes(e.toLowerCase()))))
+            if (!isCurrent || qLower.includes('compare')) {
+              return true
+            }
           }
-        }
-        return false
-      })()
+          return false
+        })()
 
-      // If asking about the active report or clicking any suggestion chip, execute report Q&A directly!
-      if (!isNewStock) {
-        executeReportQa(text)
-        return
+        // If asking about the active report or clicking any suggestion chip, execute report Q&A directly!
+        if (!isNewStock) {
+          executeReportQa(text)
+          return
+        }
       }
     }
 
@@ -1425,28 +1532,93 @@ export default function StudioPage({
       return
     }
 
-    // 3. Educational / Conceptual Finance queries
+    // 3. Educational / Conceptual Finance queries — or Backend Chat (discovery/recommendation)
     setIsGenerating(true)
     setGenerationStep(0)
     setTimeout(() => setGenerationStep(1), 180)
     setTimeout(() => setGenerationStep(2), 420)
 
+    // Quick check: does getCopilotResponse want us to use the backend?
+    const quickReply = getCopilotResponse(text, effectiveUser, {
+      companyName: job?.entities?.[0]?.name || (job?.query || activeQuery),
+      ticker: job?.entities?.[0]?.ticker,
+      job,
+    })
+
+    if (quickReply === 'USE_BACKEND_CHAT') {
+      // Call the backend /research/chat endpoint with live web search
+      const priorHistory = copilotMessages.slice(-6).map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.text,
+      }))
+      try {
+        const chatResponse = await api.copilotChat(
+          text,
+          priorHistory,
+          currentJobId || job?.job_id || null
+        )
+        setIsGenerating(false)
+        const aId = `a_${Date.now()}`
+        const suggestions = getFollowupSuggestions(text)
+
+        // If backend found tickers, add individual and comparison chips
+        const validTickers = chatResponse.suggested_tickers || []
+        const compareAllChip = validTickers.length >= 2 ? [{
+          label: `Compare All: ${validTickers.slice(0, 3).join(' vs ')}`,
+          type: 'stock',
+          isCompareAll: true,
+        }] : []
+
+        const tickerSuggestions = validTickers.map((t) => ({
+          label: `Analyze ${t} fundamentals`,
+          type: 'stock',
+        }))
+        const allSuggestions = [...compareAllChip, ...tickerSuggestions, ...suggestions].slice(0, 5)
+
+        setCopilotMessages((prev) => [
+          ...prev,
+          {
+            id: aId,
+            role: 'assistant',
+            text: chatResponse.answer || '*(No response from server)*',
+            suggestions: allSuggestions,
+            searchUsed: chatResponse.search_used,
+            sources: chatResponse.sources || [],
+            suggestedTickers: chatResponse.suggested_tickers || [],
+            clarification: chatResponse.clarification || null,
+          },
+        ])
+        requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+      } catch (err) {
+        setIsGenerating(false)
+        const aId = `a_${Date.now()}`
+        setCopilotMessages((prev) => [
+          ...prev,
+          {
+            id: aId,
+            role: 'assistant',
+            text: `### ⚠️ Copilot Temporarily Unavailable\n\nUnable to reach the research server. Please check your connection and try again.\n\n*Error: ${err.message}*`,
+          },
+        ])
+        requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+      }
+      return
+    }
+
     setTimeout(() => {
       setIsGenerating(false)
       const aId = `a_${Date.now()}`
-      const reply = getCopilotResponse(text, effectiveUser, {
-        companyName: job?.entities?.[0]?.name || (job?.query || activeQuery),
-        ticker: job?.entities?.[0]?.ticker,
-        job,
-      })
+      const replyText = typeof quickReply === 'object' && quickReply?.text ? quickReply.text : String(quickReply || '')
+      const clarification = typeof quickReply === 'object' ? quickReply?.clarification : null
       const suggestions = getFollowupSuggestions(text)
       setCopilotMessages((prev) => [
         ...prev,
-        { id: aId, role: 'assistant', text: reply, suggestions },
+        { id: aId, role: 'assistant', text: replyText, clarification, suggestions },
       ])
       requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
     }, 600)
   }
+
 
   const handleSubmit = async (e) => {
     e?.preventDefault()
@@ -1456,31 +1628,38 @@ export default function StudioPage({
     setFollowupText('')
 
     // Check if the user is asking to research a NEW / DIFFERENT stock or comparison
+    const qLower = q.toLowerCase()
+    const isExplicitReportFollowup = /(?:in this report|between these two|of these two|between them|in the report|from the report|this company)/i.test(qLower)
+    const isMarketDiscovery = (
+      /(?:which|what|any|recommend|suggest|best|top|good|ideal).*(?:indian|company|companies|stock|stocks|share|shares|equity|equities).*(?:buy|invest|long.?term|short.?term|goal|growth|holding|compound|portfolio|contract|cheap|penny|multibagger|potential|future)/i.test(qLower) ||
+      /(?:best|top|which|good|cheap).*(?:stock|stocks|company|companies|share|shares).*(?:for long.?term|for short.?term|for \d+ years|to buy|to invest|to hold|right now|in future)/i.test(qLower) ||
+      /(?:stocks? to buy|shares? to buy|where should i invest|what stock should i buy|which stock should i buy|best share to buy|top stocks in india|top compounding stocks|invest it into stocks|recommend stocks?|cheap stocks|hidden gems|small cap)/i.test(qLower)
+    ) && !isExplicitReportFollowup
+
+    // Check if the user is asking to research a NEW / DIFFERENT stock or comparison
     const isNewStock = (() => {
-      const qLower = q.toLowerCase()
       // Skip greetings, identity, concepts, hold/sell/verdict/comparison follow-ups
       if (/^(hi|hello|hey|who are you|who r u|what are you|help|introduce)/i.test(qLower)) return false
       if (/what is|explain|define|how to|meaning of/i.test(qLower)) return false
-      if (/which.*(better|winner|pick)|should i (hold|buy|sell)|can i hold|hold or sell|what to do|summarize|verdict|risks|downside/i.test(qLower)) return false
+      if (/(?:which.*(?:better|winner|pick)|should i (?:hold|buy|sell)|can i hold|hold or sell|what to do|summarize|verdict|risks|downside)/i.test(qLower)) return false
       
       const currentTickers = (job?.entities || []).map((ent) => (ent.ticker || '').toLowerCase()).filter(Boolean)
       const currentNames = (job?.entities || []).map((ent) => (ent.name || '').toLowerCase()).filter(Boolean)
       
       const type = detectQueryType(q)
       if (type === 'stock') {
-        const words = qLower.split(/[\s,vs\-\/]+/)
-        const mentionsNewEntity = words.some((w) =>
-          ['reliance', 'nvidia', 'nvda', 'apple', 'aapl', 'microsoft', 'msft', 'tesla', 'tsla', 'wipro', 'hdfc', 'sbi', 'itc', 'tata', 'tatamotors', 'meta', 'google', 'googl', 'amazon', 'amzn', 'l&t', 'icici'].includes(w) &&
-          !currentTickers.includes(w) && !currentNames.some((n) => n.includes(w))
-        )
-        if (mentionsNewEntity || (words.includes('compare') && !currentTickers.every((t) => qLower.includes(t)))) {
+        const targetOrg = extractTargetOrganization(q)
+        const targetEntities = extractStockEntities(q)
+        const isCurrent = (targetOrg && (currentNames.some(n => n.toLowerCase().includes(targetOrg.toLowerCase())) || currentTickers.some(t => t.toLowerCase() === targetOrg.toLowerCase()))) ||
+          (targetEntities.length > 0 && targetEntities.every(e => currentTickers.includes(e.toLowerCase()) || currentNames.some(n => n.toLowerCase().includes(e.toLowerCase()))))
+        if (!isCurrent || qLower.includes('compare')) {
           return true
         }
       }
       return false
     })()
 
-    if (isNewStock) {
+    if (isNewStock || isMarketDiscovery) {
       handleCopilotAction(q)
       if (!isTouchDevice()) {
         requestAnimationFrame(() => inputRef.current?.focus())
@@ -1488,7 +1667,7 @@ export default function StudioPage({
       return
     }
 
-    if (canAskReport) {
+    if (canAskReport && job && currentJobId) {
       await executeReportQa(q)
     } else {
       handleCopilotAction(q)
@@ -1565,7 +1744,7 @@ export default function StudioPage({
             setActiveView(view)
           }
         }}
-        hasReport={Boolean(job?.report)}
+        hasReport={Boolean(effectiveReport)}
       />
 
       {/* ══ Full-Width Unified Copilot Chat & Report Workspace ══ */}
@@ -1754,7 +1933,7 @@ export default function StudioPage({
               {/* Inline Institutional Report Brief Card (appears directly in chat when research finishes) */}
               {isDone && (job?.report || effectiveReport) && (
                 <InlineReportBriefCard
-                  job={job || effectiveJob}
+                  job={hydratedJob}
                   pdfUrl={pdfUrl}
                   onViewPdf={() => setShowPdfModal(true)}
                   onOpenReport={() => setActiveView('report')}
@@ -1955,11 +2134,11 @@ export default function StudioPage({
           )}
         </section>
         ) : (
-          <section className="studio-report-pane flex flex-1 flex-col bg-[#14161b] overflow-y-auto w-full p-3 sm:p-6 scroll-slim">
+          <section className="studio-report-pane flex flex-1 flex-col bg-[#14161b] overflow-y-auto w-full px-1.5 py-2 sm:p-6 scroll-slim">
             <div className="w-full max-w-5xl mx-auto space-y-4 pb-28 sm:pb-32">
               <ReportPreview
                 jobId={currentJobId}
-                job={job}
+                job={hydratedJob}
                 pdfUrl={pdfUrl}
                 initialMode={researchMode}
                 onModeChange={setResearchMode}
@@ -1967,27 +2146,30 @@ export default function StudioPage({
                 onAskMoreAboutReport={handleSwitchToChat}
               />
             </div>
-            {/* Floating action button on PC and mobile to quickly jump back to chat */}
-            <button
-              type="button"
-              onClick={handleSwitchToChat}
-              style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: '#ffffff',
-                border: '1.5px solid #6ee7b7',
-                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
-                bottom: 'max(1.25rem, env(safe-area-inset-bottom, 1.25rem))',
-              }}
-              className="fixed right-4 sm:right-6 z-40 flex items-center gap-2 rounded-full px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xl"
-              title="Chat with Artha Copilot about this report"
-              aria-label="Chat with Artha Copilot about this report"
-            >
-              <Sparkles size={16} className="text-white animate-pulse" />
-              <span className="text-white font-bold tracking-wide">Chat with Copilot →</span>
-            </button>
           </section>
         )}
       </div>
+
+      {/* Quick jump back to chat — rendered at the studio root (outside the scroll
+          container) so the mobile dock stays pinned to the bottom edge and never
+          overlaps or scrolls with the report content. Floating pill from sm up. */}
+      {activeView === 'report' && (
+        <button
+          type="button"
+          onClick={handleSwitchToChat}
+          style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: '#ffffff',
+            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.45)',
+          }}
+          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-2 border-t border-[#6ee7b7]/50 px-4 pt-3 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-auto sm:rounded-full sm:border sm:border-[#6ee7b7] sm:px-5 sm:py-3 text-xs sm:text-[13px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xl"
+          title="Chat with Artha Copilot about this report"
+          aria-label="Chat with Artha Copilot about this report"
+        >
+          <Sparkles size={16} className="text-white animate-pulse" />
+          <span className="text-white font-bold tracking-wide">Chat with Copilot →</span>
+        </button>
+      )}
 
       {toast && (
         <div className="studio-toast" role="status" aria-live="polite">
@@ -2004,7 +2186,7 @@ export default function StudioPage({
             setShowPdfModal(false)
             setActiveView('report')
           }}
-          hasReport={Boolean(job?.report)}
+          hasReport={Boolean(effectiveReport)}
         />
       )}
 

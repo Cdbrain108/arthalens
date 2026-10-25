@@ -59,7 +59,7 @@ def analyze(query: str) -> QueryAnalysis:
         '"confidence": one of high|medium|low}], '
         '"intent": one of price_move|long_term|hiring|compare|document|news|general|conversational, '
         '"time_horizon": str|null, "compare_mode": true|false (boolean, never a string), '
-        '"reasoning": str}. '
+        '"reasoning": concise 1-sentence string}. '
         "Set compare_mode true only when the query compares entities. "
         "Set intent to 'news' when the user asks ONLY for news, headlines, recent "
         "developments, updates, announcements or 'what happened' about a company "
@@ -77,14 +77,17 @@ def analyze(query: str) -> QueryAnalysis:
         "Do not infer financial facts.\n"
         f"Query: {query}"
     )
-    llm = get_structured_llm("analyzer", QueryAnalysis)
-    return llm.invoke(prompt)
+    try:
+        llm = get_structured_llm("analyzer", QueryAnalysis, attempts=2)
+        return llm.invoke(prompt)
+    except Exception:
+        return QueryAnalysis.model_validate(quick)
 
 
 def plan(query: str, analysis: QueryAnalysis) -> ResearchPlan:
     """Design bounded research plan and select specialist agents."""
+    from ..llm_mock import mock_plan
     if is_mock():
-        from ..llm_mock import mock_plan
         return ResearchPlan.model_validate(mock_plan(analysis.intent, analysis.compare_mode))
 
     if analysis.intent == "conversational" or not analysis.entities:
@@ -98,7 +101,7 @@ def plan(query: str, analysis: QueryAnalysis) -> ResearchPlan:
     from ..agents.specialists import AGENT_REGISTRY
     prompt = (
         "Design a bounded stock research plan for this analyzed question. "
-        f"Select relevant specialists from: {list(AGENT_REGISTRY)}. "
+        f"Select relevant specialists strictly from: {list(AGENT_REGISTRY)}. "
         "Rules: "
         "- Broad company, investment and comparison research requires all except document/social unless relevant. "
         "- For price move questions: pick market and news only. "
@@ -108,8 +111,11 @@ def plan(query: str, analysis: QueryAnalysis) -> ResearchPlan:
         f"Query: {query}\n"
         f"Analysis: {analysis.model_dump_json()}"
     )
-    llm = get_structured_llm("planner", ResearchPlan)
-    return llm.invoke(prompt)
+    try:
+        llm = get_structured_llm("planner", ResearchPlan, attempts=2)
+        return llm.invoke(prompt)
+    except Exception:
+        return ResearchPlan.model_validate(mock_plan(analysis.intent, analysis.compare_mode))
 
 
 def challenge(query: str, evidence: list[dict[str, Any]]) -> ChallengeOutput:

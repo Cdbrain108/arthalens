@@ -86,8 +86,8 @@ FINANCIAL_PATTERNS = [
     r"\b(revenue|profit|margin|margins|loss|earnings|balance sheet|cash flow|debt|leverage)\b",
     r"\b(capex|cagr|moat|moats|bull|bear|hold|buy|sell|quarter|quarterly|fiscal|annual report)\b",
     r"\b(10-k|10-q|sec|nse|bse|nifty|sensex|sp500|nasdaq|nyse|fed|rbi|yield|bond|etf)\b",
-    r"\b(dcf|price|target|growth|valuation|risk|moats|governance|promoter|pledge)\b",
     r"\b(tcs|infosys|infy|reliance|ril|wipro|hdfc|icici|sbi|apple|aapl|microsoft|msft|nvda|nvidia|tesla|tsla|amd|intel|intc|meta|google|googl|amzn)\b",
+    r"\b(ai|startup|startups|venture|company|companies|firm|enterprise|unicorn|founder|ceo|funding|valuation|business|product|products|tech|technology|technologies|software|saas)\b",
 ]
 
 def is_financial_or_stock_query(text: str) -> bool:
@@ -429,6 +429,26 @@ async def _run_job(job_id: str, query: str, document_ids: list[str]):
         return
     status.status = "running"
     status.current_node = "analyze_query"
+
+    # Instant deterministic pre-routing (<5ms):
+    # Populate initial intent, entities, and selected agents so the frontend UI
+    # displays the routed specialist agents immediately on the first status poll.
+    try:
+        from ..llm_mock import mock_analyze, mock_plan
+        from ..graph.routing import enforce_policy
+        from ..schemas.models import QueryAnalysis as _QA, ResearchPlan as _RP
+        pre_a = mock_analyze(query)
+        if pre_a.get("entities") or pre_a.get("intent"):
+            status.intent = pre_a.get("intent", "general")
+            status.entities = list(pre_a.get("entities", []))
+            qa_obj = _QA(**pre_a)
+            rp_obj = _RP(**mock_plan(qa_obj.intent, qa_obj.compare_mode))
+            pre_selected = enforce_policy(qa_obj, rp_obj, document_ids)
+            if pre_selected:
+                status.selected_agents = list(pre_selected)
+    except Exception as pre_exc:
+        logger.debug("Instant pre-routing skipped: %s", pre_exc)
+
     jobs.update(status)
 
     def start_step(node: str) -> None:
@@ -521,6 +541,369 @@ async def _run_job(job_id: str, query: str, document_ids: list[str]):
         logger.exception("research job %s failed at %s", job_id, status.current_node)
 
 
+class ChatRequest(BaseModel):
+    message: str
+    history: list[dict] = Field(default_factory=list)
+    job_id: str | None = None  # if set, ground answer in that completed report
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    suggested_tickers: list[str] = []   # tickers extracted — trigger research on these
+    search_used: bool = False
+    sources: list[dict] = []
+    clarification: dict | None = None   # interactive question card with options
+
+
+def _chat_web_search(query: str) -> list[dict]:
+    """Use internal web search tool to get real results."""
+    from ..tools.web_tools import _search_web
+    result = _search_web(query)
+    if result.get("ok"):
+        return result["data"].get("results", [])
+    return []
+
+
+def _chat_fetch_page(url: str) -> str:
+    """Fetch and return cleaned page text."""
+    from ..tools.web_tools import _fetch_page
+    result = _fetch_page(url)
+    if result.get("ok"):
+        return (result["data"] or {}).get("text", "")[:8000]
+    return ""
+
+
+_TICKER_EXTRACTION_RE = re.compile(
+    r'\b(?:NSE|BSE|NASDAQ|NYSE):\s*([A-Z]{2,10})\b'
+    r'|\b([A-Z]{2,6})\b(?=\s*(?:\(NSE\)|\(BSE\)|\(NASDAQ\)|\(NYSE\)))',
+    re.I
+)
+
+KNOWN_TICKERS_MAP = {
+    "tcs": "TCS", "tata consultancy": "TCS", "infosys": "INFY", "infy": "INFY",
+    "reliance": "RELIANCE", "ril": "RELIANCE", "wipro": "WIPRO",
+    "hdfc bank": "HDFCBANK", "hdfcbank": "HDFCBANK", "hdfc": "HDFCBANK",
+    "icici bank": "ICICIBANK", "icicibank": "ICICIBANK", "icici": "ICICIBANK",
+    "sbi": "SBIN", "state bank": "SBIN",
+    "l&t": "LT", "larsen": "LT", "bajaj finance": "BAJFINANCE",
+    "hcl tech": "HCLTECH", "hcltech": "HCLTECH",
+    "airtel": "BHARTIARTL", "bharti airtel": "BHARTIARTL",
+    "itc": "ITC", "zomato": "ZOMATO", "paytm": "PAYTM", "swiggy": "SWIGGY",
+    "titan": "TITAN", "asian paints": "ASIANPAINT", "maruti": "MARUTI",
+    "sun pharma": "SUNPHARMA", "dr reddy": "DRREDDY", "axis bank": "AXISBANK",
+    "kotak": "KOTAKBANK", "ntpc": "NTPC", "ongc": "ONGC", "bel": "BEL",
+    "hal": "HAL", "bhel": "BHEL", "coal india": "COALINDIA",
+    "trent": "TRENT", "siemens": "SIEMENS", "polycab": "POLYCAB", "dixon": "DIXON",
+    "mazagon": "MAZDOCK", "mazdock": "MAZDOCK", "tata steel": "TATASTEEL",
+    "tata power": "TATAPOWER", "tata motors": "TATAMOTORS", "suzlon": "SUZLON",
+    "ireda": "IREDA", "rvnl": "RVNL", "irfc": "IRFC", "cdsl": "CDSL",
+    "apple": "AAPL", "aapl": "AAPL", "microsoft": "MSFT", "msft": "MSFT",
+    "nvidia": "NVDA", "nvda": "NVDA", "tesla": "TSLA", "tsla": "TSLA",
+    "amazon": "AMZN", "amzn": "AMZN", "google": "GOOGL", "alphabet": "GOOGL",
+    "meta": "META", "netflix": "NFLX", "amd": "AMD", "intel": "INTC",
+    "palantir": "PLTR", "pltr": "PLTR",
+}
+
+_COMMON_MARKDOWN_WORDS = {
+    "WHY", "WHAT", "NOTE", "PRO", "CON", "RISK", "BULL", "BEAR", "RULE", "HIGH",
+    "LOW", "PE", "ROE", "ROCE", "DCF", "EPS", "NSE", "BSE", "NYSE", "NASDAQ",
+    "USD", "INR", "CAGR", "THE", "AND", "FOR", "BUY", "SELL", "HOLD", "VIEW",
+    "BEST", "TOP", "KEY", "ALL", "NEW", "NOW", "YES", "NOT", "TAX", "CAP", "NET"
+}
+
+def _extract_tickers_from_text(text: str) -> list[str]:
+    """Extract likely stock tickers from LLM output and web snippets."""
+    found = []
+    lower = text.lower()
+    for name, ticker in KNOWN_TICKERS_MAP.items():
+        if re.search(r'(?<![a-z])' + re.escape(name) + r'(?![a-z])', lower):
+            if ticker not in found:
+                found.append(ticker)
+    # Also grab explicit NSE:/BSE: patterns
+    for m in _TICKER_EXTRACTION_RE.finditer(text):
+        t = (m.group(1) or m.group(2) or "").upper()
+        if t and t not in found and len(t) >= 2 and t not in _COMMON_MARKDOWN_WORDS:
+            found.append(t)
+    # Also grab bold uppercase tickers like **TRENT** or **PLTR**
+    for m in re.finditer(r'\*\*([A-Z0-9-]{2,10})\*\*', text):
+        t = m.group(1).upper()
+        if t not in found and t not in _COMMON_MARKDOWN_WORDS and not t.isdigit():
+            found.append(t)
+    return found[:4]  # max 4 tickers for auto-research
+
+
+def _copilot_chat_llm(message: str, history: list[dict], search_results: list[dict],
+                      report: dict | None, context: dict | None) -> str:
+    """Ask the LLM for a copilot answer grounded in web search + optional report."""
+    from ..llm import get_llm, is_mock
+
+    # Build search snippet block
+    snippets = ""
+    if search_results:
+        snippets = "\n\n**Live Web Search Results:**\n"
+        for i, r in enumerate(search_results[:6], 1):
+            title = r.get("title", "")
+            body = (r.get("body") or r.get("snippet") or "")[:500]
+            url = r.get("href") or r.get("url") or ""
+            snippets += f"{i}. **{title}** ({url})\n   {body}\n\n"
+
+    # Build report block if we have one
+    report_block = ""
+    if report:
+        report_block = f"\n\n**Active Completed Research Report:**\n{str(report)[:6000]}"
+
+    history_block = ""
+    if history:
+        turns = []
+        for msg in history[-6:]:
+            role = "User" if msg.get("role") == "user" else "Copilot"
+            content = (msg.get("content") or msg.get("text") or "").strip()[:400]
+            if content:
+                turns.append(f"{role}: {content}")
+        if turns:
+            history_block = "\n\n**Prior Conversation:**\n" + "\n".join(turns)
+
+    system_msg = (
+        "You are Artha AI Copilot — an expert equity research intelligence assistant. "
+        "You have access to live web search results provided below. "
+        "Use the search results to give a grounded, accurate, and insightful answer. "
+        "RULES: "
+        "1. Ground every stock recommendation or claim in the search results provided. "
+        "2. When recommending stocks, name specific company tickers in bold (e.g. **TCS**, **TRENT**, **MAZDOCK**, **DIXON**, **RELIANCE**). "
+        "3. Highlight real growth catalysts found in the news: such as recent contract / order book wins, quarterly margin expansions, capacity expansion, or turnaround potential. Do not only recommend the same mega-caps; include breakout small/mid-cap opportunities if highlighted in the search. "
+        "4. Differentiate between Short-Term momentum/catalysts (earnings surprises, fresh government/defense contracts, sector rotations) vs Long-Term compounding (moats, clean balance sheets, return on capital). "
+        "5. Explain WHY each stock is relevant with facts, numbers, or contract details from the search. "
+        "6. Format your response in clean GitHub Markdown with headers, bullet points, and a comparison table. "
+        "7. Always conclude by inviting the user to choose between a quick breakdown or dispatching our 11 autonomous agents for a deep multi-agent institutional report. "
+        "8. Never make up financial figures. If the search has numbers, cite them. "
+        "9. You are Artha AI Copilot — never say you are OpenAI, Google, or any base LLM."
+    )
+
+    prompt_text = (
+        f"User Question: {message}"
+        f"{history_block}"
+        f"{snippets}"
+        f"{report_block}"
+    )
+
+    if is_mock():
+        return (
+            f"### 🧠 Artha AI Copilot\n\n"
+            f"*(Mock mode — LLM not configured. Web search was used.)*\n\n"
+            f"Your query: **{message}**\n\n"
+            + (snippets[:1200] if snippets else "No web results available.")
+        )
+
+    try:
+        llm = get_llm("report_qa", temperature=0.3)
+        msgs = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": prompt_text},
+        ]
+        resp = llm.invoke(msgs)
+        return resp.content if hasattr(resp, "content") else str(resp)
+    except Exception as exc:
+        logger.warning("Copilot chat LLM failed: %s", exc)
+        # Fallback: summarize search results
+        if search_results:
+            lines = [f"### 🔍 Web Search Results for: *{message}*\n"]
+            for r in search_results[:5]:
+                lines.append(f"* **{r.get('title','')}** — {(r.get('body') or r.get('snippet') or '')[:300]}")
+            lines.append("\n*Tap any suggested stock below to run a full multi-agent research audit.*")
+            return "\n".join(lines)
+        return f"### ⚠️ Copilot Unavailable\n\nLLM provider is temporarily unavailable. Please try again shortly."
+
+
+_IS_DISCOVERY_QUERY = re.compile(
+    r'(?:which|what|any|recommend|suggest|best|top|good|ideal|cheap|penny|hidden).*'
+    r'(?:stock|stocks|share|shares|company|companies|equity).*'
+    r'(?:buy|invest|long.?term|short.?term|goal|growth|portfolio|compound|contract|orders?|potential|multibagger|breakout)|'
+    r'(?:best|top|which|cheap).*(?:stock|share|company).*(?:for|to)\s+(?:buy|invest|hold)|'
+    r'stocks?\s+to\s+buy|where\s+should\s+i\s+invest|best\s+stock\s+to\s+buy|'
+    r'top\s+(?:indian|us|global)\s+stocks?|'
+    r'small.?cap|mid.?cap|breakout\s+stocks?|penny\s+stocks?|contract\s+win|order\s+book',
+    re.I
+)
+
+_IS_EDUCATIONAL_QUERY = re.compile(
+    r'what\s+is\s+|explain\s+|how\s+(?:does|to|is)\s+|define\s+|meaning\s+of\s+|'
+    r'pe\s*ratio|p\/e|roe|roce|ebitda|market\s*cap|dcf|free\s*cash\s*flow|'
+    r'dividend\s*yield|eps|earnings\s*per\s*share|bull\s*(?:vs|and)\s*bear|'
+    r'debt.to.equity|balance\s*sheet|how\s*to\s*(?:read|analyze|evaluate)',
+    re.I
+)
+
+
+@router.post("/chat")
+async def copilot_chat(req: ChatRequest):
+    """
+    Artha AI Copilot chat endpoint with live web search capability.
+    
+    For discovery/recommendation queries: searches the web, extracts relevant 
+    tickers, returns a grounded answer + suggested tickers for auto-research.
+    For educational queries: uses LLM with optional web search for context.
+    For report Q&A: grounds answer in completed report data.
+    """
+    message = (req.message or "").strip()
+    if not message:
+        raise HTTPException(400, "message is required")
+
+    # Refuse non-financial queries
+    if not is_financial_or_stock_query(message):
+        return ChatResponse(
+            answer=(
+                "### 🛡️ Out of Scope — Finance & Equity Research Only\n\n"
+                "I am **Artha AI Copilot**, specialized exclusively in equity research, "
+                "stock fundamental analysis, financial valuation, and investment intelligence.\n\n"
+                "Please ask a question related to stocks, financial metrics, or investment analysis."
+            )
+        ).model_dump()
+
+    # If anchored to a completed report, check if this is a general discovery question first.
+    # Open-ended discovery questions (e.g. "which company is best to invest in short term")
+    # should NOT be constrained to the old report unless explicitly asked.
+    is_discovery = bool(_IS_DISCOVERY_QUERY.search(message))
+    is_educational = bool(_IS_EDUCATIONAL_QUERY.search(message))
+
+    if req.job_id and not is_discovery:
+        job = jobs.get(req.job_id)
+        if job and job.status == "succeeded":
+            report = jobs.get_report(req.job_id)
+            if report:
+                answer = await asyncio.to_thread(
+                    _answer_report_question, message, report, jobs.get_context(req.job_id), req.history
+                )
+                return ChatResponse(
+                    answer=answer.answer,
+                    suggested_tickers=[],
+                    search_used=False,
+                    sources=answer.sources or []
+                ).model_dump()
+
+    search_results = []
+    search_used = False
+    suggested_tickers: list[str] = []
+
+    # For discovery queries: ALWAYS search the web
+    if is_discovery:
+        is_short_term = bool(re.search(r'short.?term|quick|swing|momentum|breakout', message, re.I))
+        is_contract_or_smallcap = bool(re.search(r'contract|order|small.?cap|cheap|penny|hidden|potential|multibagger', message, re.I))
+
+        if is_short_term:
+            search_query = f"{message} Indian stocks NSE BSE news breakout catalysts 2025"
+        elif is_contract_or_smallcap:
+            search_query = f"{message} Indian small cap stocks huge contracts orders news growth potential 2025"
+        else:
+            search_query = f"best stocks to buy {message} 2025 India NSE fundamentals"
+
+        search_results = await asyncio.to_thread(_chat_web_search, search_query)
+        search_used = bool(search_results)
+        # Also try a second targeted search if few results
+        if not search_results or len(search_results) < 3:
+            more_results = await asyncio.to_thread(_chat_web_search, message)
+            search_results = search_results + [r for r in more_results if r not in search_results]
+            search_used = bool(search_results)
+        # Extract tickers from snippets
+        combined_text = " ".join(
+            (r.get("title", "") + " " + r.get("body", "") + " " + r.get("snippet", ""))
+            for r in search_results
+        )
+        suggested_tickers = _extract_tickers_from_text(combined_text)
+
+    # For educational queries with no specific company: minimal search for context
+    elif is_educational and not suggested_tickers:
+        search_results = await asyncio.to_thread(_chat_web_search, f"{message} stock market India 2024")
+        search_used = bool(search_results)
+
+    # Default: search for context
+    else:
+        search_results = await asyncio.to_thread(_chat_web_search, f"{message} stocks India NSE 2024")
+        search_used = bool(search_results)
+        combined_text = " ".join(
+            (r.get("title", "") + " " + r.get("body", "") + " " + r.get("snippet", ""))
+            for r in search_results
+        )
+        suggested_tickers = _extract_tickers_from_text(combined_text)
+
+    # Report context if job_id provided (even non-succeeded)
+    report = None
+    context = None
+    if req.job_id:
+        report = jobs.get_report(req.job_id)
+        context = jobs.get_context(req.job_id)
+
+    # Get LLM answer grounded in search
+    answer_text = await asyncio.to_thread(
+        _copilot_chat_llm, message, req.history, search_results, report, context
+    )
+
+    # Prioritize tickers actually analyzed and cited in the LLM answer
+    answer_tickers = _extract_tickers_from_text(answer_text)
+    combined_tickers = []
+    for t in answer_tickers + suggested_tickers:
+        if t not in combined_tickers:
+            combined_tickers.append(t)
+    suggested_tickers = combined_tickers[:4]
+
+    # Build interactive clarification card asking the user whether they want quick breakdown or full report
+    clarification = None
+    if is_discovery and suggested_tickers:
+        top_ticker = suggested_tickers[0]
+        compare_str = " vs ".join(suggested_tickers[:3])
+        options = [
+            f"🚀 Generate In-Depth Multi-Agent Report on {top_ticker}",
+        ]
+        if len(suggested_tickers) >= 2:
+            options.append(f"⚖️ Compare All in a Multi-Stock Audit ({compare_str})")
+        options.append("📰 Audit Latest Contract News & Order Book Catalysts")
+        options.append("🎯 Explore Undervalued Small-Caps with High Growth Potential")
+
+        clarification = {
+            "prompt": "How would you like to proceed with these candidate opportunities?",
+            "options": options,
+        }
+    elif not clarification:
+        org_match = re.search(
+            r'(?:tell me about|what is|who is|details on|overview of|research on|analyze|audit|how is|performance of|about)\s+([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,2})',
+            message,
+            re.I
+        )
+        target_name = None
+        if org_match:
+            candidate = org_match.group(1).strip().rstrip('?!.,;:')
+            stopwords = {'the', 'a', 'an', 'this', 'that', 'pe', 'p/e', 'roe', 'ebitda', 'market', 'stock', 'share', 'what', 'how', 'why'}
+            if candidate.lower() not in stopwords and len(candidate) >= 2:
+                target_name = candidate.title()
+        elif suggested_tickers:
+            target_name = suggested_tickers[0]
+
+        if target_name:
+            clarification = {
+                "prompt": f"Would you like me to create a full multi-agent research report for {target_name}?",
+                "options": [
+                    f"🚀 Yes, create full research report for {target_name}",
+                    f"📊 Check valuation & financial metrics for {target_name}",
+                    f"🥊 Compare {target_name} with industry peers",
+                    f"⚡ Quick high-level summary of {target_name}",
+                ],
+            }
+
+    # Build source citations
+    sources = [
+        {"title": r.get("title", ""), "url": r.get("href") or r.get("url") or ""}
+        for r in search_results[:5]
+        if r.get("href") or r.get("url")
+    ]
+
+    return ChatResponse(
+        answer=answer_text,
+        suggested_tickers=suggested_tickers,
+        search_used=search_used,
+        sources=sources,
+        clarification=clarification,
+    ).model_dump()
+
+
 @router.post("", status_code=202)
 async def start_research(req: ResearchRequest):
     if not req.query or not req.query.strip():
@@ -587,8 +970,7 @@ async def ask_report(job_id: str, req: ReportQuestion):
     return answer.model_dump()
 
 
-@router.api_route("/{job_id}/pdf", methods=["GET", "HEAD"])
-async def get_pdf(job_id: str, download: bool = False):
+def _resolve_pdf_path(job_id: str) -> tuple[str, str, str]:
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, "job not found")
@@ -619,8 +1001,22 @@ async def get_pdf(job_id: str, download: bool = False):
                 path = cand
                 break
 
-    # On-demand PDF generation if report JSON exists but PDF was not generated yet
-    if not path or not os.path.exists(path):
+    # On-demand PDF generation (or refresh if template is newer than cached PDF)
+    needs_render = not path or not os.path.exists(path)
+    if not needs_render and path and os.path.exists(path):
+        try:
+            from ..report import pdf as pdf_mod
+            tpl_path = os.path.join(os.path.dirname(pdf_mod.__file__), "templates", "report.html.j2")
+            latest_code_mtime = max(
+                os.path.getmtime(pdf_mod.__file__),
+                os.path.getmtime(tpl_path) if os.path.exists(tpl_path) else 0,
+            )
+            if os.path.getmtime(path) < latest_code_mtime:
+                needs_render = True
+        except Exception:
+            pass
+
+    if needs_render:
         report_data = jobs.get_report(real_id) or jobs.get_report(job_id)
         if report_data:
             try:
@@ -630,13 +1026,43 @@ async def get_pdf(job_id: str, download: bool = False):
                     validated = ReportJSON.model_validate(report_data)
                 else:
                     validated = report_data
-                path = render_pdf(validated, real_id)
-                jobs.attach_report(real_id, report_data, path)
+                new_path = render_pdf(validated, real_id)
+                if new_path and os.path.exists(new_path):
+                    path = new_path
+                    jobs.attach_report(real_id, report_data, path)
             except Exception as e:
                 logger.error("Failed to render PDF on-demand for %s: %s", real_id, e)
 
     if not path or not os.path.exists(path):
         raise HTTPException(404, "PDF not ready")
+
+    return path, real_id, clean_id
+
+
+@router.get("/{job_id}/pdf-data")
+async def get_pdf_data(job_id: str):
+    """Return PDF as Base64 JSON payload.
+    
+    This completely prevents browser download managers (like IDM) from intercepting
+    PDF downloads or popping up download dialogs when users view reports in-app.
+    """
+    import base64
+    path, real_id, clean_id = _resolve_pdf_path(job_id)
+    with open(path, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode("ascii")
+    return {
+        "job_id": real_id,
+        "clean_id": clean_id,
+        "filename": f"arthalens_research_{clean_id}.pdf",
+        "size_bytes": len(data),
+        "base64": b64,
+    }
+
+
+@router.api_route("/{job_id}/pdf", methods=["GET", "HEAD"])
+async def get_pdf(job_id: str, download: bool = False):
+    path, real_id, clean_id = _resolve_pdf_path(job_id)
 
     if download:
         response = FileResponse(

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="144" viewBox="0 0 560 144" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">ArthaAI · Bulls Eye, light background</title>
+  <desc id="desc">Signal Aperture mark beside the ArthaAI wordmark for light surfaces and print.</desc>
+  <defs>
+    <linearGradient id="orbit" x1="9" y1="54" x2="49" y2="8" gradientUnits="userSpaceOnUse"><stop stop-color="#315ED8"/><stop offset="1" stop-color="#087F72"/></linearGradient>
+  </defs>
+  <g transform="translate(12 20) scale(1.625)">
+    <path d="M32 3.5a28.5 28.5 0 1 0 28.5 28.5 2.5 2.5 0 0 0-5 0A23.5 23.5 0 1 1 32 8.5a2.5 2.5 0 0 0 0-5Z" fill="url(#orbit)"/>
+    <path d="M18 44 32 19 46 44" stroke="#102139" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M25 34h14" stroke="#087F72" stroke-width="5" stroke-linecap="round"/>
+    <path d="m52 5 7 7-7 7-7-7Z" fill="#087F72"/>
+  </g>
+  <text x="145" y="77" font-family="Inter, DejaVu Sans, Arial, sans-serif" font-size="58" font-weight="600" letter-spacing="-2.8" fill="#102139">Artha<tspan fill="#087F72">AI</tspan></text>
+  <text x="148" y="104" font-family="Inter, DejaVu Sans, Arial, sans-serif" font-size="10" font-weight="600" letter-spacing="2.3" fill="#51647C">BULLS EYE / EQUITY RESEARCH</text>
+</svg>

@@ -170,18 +170,18 @@ test('detectQueryType classifies non-financial queries as out_of_scope and getCo
   }
 })
 
-test('getCopilotResponse delivers comprehensive Indian blue-chip analysis for long-term goal inquiries without phantom Auditing tab', () => {
+test('getCopilotResponse routes open-ended long-term stock discovery to backend chat', () => {
   const query = 'Which Indian company stock should be best to buy now for a long term goal?'
   const mockUser = { uid: 'user_123', name: 'Anuj Kesharwani', guest: false }
   const response = getCopilotResponse(query, mockUser)
 
-  assert.ok(response.includes('Top Indian Blue-Chip Pillars for Long-Term Wealth Compounding'))
-  assert.ok(response.includes('TCS (Tata Consultancy Services)'))
-  assert.ok(response.includes('Reliance Industries'))
-  assert.ok(response.includes('HDFC Bank'))
-  assert.ok(response.includes('Larsen & Toubro'))
-  assert.ok(response.includes('The 4-Pillar Long-Term Selection Checklist'))
-  assert.ok(!response.includes('Auditing tab'), 'Response should not refer to a non-existent Auditing tab')
+  // These open-ended discovery queries are intentionally routed to the backend
+  // /research/chat endpoint for live web search + LLM response.
+  assert.strictEqual(
+    response,
+    'USE_BACKEND_CHAT',
+    'Open-ended long-term stock discovery should return USE_BACKEND_CHAT sentinel'
+  )
 
   const suggestions = getFollowupSuggestions(query)
   assert.ok(suggestions.some((s) => s.label.includes('TCS') && s.type === 'stock'))
@@ -220,4 +220,60 @@ test('getCopilotResponse returns current live stock price for single and compara
   assert.ok(resp2.includes('₹1,745.20'), 'Should contain INFY live price')
   assert.ok(resp2.includes('₹3,850.50'), 'Should contain TCS live price')
 })
+
+test('extractTargetOrganization dynamically extracts organizations from natural queries', async () => {
+  const { extractTargetOrganization } = await import('../utils/queryRouter.js')
+  assert.strictEqual(extractTargetOrganization('tell me about Sarvam'), 'Sarvam')
+  assert.strictEqual(extractTargetOrganization('tell me about Sarvam ai'), 'Sarvam AI')
+  assert.strictEqual(extractTargetOrganization('tell me about Zoho'), 'Zoho')
+  assert.strictEqual(extractTargetOrganization('what is OpenAI'), 'OpenAI')
+  assert.strictEqual(extractTargetOrganization('tell me about Tata Motors'), 'Tata Motors')
+  assert.strictEqual(extractTargetOrganization('overview of Databricks'), 'Databricks')
+  // Concepts, stopwords, and discovery queries must not be extracted as organizations
+  assert.strictEqual(extractTargetOrganization('risks'), null)
+  assert.strictEqual(extractTargetOrganization('operating margins'), null)
+  assert.strictEqual(extractTargetOrganization('Which Indian company stock should be best to buy?'), null)
+  assert.strictEqual(extractTargetOrganization('who made you'), null)
+  assert.strictEqual(extractTargetOrganization('Who am I?'), null)
+})
+
+test('getCopilotResponse and getFollowupSuggestions handle organizations dynamically with clarification card and zero TCS fallback', () => {
+  // 1. Generic organization query (Sarvam)
+  const sarvamResp = getCopilotResponse('tell me about Sarvam')
+  assert.ok(sarvamResp.includes('Sarvam'), 'Should identify Sarvam')
+  assert.ok(sarvamResp.clarification, 'Should attach clarification card')
+  assert.ok(sarvamResp.clarification.prompt.includes('Sarvam'), 'Prompt must ask whether to create report for Sarvam')
+  assert.ok(sarvamResp.clarification.options.some((o) => o.includes('Sarvam')), 'Options must include Sarvam')
+
+  const sarvamSuggestions = getFollowupSuggestions('tell me about Sarvam')
+  assert.ok(sarvamSuggestions.every((s) => !s.label.includes('TCS') && !s.label.includes('Infosys')), 'Suggestions must NOT fallback to TCS or Infosys')
+  assert.ok(sarvamSuggestions.some((s) => s.label.includes('Sarvam')), 'Suggestions must be dynamically tailored to Sarvam')
+
+  // 2. Another organization (Zoho)
+  const zohoResp = getCopilotResponse('tell me about Zoho')
+  assert.ok(zohoResp.includes('Zoho'), 'Should identify Zoho')
+  assert.ok(zohoResp.clarification, 'Should attach clarification card for Zoho')
+  assert.ok(zohoResp.clarification.prompt.includes('Zoho'), 'Prompt must ask whether to create report for Zoho')
+  const zohoSuggestions = getFollowupSuggestions('tell me about Zoho')
+  assert.ok(zohoSuggestions.every((s) => !s.label.includes('TCS')), 'Zoho suggestions must NOT fallback to TCS')
+  assert.ok(zohoSuggestions.some((s) => s.label.includes('Zoho')), 'Suggestions must be tailored to Zoho')
+
+  // 3. Tata Motors
+  const tmSuggestions = getFollowupSuggestions('tell me about Tata Motors')
+  assert.ok(tmSuggestions.some((s) => s.label.includes('Tata Motors')), 'Suggestions must be tailored to Tata Motors')
+
+  // 4. Organization query when an active report (TCS) is already in context
+  const activeReportContext = {
+    companyName: 'Tata Consultancy Services',
+    job: {
+      entities: [{ name: 'Tata Consultancy Services', ticker: 'TCS' }],
+      report: { company: { name: 'Tata Consultancy Services' }, overall_assessment: { classification: 'STRONG MOAT' } }
+    }
+  }
+  const zohoWithTcsLoaded = getCopilotResponse('tell me about Zoho', null, activeReportContext)
+  assert.ok(zohoWithTcsLoaded.clarification, 'Must provide clarification for Zoho even when TCS report is loaded')
+  assert.ok(zohoWithTcsLoaded.clarification.prompt.includes('Zoho'), 'Must ask about Zoho, not TCS')
+  assert.ok(!zohoWithTcsLoaded.includes('Tata Consultancy Services'), 'Must not answer with TCS when asking about Zoho')
+})
+
 

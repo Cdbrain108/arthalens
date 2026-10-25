@@ -107,7 +107,7 @@ def execute_specialist(name, state):
         import concurrent.futures
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exp_pool:
             future = exp_pool.submit(run_specialist_live, name, state, collected)
-            result = future.result(timeout=30)
+            result = future.result(timeout=10)
             return result if result and result.evidence else collected
     except Exception as exc:
         collected.data_gaps.append(f'Model explanation unavailable ({type(exc).__name__}); real tool evidence retained.')

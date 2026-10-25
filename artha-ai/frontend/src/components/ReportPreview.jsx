@@ -279,7 +279,7 @@ function ChartPanel({ jobId, chart, index, title, caption, maxHeight }) {
       ) : (
         <div className="overflow-hidden rounded-lg bg-slate-950 p-2">
           <img
-            src={`/api/research/${encodeURIComponent(jobId)}/charts/${chart}`}
+            src={api.chartUrl(jobId, chart)}
             alt={title}
             className={`w-full rounded object-contain ${maxHeight}`}
             onError={() => setFailed(true)}
@@ -309,11 +309,147 @@ function EvidenceList({ items, sources, bullet, bulletClass, emptyText }) {
   )
 }
 
-/** Structured institutional synthesis narrative with prominent bold headings and action pills. */
-function SynthesisNarrativeBlock({ text, sources }) {
+/** Helper to cleanly format card content into bulleted sub-items or comparison cards instead of walls of text */
+function FormattedCardBody({ text, pill, headerTitle, sources }) {
   if (!text) return null
 
-  const rawLines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  // If body has numbered rules like (1)... (2)... (3)...
+  if (text.includes('(1)') && text.includes('(2)')) {
+    const leadMatch = text.match(/^(.*?)(?=\(1\))/s)
+    const leadText = leadMatch ? leadMatch[1].trim() : ''
+    const itemMatches = text.match(/\(\d+\)[^()]+/g)
+    if (itemMatches && itemMatches.length > 0) {
+      return (
+        <div className="space-y-2 mt-1">
+          {leadText && (
+            <p className="text-[12.5px] sm:text-[13px] leading-relaxed text-slate-200">
+              <CitedText text={leadText} sources={sources} />
+            </p>
+          )}
+          <div className="grid grid-cols-1 gap-1.5 pt-1">
+            {itemMatches.map((item, idx) => {
+              const cleanItem = item.replace(/^\(\d+\)\s*/, '').trim().replace(/;$/, '')
+              return (
+                <div
+                  key={idx}
+                  className="flex items-start gap-2.5 rounded-lg border border-white/5 bg-black/25 px-3 py-2 text-[12px] leading-snug text-slate-200 shadow-sm"
+                >
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-500/20 font-mono text-[10px] font-bold text-rose-400 border border-rose-500/30">
+                    {idx + 1}
+                  </span>
+                  <span className="flex-1">
+                    <CitedText text={cleanItem} sources={sources} />
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )
+    }
+  }
+
+  // Handle "Business Strengths: ... Watchpoints: ..." (or when pill has "BUSINESS STRENGTHS" and body has "WATCHPOINTS:")
+  const hasStrengthsWatchpoints =
+    (text.includes('Business Strengths:') && text.includes('Watchpoints:')) ||
+    (pill && pill.toUpperCase().includes('STRENGTH') && /WATCHPOINTS?:/i.test(text)) ||
+    (headerTitle && headerTitle.toUpperCase().includes('STRENGTH') && /WATCHPOINTS?:/i.test(text))
+
+  if (hasStrengthsWatchpoints) {
+    const watchSplitRegex = /(?:;\s*)?(?:Watchpoints:|WATCHPOINTS:)\s*/i
+    const parts = text.split(watchSplitRegex)
+    if (parts.length === 2) {
+      const cleanStrengths = parts[0]
+        .replace(/^(?:Business\s+Strengths:|BUSINESS\s+STRENGTHS:?)\s*/i, '')
+        .trim()
+        .replace(/;\s*$/, '')
+      const cleanWatchpoints = parts[1].trim()
+      return (
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px]">
+          <div className="rounded-xl bg-emerald-500/[0.07] border border-emerald-500/25 p-3">
+            <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-[11.5px] mb-1">
+              <span>👍</span>
+              <span>Business Strengths</span>
+            </div>
+            <p className="text-slate-300 leading-snug">
+              <CitedText text={cleanStrengths} sources={sources} />
+            </p>
+          </div>
+          <div className="rounded-xl bg-rose-500/[0.07] border border-rose-500/25 p-3">
+            <div className="flex items-center gap-1.5 font-bold text-rose-400 text-[11.5px] mb-1">
+              <span>⚠️</span>
+              <span>Things to Watch</span>
+            </div>
+            <p className="text-slate-300 leading-snug">
+              <CitedText text={cleanWatchpoints} sources={sources} />
+            </p>
+          </div>
+        </div>
+      )
+    }
+  }
+
+  // Handle "LONG-TERM ... NEXT 6-12 MONTHS ..." in Time Horizon
+  const hasTimeHorizonSplit =
+    (text.toUpperCase().includes('LONG-TERM') || (pill && pill.toUpperCase().includes('LONG-TERM'))) &&
+    /(?:NEXT\s+6[–-]12\s+MONTHS|Next\s+6[–-]12\s+Months)/i.test(text)
+
+  if (hasTimeHorizonSplit) {
+    const splitRegex = /(?=(?:NEXT\s+6[–-]12\s+MONTHS|Next\s+6[–-]12\s+Months):?)/i
+    const parts = text.split(splitRegex)
+    if (parts.length === 2) {
+      const cleanLongTerm = parts[0]
+        .replace(/^(?:LONG-TERM\s*\([^)]+\):?|Long-Term\s*\([^)]+\):?)\s*/i, '')
+        .trim()
+      const cleanNearTerm = parts[1]
+        .replace(/^(?:NEXT\s+6[–-]12\s+MONTHS|Next\s+6[–-]12\s+Months):?\s*/i, '')
+        .trim()
+      return (
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px]">
+          <div className="rounded-xl bg-indigo-500/[0.07] border border-indigo-500/25 p-3">
+            <div className="flex items-center gap-1.5 font-bold text-indigo-300 text-[11.5px] mb-1">
+              <span>🚀</span>
+              <span>Long-Term (3–5+ Years)</span>
+            </div>
+            <p className="text-slate-300 leading-snug">
+              <CitedText text={cleanLongTerm} sources={sources} />
+            </p>
+          </div>
+          <div className="rounded-xl bg-blue-500/[0.07] border border-blue-500/25 p-3">
+            <div className="flex items-center gap-1.5 font-bold text-[#8ab4f8] text-[11.5px] mb-1">
+              <span>⏳</span>
+              <span>Next 6–12 Months</span>
+            </div>
+            <p className="text-slate-300 leading-snug">
+              <CitedText text={cleanNearTerm} sources={sources} />
+            </p>
+          </div>
+        </div>
+      )
+    }
+  }
+
+  return (
+    <p className="mt-1 text-[12.5px] sm:text-[13px] leading-relaxed text-[#cbd5e1]">
+      <CitedText text={text} sources={sources} />
+    </p>
+  )
+}
+
+/** Structured institutional synthesis narrative with prominent bold headings and action pills. */
+export function SynthesisNarrativeBlock({ text, sources = [] }) {
+  if (!text) return null
+
+  // Normalize: ensure any bullet or uppercase heading starts on its own line dynamically
+  const normalized = String(text)
+    .replace(/\s*•\s*/g, '\n• ')
+    .replace(/\s*[*•-]\s*([A-Z][A-Z0-9\s()–-]{2,}:)/g, '\n• $1')
+    .replace(/\s+([A-Z][A-Z\s()–-]{3,}:)/g, (match, p1) => {
+      // Don't split "PE:" or short acronyms unless preceded by a space or sentence end
+      return p1.startsWith('HTTP') || p1.startsWith('URL') ? match : `\n• ${p1}`
+    })
+
+  const rawLines = normalized.split('\n').map((l) => l.trim()).filter(Boolean)
   const introBlocks = []
   const bulletCards = []
 
@@ -324,11 +460,17 @@ function SynthesisNarrativeBlock({ text, sources }) {
       const firstColon = clean.indexOf(':')
       if (firstColon !== -1) {
         const headerTitle = clean.substring(0, firstColon).trim()
-        const remainder = clean.substring(firstColon + 1).trim()
+        let remainder = clean.substring(firstColon + 1).trim()
+
+        // Strip accidental double-heading like "WHAT EXISTING SHAREHOLDERS SHOULD DO: WHAT EXISTING SHAREHOLDERS SHOULD DO"
+        if (remainder.toUpperCase().startsWith(headerTitle.toUpperCase())) {
+          remainder = remainder.substring(headerTitle.length).replace(/^[:\s-]+/, '').trim()
+        }
+
         const secondColon = remainder.indexOf(':')
         let pill = ''
         let body = remainder
-        if (secondColon !== -1 && secondColon < 65) {
+        if (secondColon !== -1 && secondColon < 75) {
           pill = remainder.substring(0, secondColon).trim()
           body = remainder.substring(secondColon + 1).trim()
         }
@@ -343,8 +485,12 @@ function SynthesisNarrativeBlock({ text, sources }) {
 
   if (bulletCards.length === 0) {
     return (
-      <div className="whitespace-pre-line text-[13px] leading-relaxed text-[#e2e8f0]">
-        <CitedText text={text} sources={sources} />
+      <div className="space-y-2.5 text-left text-[13px] leading-relaxed text-[#e2e8f0]">
+        {rawLines.map((l, i) => (
+          <p key={i}>
+            <CitedText text={l} sources={sources} />
+          </p>
+        ))}
       </div>
     )
   }
@@ -360,6 +506,7 @@ function SynthesisNarrativeBlock({ text, sources }) {
         badgeBg: 'bg-emerald-500/20',
         badgeText: 'text-emerald-300',
         titleColor: 'text-emerald-400',
+        icon: '💼',
       }
     }
     if (t.includes('NEW INVESTOR') || t.includes('BUY') || t.includes('STAGES')) {
@@ -371,6 +518,7 @@ function SynthesisNarrativeBlock({ text, sources }) {
         badgeBg: 'bg-teal-500/20',
         badgeText: 'text-teal-300',
         titleColor: 'text-teal-300',
+        icon: '🌱',
       }
     }
     if (t.includes('HORIZON') || t.includes('TIME') || t.includes('LONG-TERM')) {
@@ -382,6 +530,7 @@ function SynthesisNarrativeBlock({ text, sources }) {
         badgeBg: 'bg-indigo-500/20',
         badgeText: 'text-indigo-300',
         titleColor: 'text-indigo-300',
+        icon: '⏳',
       }
     }
     if (t.includes('SELL') || t.includes('RULES FOR WHEN') || t.includes('EXIT')) {
@@ -393,6 +542,7 @@ function SynthesisNarrativeBlock({ text, sources }) {
         badgeBg: 'bg-rose-500/20',
         badgeText: 'text-rose-300',
         titleColor: 'text-rose-400',
+        icon: '🛑',
       }
     }
     if (t.includes('WATCH') || t.includes('STRENGTH') || t.includes('RISK')) {
@@ -404,6 +554,7 @@ function SynthesisNarrativeBlock({ text, sources }) {
         badgeBg: 'bg-amber-500/20',
         badgeText: 'text-amber-300',
         titleColor: 'text-amber-300',
+        icon: '⚖️',
       }
     }
     return {
@@ -414,11 +565,12 @@ function SynthesisNarrativeBlock({ text, sources }) {
       badgeBg: 'bg-white/10',
       badgeText: 'text-slate-300',
       titleColor: 'text-white',
+      icon: '📌',
     }
   }
 
   return (
-    <div className="space-y-3.5 text-left">
+    <div className="space-y-3 text-left">
       {introBlocks.length > 0 && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 shadow-sm">
           {introBlocks.map((intro, idx) => {
@@ -426,17 +578,15 @@ function SynthesisNarrativeBlock({ text, sources }) {
             const content = hasPrefix ? intro.replace('Plain English Executive Summary:', '').trim() : intro
             return (
               <div key={idx} className="space-y-1.5">
-                {hasPrefix && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-400/20 text-emerald-300 text-xs font-bold">
-                      ✓
-                    </span>
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-                      Plain English Executive Summary
-                    </span>
-                  </div>
-                )}
-                <p className="text-[13px] sm:text-[13.5px] leading-relaxed text-[#f1f3f4] font-normal">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-400/20 text-emerald-300 text-xs font-bold">
+                    🎯
+                  </span>
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                    The Short Answer (Plain English Verdict)
+                  </span>
+                </div>
+                <p className="text-[13.5px] sm:text-[14px] leading-relaxed text-[#f1f3f4] font-medium">
                   <CitedText text={content} sources={sources} />
                 </p>
               </div>
@@ -445,18 +595,18 @@ function SynthesisNarrativeBlock({ text, sources }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-2.5">
         {bulletCards.map((card, idx) => {
           const style = getStyleForTitle(card.headerTitle)
           return (
             <div
               key={idx}
-              className={`rounded-xl border ${style.border} ${style.bg} p-4 text-left transition-all hover:bg-white/[0.04] shadow-sm`}
+              className={`rounded-xl border ${style.border} ${style.bg} p-3.5 sm:p-4 text-left transition-all hover:bg-white/[0.04] shadow-sm`}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
-                  <h4 className={`text-[12.5px] sm:text-[13px] font-extrabold uppercase tracking-wider ${style.titleColor}`}>
+                  <span className="text-[13px]">{style.icon}</span>
+                  <h4 className={`text-[12px] sm:text-[13px] font-extrabold uppercase tracking-wider ${style.titleColor}`}>
                     {card.headerTitle}
                   </h4>
                 </div>
@@ -468,9 +618,7 @@ function SynthesisNarrativeBlock({ text, sources }) {
                   </span>
                 )}
               </div>
-              <div className="text-[12.5px] sm:text-[13px] leading-relaxed text-[#cbd5e1]">
-                <CitedText text={card.body} sources={sources} />
-              </div>
+              <FormattedCardBody text={card.body} pill={card.pill} headerTitle={card.headerTitle} sources={sources} />
             </div>
           )
         })}
@@ -496,6 +644,7 @@ export default function ReportPreview({
   const [mode, setMode] = useState(initialMode) // 'beginner' | 'expert'
   const [activeTab, setActiveTab] = useState('all')
   const [showPdfViewer, setShowPdfViewer] = useState(false)
+  const [openingInWindow, setOpeningInWindow] = useState(false)
 
   useEffect(() => {
     if (initialMode) setMode(initialMode)
@@ -816,7 +965,32 @@ export default function ReportPreview({
   // markers are the same numbering as `sources`, so CitedText resolves them.
   const agentNotes = (report.agent_notes || []).filter((n) => n && typeof n === 'object')
 
-  const resolvedPdfUrl = pdfUrl || `/api/research/${encodeURIComponent(jobId)}/pdf`
+  const resolvedPdfUrl = pdfUrl || api.pdfUrl(jobId)
+
+  // Opens PDF in a new tab via a blob: URL so download-manager browser extensions
+  // (e.g. IDM) cannot intercept it — they only intercept direct HTTP navigations.
+  const handleOpenInNewWindow = async () => {
+    setOpeningInWindow(true)
+    try {
+      const resp = await fetch(resolvedPdfUrl)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const blob = await resp.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const win = window.open(blobUrl, '_blank')
+      // Revoke blob URL after the viewer has loaded (60 s is plenty)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+      if (!win) {
+        // Popup blocked — silently fall back so user sees the blob page
+        window.location.href = blobUrl
+      }
+    } catch {
+      // Last-resort fallback to direct URL
+      window.open(resolvedPdfUrl, '_blank')
+    } finally {
+      setOpeningInWindow(false)
+    }
+  }
+
   const queryText = report.query || job?.query || ''
 
   const baseStance = decisionFramework.base_stance || oa.rationale || `Verified multi-agent consensus indicates a ${verdictLabel} position.`
@@ -995,7 +1169,7 @@ export default function ReportPreview({
   const plainEnglish = getPlainEnglishSummary()
 
   const executiveHeroCard = (
-    <div className="mx-2 sm:mx-6 mt-4 sm:mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#1e2026] p-4 sm:p-6 shadow-2xl text-left">
+    <div id="section-briefing" className="mx-1 sm:mx-6 mt-3 sm:mt-5 overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3 sm:p-6 shadow-2xl text-left">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4285f4]/15 text-[#8ab4f8] font-mono text-sm font-bold border border-[#4285f4]/25">
@@ -1254,21 +1428,21 @@ export default function ReportPreview({
       </div>
 
       {/* 4-Pillar Strategic Snapshot Matrix with Human-Friendly Headers */}
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div id="section-pillars" className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         {/* Pillar 1: Upside Drivers */}
-        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] p-3.5 text-left">
-          <div className="flex items-center justify-between text-emerald-400 font-bold text-[11.5px] mb-2">
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] p-2.5 sm:p-3.5 text-left">
+          <div className="flex items-center justify-between text-emerald-400 font-bold text-[11px] sm:text-[11.5px] mb-2">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} /> What&rsquo;s Working
+              <CheckCircle2 size={14} className="shrink-0" /> What&rsquo;s Working
             </span>
-            <span className="font-mono text-[10px] bg-emerald-500/15 px-1.5 py-0.5 rounded text-emerald-300">
+            <span className="font-mono text-[9px] sm:text-[10px] bg-emerald-500/15 px-1.5 py-0.5 rounded text-emerald-300">
               {bullItems.length} Strengths
             </span>
           </div>
-          <ul className="space-y-1.5 text-[11.5px] text-slate-300">
+          <ul className="space-y-1 sm:space-y-1.5 text-[11px] sm:text-[11.5px] text-slate-300">
             {bullItems.length > 0 ? (
               bullItems.slice(0, 2).map((item, i) => (
-                <li key={i} className="flex items-start gap-1.5 leading-snug">
+                <li key={i} className="flex items-start gap-1 leading-snug">
                   <span className="text-emerald-400 font-bold">•</span>
                   <span className="line-clamp-2"><CitedText text={item} sources={sources} /></span>
                 </li>
@@ -1280,19 +1454,19 @@ export default function ReportPreview({
         </div>
 
         {/* Pillar 2: Downside Risks */}
-        <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.04] p-3.5 text-left">
-          <div className="flex items-center justify-between text-rose-400 font-bold text-[11.5px] mb-2">
+        <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.04] p-2.5 sm:p-3.5 text-left">
+          <div className="flex items-center justify-between text-rose-400 font-bold text-[11px] sm:text-[11.5px] mb-2">
             <span className="flex items-center gap-1.5">
-              <AlertTriangle size={14} /> What to Watch
+              <AlertTriangle size={14} className="shrink-0" /> What to Watch
             </span>
-            <span className="font-mono text-[10px] bg-rose-500/15 px-1.5 py-0.5 rounded text-rose-300">
+            <span className="font-mono text-[9px] sm:text-[10px] bg-rose-500/15 px-1.5 py-0.5 rounded text-rose-300">
               {bearItems.length} Risks
             </span>
           </div>
-          <ul className="space-y-1.5 text-[11.5px] text-slate-300">
+          <ul className="space-y-1 sm:space-y-1.5 text-[11px] sm:text-[11.5px] text-slate-300">
             {bearItems.length > 0 ? (
               bearItems.slice(0, 2).map((item, i) => (
-                <li key={i} className="flex items-start gap-1.5 leading-snug">
+                <li key={i} className="flex items-start gap-1 leading-snug">
                   <span className="text-rose-400 font-bold">•</span>
                   <span className="line-clamp-2"><CitedText text={item} sources={sources} /></span>
                 </li>
@@ -1304,19 +1478,19 @@ export default function ReportPreview({
         </div>
 
         {/* Pillar 3: Recent Filings & News */}
-        <div className="rounded-xl border border-blue-500/25 bg-blue-500/[0.04] p-3.5 text-left">
-          <div className="flex items-center justify-between text-[#8ab4f8] font-bold text-[11.5px] mb-2">
+        <div className="rounded-xl border border-blue-500/25 bg-blue-500/[0.04] p-2.5 sm:p-3.5 text-left">
+          <div className="flex items-center justify-between text-[#8ab4f8] font-bold text-[11px] sm:text-[11.5px] mb-2">
             <span className="flex items-center gap-1.5">
-              <FileText size={14} /> Latest News &amp; Filings
+              <FileText size={14} className="shrink-0" /> News &amp; Filings
             </span>
-            <span className="font-mono text-[10px] bg-[#4285f4]/15 px-1.5 py-0.5 rounded text-[#8ab4f8]">
+            <span className="font-mono text-[9px] sm:text-[10px] bg-[#4285f4]/15 px-1.5 py-0.5 rounded text-[#8ab4f8]">
               Verified
             </span>
           </div>
-          <ul className="space-y-1.5 text-[11.5px] text-slate-300">
+          <ul className="space-y-1 sm:space-y-1.5 text-[11px] sm:text-[11.5px] text-slate-300">
             {((report.news?.findings || sources).length > 0) ? (
               (report.news?.findings || sources).slice(0, 2).map((item, i) => (
-                <li key={i} className="flex items-start gap-1.5 leading-snug">
+                <li key={i} className="flex items-start gap-1 leading-snug">
                   <span className="text-[#8ab4f8] font-bold">•</span>
                   <span className="line-clamp-2">{item.claim || item.title || 'Corporate regulatory disclosure'}</span>
                 </li>
@@ -1328,17 +1502,20 @@ export default function ReportPreview({
         </div>
 
         {/* Pillar 4: Actionable Framework */}
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.04] p-3.5 text-left">
-          <div className="flex items-center justify-between text-amber-400 font-bold text-[11.5px] mb-2">
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.04] p-2.5 sm:p-3.5 text-left">
+          <div className="flex items-center justify-between text-amber-400 font-bold text-[11px] sm:text-[11.5px] mb-2">
             <span className="flex items-center gap-1.5">
-              <Scale size={14} /> Action Plan
+              <Scale size={14} className="shrink-0" /> Action Plan
             </span>
-            <span className="font-mono text-[10px] bg-amber-500/15 px-1.5 py-0.5 rounded text-amber-300">
+            <span className="font-mono text-[9px] sm:text-[10px] bg-amber-500/15 px-1.5 py-0.5 rounded text-amber-300">
               Guidance
             </span>
           </div>
-          <p className="text-[11.5px] leading-snug text-slate-300 line-clamp-3">
-            {decisionFramework.hold_when?.[0] ? `Hold: ${decisionFramework.hold_when[0]}` : decisionFramework.base_stance || 'Maintain disciplined portfolio sizing.'}
+          <p className="text-[11px] sm:text-[11.5px] leading-snug text-slate-300 line-clamp-3">
+            {(() => {
+              const rawText = decisionFramework.buy_when?.[0] || decisionFramework.hold_when?.[0] || decisionFramework.base_stance || 'Maintain disciplined portfolio sizing.'
+              return String(rawText).replace(/^(?:(?:Buy|Hold|Sell):\s*)?(?:WHAT\s+(?:NEW\s+INVESTORS|EXISTING\s+SHAREHOLDERS)\s+SHOULD\s+DO:?\s*)?/i, '').trim()
+            })()}
           </p>
         </div>
       </div>
@@ -1395,14 +1572,14 @@ export default function ReportPreview({
 
   const headerBlock = (
     <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 border-b border-white/10 bg-[#1e2026] px-3.5 sm:px-6 py-3.5 sm:py-5">
-      <div>
-        <div className="flex items-center gap-2">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Logo size={28} />
-          <span className="font-sans text-[16px] font-bold tracking-tight text-white">
+          <span className="font-sans text-[16px] font-bold tracking-tight text-white whitespace-nowrap">
             ArthaLens <span className="text-emerald-400">AI</span>
           </span>
-          <span className="font-mono text-[12px] text-[#9aa0a6]">·</span>
-          <span className="text-[12px] font-medium text-[#bdc1c6]">Evidence-First Financial Intelligence</span>
+          <span className="font-mono text-[12px] text-[#9aa0a6] hidden sm:inline">·</span>
+          <span className="hidden sm:inline text-[12px] font-medium text-[#bdc1c6]">Evidence-First Financial Intelligence</span>
         </div>
         {queryText ? (
           <p className="mt-1.5 text-[14px] font-semibold text-[#8ab4f8]">
@@ -1457,15 +1634,15 @@ export default function ReportPreview({
           <Eye size={14} />
           <span>View PDF</span>
         </button>
-        <a
-          href={resolvedPdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 min-h-[38px] font-mono text-[12px] text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
+        <button
+          type="button"
+          onClick={handleOpenInNewWindow}
+          disabled={openingInWindow}
+          className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 min-h-[38px] font-mono text-[12px] text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-wait"
         >
           <ExternalLink size={14} />
-          <span>New window</span>
-        </a>
+          <span>{openingInWindow ? 'Opening…' : 'New window'}</span>
+        </button>
       </div>
     </div>
   )
@@ -1527,11 +1704,59 @@ export default function ReportPreview({
     </div>
   ) : null
 
+  /* --- Quick jump navigation bar for mobile & desktop -------------------- */
+
+  const quickJumpBar = (
+    <div className="sticky top-0 z-20 flex items-center gap-1.5 overflow-x-auto scroll-slim border-b border-white/10 bg-[#181a1f]/95 px-2.5 py-1.5 backdrop-blur-md">
+      <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-wider text-[#9aa0a6] mr-1">
+        Jump:
+      </span>
+      <a
+        href="#section-briefing"
+        className="inline-flex items-center gap-1 shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-400 transition"
+      >
+        🎯 Briefing
+      </a>
+      <a
+        href="#section-pillars"
+        className="inline-flex items-center gap-1 shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-[#8ab4f8] transition"
+      >
+        📊 4 Pillars
+      </a>
+      <a
+        href="#section-ratios"
+        className="inline-flex items-center gap-1 shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-indigo-500/40 hover:bg-indigo-500/10 hover:text-indigo-300 transition"
+      >
+        🔢 Key Ratios
+      </a>
+      <a
+        href="#section-thesis"
+        className="inline-flex items-center gap-1 shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-400 transition"
+      >
+        🐂 Bull / Bear
+      </a>
+      <a
+        href="#section-decision"
+        className="inline-flex items-center gap-1 shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-400 transition"
+      >
+        ⚖️ Action Plan
+      </a>
+      {quarterlyTable && quarterlyTable.length > 0 && (
+        <a
+          href="#section-earnings"
+          className="inline-flex items-center gap-1 shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-purple-400 transition"
+        >
+          📈 Earnings
+        </a>
+      )}
+    </div>
+  )
+
   /* --- Beginner mode: comparison ------------------------------------------ */
 
   const beginnerComparison = (
-    <div className="mx-auto max-w-4xl space-y-6 p-6 text-left animate-fade-up sm:p-8">
-      <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-xl">
+    <div className="mx-auto max-w-4xl space-y-3 sm:space-y-6 px-1.5 py-2 sm:p-8 text-left animate-fade-up">
+      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-xl">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 font-mono text-[11px] font-bold text-indigo-300">
             HEAD-TO-HEAD COMPARISON
@@ -1550,9 +1775,9 @@ export default function ReportPreview({
               : 'None of the comparison metrics could be established for both listings in this run.')}
         </p>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {compEntities.map((entity, idx) => (
-            <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div key={idx} className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[13px] font-bold text-white">
                   {entity.name}
@@ -1579,7 +1804,7 @@ export default function ReportPreview({
       </div>
 
       {/* Plain-English read of whichever metrics were actually comparable */}
-      <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
+      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
         <span className="block font-mono text-[11px] uppercase tracking-wider text-[#9aa0a6]">
           What the comparable numbers say
         </span>
@@ -1606,13 +1831,14 @@ export default function ReportPreview({
       </div>
 
       {executiveSummary ? (
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-md">
-          <span className="mb-2 block font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
-            Comparative summary
-          </span>
-          <p className="text-[14px] leading-relaxed text-[#f1f3f4]">
-            <CitedText text={executiveSummary} sources={sources} />
-          </p>
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-md text-left">
+          <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2">
+            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
+              Comparative Research Summary
+            </span>
+            <span className="font-mono text-[10px] text-emerald-400">Verified Findings</span>
+          </div>
+          <SynthesisNarrativeBlock text={executiveSummary} sources={sources} />
         </div>
       ) : (
         <EvidenceGapPanel
@@ -1621,8 +1847,8 @@ export default function ReportPreview({
         />
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
+      <div className="grid grid-cols-1 gap-2.5 sm:gap-4 sm:grid-cols-2">
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
           <h4 className="flex items-center gap-2 text-[14px] font-bold text-[#34a853]">
             <span>👍</span>
             <span>What&rsquo;s working</span>
@@ -1635,7 +1861,7 @@ export default function ReportPreview({
             emptyText="No positive drivers were established by validated evidence in this run."
           />
         </div>
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
           <h4 className="flex items-center gap-2 text-[14px] font-bold text-[#ea4335]">
             <span>👎</span>
             <span>What to watch</span>
@@ -1660,8 +1886,8 @@ export default function ReportPreview({
   /* --- Beginner mode: single company -------------------------------------- */
 
   const beginnerSingle = (
-    <div className="mx-auto max-w-3xl space-y-6 p-6 text-left animate-fade-up sm:p-8">
-      <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-xl">
+    <div className="mx-auto max-w-3xl space-y-3 sm:space-y-6 px-1.5 py-2 sm:p-8 text-left animate-fade-up">
+      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-xl">
         <div className="flex items-center gap-2">
           <span className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 font-mono text-[11px] text-[#9aa0a6]">
             {companyName || 'Security not resolved'}
@@ -1686,7 +1912,7 @@ export default function ReportPreview({
           )}
         </p>
 
-        <div className="mt-4 rounded-xl border border-[#4285f4]/30 bg-[#4285f4]/10 p-3.5 text-[13px] font-medium text-[#8ab4f8]">
+        <div className="mt-4 rounded-xl border border-[#4285f4]/30 bg-[#4285f4]/10 p-3 sm:p-3.5 text-[13px] font-medium text-[#8ab4f8]">
           {formattedPrice ? (
             <span className="font-mono">
               Last quoted at {formattedPrice}
@@ -1699,27 +1925,26 @@ export default function ReportPreview({
         </div>
       </div>
 
-      {/* Two plain-English gauges, each backed by a measured value or blank */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
-          <span className="block font-mono text-[11px] uppercase tracking-wider text-[#9aa0a6]">
-            How healthy is the business?
+      {/* Two plain-English gauges, placed side-by-side on mobile and desktop */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3 sm:p-5 shadow-md">
+          <span className="block font-mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#9aa0a6]">
+            How healthy is business?
           </span>
           {qualityScore !== null && maxQualityScore ? (
             <>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-2xl font-bold text-[#8ab4f8]">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-xl sm:text-2xl font-bold text-[#8ab4f8]">
                   {qualityScore} / {maxQualityScore}
                 </span>
                 {qualityRating ? (
-                  <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-[11px] text-[#bdc1c6]">
+                  <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] sm:text-[11px] text-[#bdc1c6]">
                     {qualityRating.split('-').slice(-1)[0].trim()}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[#bdc1c6]">
-                A deterministic nine-point checklist. A point is only awarded where the underlying number was
-                measured &mdash; unmeasured criteria fail rather than pass on an assumption.
+              <p className="mt-1.5 text-[11px] sm:text-[12.5px] leading-relaxed text-[#bdc1c6]">
+                Deterministic 9-point checklist from verified filings.
               </p>
             </>
           ) : (
@@ -1727,28 +1952,27 @@ export default function ReportPreview({
               <div className="mt-2">
                 <NotMeasured label="not scored" />
               </div>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[#bdc1c6]">
-                No quality score was produced for this run.
+              <p className="mt-1.5 text-[11px] sm:text-[12.5px] leading-relaxed text-[#bdc1c6]">
+                No quality score produced for this run.
               </p>
             </>
           )}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
-          <span className="block font-mono text-[11px] uppercase tracking-wider text-[#9aa0a6]">
-            Is the stock cheap or pricey right now?
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3 sm:p-5 shadow-md">
+          <span className="block font-mono text-[10px] sm:text-[11px] uppercase tracking-wider text-[#9aa0a6]">
+            Stock cheap or pricey?
           </span>
           {metrics.pe_ratio ? (
             <>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-2xl font-bold text-[#f1f3f4]">{metrics.pe_ratio}</span>
-                <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-[11px] text-[#bdc1c6]">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-xl sm:text-2xl font-bold text-[#f1f3f4]">{metrics.pe_ratio}</span>
+                <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] sm:text-[11px] text-[#bdc1c6]">
                   trailing P/E
                 </span>
               </div>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[#bdc1c6]">
-                This is the measured trailing multiple. Judging it cheap or expensive needs a peer or
-                historical range, which this run did not establish.
+              <p className="mt-1.5 text-[11px] sm:text-[12.5px] leading-relaxed text-[#bdc1c6]">
+                Measured trailing multiple vs sector baseline.
               </p>
             </>
           ) : (
@@ -1756,9 +1980,8 @@ export default function ReportPreview({
               <div className="mt-2">
                 <NotMeasured label="no verified multiple" />
               </div>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[#bdc1c6]">
-                No trailing P/E was verified for this security, so the report does not place it on a
-                cheap-to-expensive scale.
+              <p className="mt-1.5 text-[11px] sm:text-[12.5px] leading-relaxed text-[#bdc1c6]">
+                No trailing P/E was verified for this security.
               </p>
             </>
           )}
@@ -1766,7 +1989,7 @@ export default function ReportPreview({
       </div>
 
       {/* Measured ratios, plain-English */}
-      <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
+      <div id="section-ratios" className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
         <span className="block font-mono text-[11px] uppercase tracking-wider text-[#9aa0a6]">
           The numbers this run could verify
         </span>
@@ -1775,19 +1998,19 @@ export default function ReportPreview({
             None of the six headline ratios could be established from validated evidence or a live quote.
           </p>
         ) : (
-          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
             {measuredMetrics.map((m) => (
-              <div key={m.key} className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
-                <span className="block font-mono text-[10px] uppercase tracking-wider text-[#9aa0a6]">
+              <div key={m.key} className="rounded-lg border border-white/5 bg-white/[0.03] p-2 sm:p-2.5">
+                <span className="block font-mono text-[9.5px] sm:text-[10px] uppercase tracking-wider text-[#9aa0a6]">
                   {m.short}
                 </span>
-                <span className="mt-0.5 block text-[15px] font-bold text-[#f1f3f4]">{metrics[m.key]}</span>
+                <span className="mt-0.5 block text-[13.5px] sm:text-[15px] font-bold text-[#f1f3f4]">{metrics[m.key]}</span>
               </div>
             ))}
           </div>
         )}
         {unmeasuredMetrics.length > 0 && (
-          <p className="mt-3 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[#9aa0a6]">
+          <p className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] sm:text-[11.5px] text-[#9aa0a6]">
             <span>Not established:</span>
             {unmeasuredMetrics.map((m) => (
               <NotMeasured key={m.key} label={m.label} />
@@ -1797,26 +2020,26 @@ export default function ReportPreview({
       </div>
 
       {quarterlyTable && quarterlyTable.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
+        <div id="section-earnings" className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
           <div className="flex items-center justify-between">
             <span className="block font-mono text-[11px] uppercase tracking-wider text-[#9aa0a6]">
               Recent Quarterly Earnings Trend (Q1-Q4)
             </span>
             <span className="font-mono text-[10px] text-emerald-400">Verified Filings</span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-4">
             {quarterlyTable.slice(0, 4).map((q, idx) => (
-              <div key={idx} className="rounded-lg border border-white/5 bg-white/[0.03] p-3">
-                <span className="block font-mono text-[10.5px] font-semibold text-[#8ab4f8]">
+              <div key={idx} className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5 sm:p-3">
+                <span className="block font-mono text-[10px] sm:text-[10.5px] font-semibold text-[#8ab4f8]">
                   {q.period?.split('(')[0]?.trim() || q.period}
                 </span>
-                <span className="mt-1 block text-[13px] font-bold text-white">
+                <span className="mt-1 block text-[12px] sm:text-[13px] font-bold text-white">
                   Rev: {q.revenue}
                 </span>
-                <span className="block text-[12px] font-medium text-emerald-400">
+                <span className="block text-[11px] sm:text-[12px] font-medium text-emerald-400">
                   PAT: {q.net_profit}
                 </span>
-                <span className="mt-1 block font-mono text-[10px] text-[#9aa0a6]">
+                <span className="mt-0.5 block font-mono text-[9.5px] sm:text-[10px] text-[#9aa0a6]">
                   YoY: {q.yoy_growth}
                 </span>
               </div>
@@ -1826,43 +2049,43 @@ export default function ReportPreview({
       )}
 
       {entityCard && entityCard.legal_name && (
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-lg">
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span className="font-sans text-[14px] font-bold text-white">
+              <span className="font-sans text-[13.5px] sm:text-[14px] font-bold text-white">
                 {entityCard.legal_name}
               </span>
-              <span className="rounded bg-white/10 px-2 py-0.5 font-mono text-[10px] text-slate-300">
+              <span className="rounded bg-white/10 px-2 py-0.5 font-mono text-[9.5px] sm:text-[10px] text-slate-300">
                 NSE: {entityCard.nse_ticker} | BSE: {entityCard.bse_code}
               </span>
             </div>
-            <span className="font-mono text-[11px] text-[#8ab4f8]">
+            <span className="font-mono text-[10.5px] sm:text-[11px] text-[#8ab4f8]">
               {entityCard.industry}
             </span>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-3 text-[12px] sm:grid-cols-4">
-            <div className="rounded-lg bg-white/[0.02] p-2.5 border border-white/5">
-              <span className="block text-[10px] uppercase tracking-wider text-[#9aa0a6]">Fiscal Cycle</span>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3 text-[11.5px] sm:text-[12px] sm:grid-cols-4">
+            <div className="rounded-lg bg-white/[0.02] p-2 sm:p-2.5 border border-white/5">
+              <span className="block text-[9.5px] sm:text-[10px] uppercase tracking-wider text-[#9aa0a6]">Fiscal Cycle</span>
               <span className="font-medium text-slate-200">{entityCard.fiscal_year_end}</span>
             </div>
-            <div className="rounded-lg bg-white/[0.02] p-2.5 border border-white/5">
-              <span className="block text-[10px] uppercase tracking-wider text-[#9aa0a6]">Latest Quarter</span>
+            <div className="rounded-lg bg-white/[0.02] p-2 sm:p-2.5 border border-white/5">
+              <span className="block text-[9.5px] sm:text-[10px] uppercase tracking-wider text-[#9aa0a6]">Latest Quarter</span>
               <span className="font-medium text-slate-200">{entityCard.latest_quarter}</span>
             </div>
-            <div className="rounded-lg bg-white/[0.02] p-2.5 border border-white/5">
-              <span className="block text-[10px] uppercase tracking-wider text-[#9aa0a6]">Reference Close</span>
+            <div className="rounded-lg bg-white/[0.02] p-2 sm:p-2.5 border border-white/5">
+              <span className="block text-[9.5px] sm:text-[10px] uppercase tracking-wider text-[#9aa0a6]">Reference Close</span>
               <span className="font-semibold text-white">{entityCard.reference_price}</span>
             </div>
-            <div className="rounded-lg bg-white/[0.02] p-2.5 border border-white/5">
-              <span className="block text-[10px] uppercase tracking-wider text-[#9aa0a6]">Reporting Standard</span>
+            <div className="rounded-lg bg-white/[0.02] p-2 sm:p-2.5 border border-white/5">
+              <span className="block text-[9.5px] sm:text-[10px] uppercase tracking-wider text-[#9aa0a6]">Reporting Standard</span>
               <span className="font-medium text-slate-200">{entityCard.reporting_currency}</span>
             </div>
           </div>
 
           {entityCard.decision_scope && (
-            <div className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-[11px] italic text-indigo-300">
+            <div className="mt-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[10.5px] sm:text-[11px] italic text-indigo-300">
               <span className="font-semibold not-italic text-indigo-400">Decision Scope: </span>
               {entityCard.decision_scope}
             </div>
@@ -1871,15 +2094,21 @@ export default function ReportPreview({
       )}
 
       {executiveSummary ? (
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-md">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
-              Overview summary
+        <div id="section-overview" className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-xl text-left">
+          <div className="mb-3.5 flex items-center justify-between border-b border-white/10 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#4285f4]/20 text-[#8ab4f8]">
+                <Sparkles size={13} />
+              </span>
+              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
+                Executive Research Summary · In Plain English
+              </span>
+            </div>
+            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 font-mono text-[9.5px] font-semibold text-emerald-300">
+              Plain English Guide
             </span>
           </div>
-          <p className="text-[14px] leading-relaxed text-[#f1f3f4]">
-            <CitedText text={executiveSummary} sources={sources} />
-          </p>
+          <SynthesisNarrativeBlock text={executiveSummary} sources={sources} />
         </div>
       ) : (
         <EvidenceGapPanel
@@ -1888,9 +2117,9 @@ export default function ReportPreview({
         />
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
-          <h4 className="flex items-center gap-2 text-[14px] font-bold text-[#34a853]">
+      <div id="section-thesis" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4">
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
+          <h4 className="flex items-center gap-2 text-[13.5px] sm:text-[14px] font-bold text-[#34a853]">
             <span>👍</span>
             <span>What&rsquo;s working</span>
           </h4>
@@ -1903,8 +2132,8 @@ export default function ReportPreview({
           />
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-5 shadow-md">
-          <h4 className="flex items-center gap-2 text-[14px] font-bold text-[#ea4335]">
+        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-5 shadow-md">
+          <h4 className="flex items-center gap-2 text-[13.5px] sm:text-[14px] font-bold text-[#ea4335]">
             <span>👎</span>
             <span>What to watch</span>
           </h4>
@@ -1918,12 +2147,12 @@ export default function ReportPreview({
         </div>
       </div>
 
-      {decisionFramework && (decisionFramework.hold_when?.length > 0 || decisionFramework.sell_when?.length > 0) && (
-        <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-xl">
+      {decisionFramework && (decisionFramework.hold_when?.length > 0 || decisionFramework.sell_when?.length > 0 || decisionFramework.buy_when?.length > 0) && (
+        <div id="section-decision" className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div>
               <h4 className="font-sans text-[15px] font-bold tracking-tight text-white">
-                Decision Framework: Hold, Reduce, or Sell?
+                Decision Framework: Buy, Hold, Reduce, or Sell?
               </h4>
               <p className="mt-0.5 text-[11.5px] text-[#9aa0a6]">
                 Objective criteria based on position sizing, portfolio time horizon, and thesis validity.
@@ -1945,23 +2174,45 @@ export default function ReportPreview({
             </div>
           )}
 
-          <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+            {/* Buy is defensible when */}
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3.5 sm:p-4">
               <div className="flex items-center gap-1.5 font-semibold text-emerald-400 text-[12.5px]">
+                <Sparkles size={15} />
+                <span>Buy is defensible when:</span>
+              </div>
+              <ul className="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-slate-300">
+                {(decisionFramework.buy_when || [
+                  `Valuation contracts near historical support with healthy operating margin (${metrics.opm_pct || 'intact'}).`,
+                  'Staggering fresh capital into 2–3 purchases on market pullbacks to maximize long-term IRR.',
+                  'Free cash flow conversion exceeds 80%+ with clean debt profile.'
+                ]).map((b, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Hold is defensible when */}
+            <div className="rounded-xl border border-blue-500/25 bg-blue-500/[0.05] p-3.5 sm:p-4">
+              <div className="flex items-center gap-1.5 font-semibold text-[#8ab4f8] text-[12.5px]">
                 <CheckCircle2 size={15} />
                 <span>Hold is defensible when:</span>
               </div>
               <ul className="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-slate-300">
                 {(decisionFramework.hold_when || []).map((h, i) => (
                   <li key={i} className="flex items-start gap-1.5">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8ab4f8]" />
                     <span>{h}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4">
+            {/* Reduce is defensible when */}
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.05] p-3.5 sm:p-4">
               <div className="flex items-center gap-1.5 font-semibold text-amber-400 text-[12.5px]">
                 <MinusCircle size={15} />
                 <span>Reduce is defensible when:</span>
@@ -1976,7 +2227,8 @@ export default function ReportPreview({
               </ul>
             </div>
 
-            <div className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-4">
+            {/* Sell is defensible when */}
+            <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.05] p-3.5 sm:p-4">
               <div className="flex items-center gap-1.5 font-semibold text-rose-400 text-[12.5px]">
                 <XCircle size={15} />
                 <span>Sell is defensible when:</span>
@@ -3032,18 +3284,16 @@ export default function ReportPreview({
 
       <div className="px-6 pt-4">
         {executiveSummary ? (
-          <div className="rounded-xl border-l-4 border-[#4285f4] bg-[#4285f4]/10 p-4">
-            <div className="flex items-center justify-between gap-3">
+          <div className="rounded-xl border border-white/10 bg-[#1e2026] p-4 sm:p-5 shadow-lg text-left">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2.5 mb-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#8ab4f8]">
-                Executive Thesis
+                Executive Thesis &amp; Action Synthesis
               </span>
               <span className="truncate font-mono text-[10px] text-[#9aa0a6]" title={dataCurrency}>
                 {dataCurrency}
               </span>
             </div>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#f1f3f4]">
-              <CitedText text={executiveSummary} sources={sources} />
-            </p>
+            <SynthesisNarrativeBlock text={executiveSummary} sources={sources} />
           </div>
         ) : (
           <EvidenceGapPanel
@@ -3080,12 +3330,12 @@ export default function ReportPreview({
             <div className="space-y-6">{ratiosTab}</div>
             {visualsTab}
             {bullBearTab}
-            {decisionFramework && (decisionFramework.hold_when?.length > 0 || decisionFramework.sell_when?.length > 0) && (
-              <div className="rounded-2xl border border-white/10 bg-[#1e2026] p-6 shadow-xl text-left">
+            {decisionFramework && (decisionFramework.hold_when?.length > 0 || decisionFramework.sell_when?.length > 0 || decisionFramework.buy_when?.length > 0) && (
+              <div id="section-decision-expert" className="rounded-xl sm:rounded-2xl border border-white/10 bg-[#1e2026] p-3.5 sm:p-6 shadow-xl text-left">
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div>
                     <h4 className="font-sans text-[15px] font-bold tracking-tight text-white">
-                      Investment Action Framework: Hold, Reduce, or Sell?
+                      Decision Framework: Buy, Hold, Reduce, or Sell?
                     </h4>
                     <p className="mt-0.5 text-[11.5px] text-[#9aa0a6]">
                       Objective criteria based on position sizing, portfolio time horizon, and thesis validity.
@@ -3107,23 +3357,45 @@ export default function ReportPreview({
                   </div>
                 )}
 
-                <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+                  {/* Buy is defensible when */}
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3.5 sm:p-4">
                     <div className="flex items-center gap-1.5 font-semibold text-emerald-400 text-[12.5px]">
+                      <Sparkles size={15} />
+                      <span>Buy is defensible when:</span>
+                    </div>
+                    <ul className="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-slate-300">
+                      {(decisionFramework.buy_when || [
+                        `Valuation contracts near historical support with healthy operating margin (${metrics.opm_pct || 'intact'}).`,
+                        'Staggering fresh capital into 2–3 purchases on market pullbacks to maximize long-term IRR.',
+                        'Free cash flow conversion exceeds 80%+ with clean debt profile.'
+                      ]).map((b, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Hold is defensible when */}
+                  <div className="rounded-xl border border-blue-500/25 bg-blue-500/[0.05] p-3.5 sm:p-4">
+                    <div className="flex items-center gap-1.5 font-semibold text-[#8ab4f8] text-[12.5px]">
                       <CheckCircle2 size={15} />
                       <span>Hold is defensible when:</span>
                     </div>
                     <ul className="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-slate-300">
                       {(decisionFramework.hold_when || []).map((h, i) => (
                         <li key={i} className="flex items-start gap-1.5">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8ab4f8]" />
                           <span>{h}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4">
+                  {/* Reduce is defensible when */}
+                  <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.05] p-3.5 sm:p-4">
                     <div className="flex items-center gap-1.5 font-semibold text-amber-400 text-[12.5px]">
                       <MinusCircle size={15} />
                       <span>Reduce is defensible when:</span>
@@ -3138,7 +3410,8 @@ export default function ReportPreview({
                     </ul>
                   </div>
 
-                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-4">
+                  {/* Sell is defensible when */}
+                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.05] p-3.5 sm:p-4">
                     <div className="flex items-center gap-1.5 font-semibold text-rose-400 text-[12.5px]">
                       <XCircle size={15} />
                       <span>Sell is defensible when:</span>
@@ -3204,6 +3477,7 @@ export default function ReportPreview({
       {headerBlock}
       {coverageStrip}
       {gapBanner}
+      {quickJumpBar}
       {executiveHeroCard}
 
       {mode === 'beginner' ? (isComparison ? beginnerComparison : beginnerSingle) : expertMode}

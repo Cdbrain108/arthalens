@@ -119,6 +119,29 @@ function synthesizeReportAnswer(q, reportData, companyName, ticker, user) {
       : ''
 
     if (ad) {
+      const isSellIntent = /\b(should\s*i\s*sell|when\s*(to|should\s*i)\s*sell|can\s*i\s*sell|sell\s*(it|this|that|shares?|stock)?|exit\s*(now|position|this)?|book\s*profit|profit\s*booking|trim|liquidat|dump|cut\s*losses?)\b/i.test(qLower) && !/\b(buy|accumulat|invest|fresh)\b/i.test(qLower)
+      const isBuyIntent = /\b(should\s*i\s*buy|can\s*i\s*buy|buy\s*(it|this|that|shares?|stock)?|invest\s*in|entry\s*point|good\s*time\s*to\s*buy|which\s*(company|stock|one)\s*(to\s*buy|is\s*best|gives?\s*max|performing\s*well)|maximum\s*profit|max\s*profit|cheap|low\s*price|dip)\b/i.test(qLower) && !isSellIntent
+
+      if (isSellIntent) {
+        let resp = `### 🚨 Sell Evaluation & Profit-Taking Discipline: ${ad.headline}\n\n`
+        resp += `Here is your direct guidance on selling, trimming, and risk protection for **${targetName}**:\n\n`
+        resp += `* **🎯 Portfolio Sizing & Trimming Rule:** ${ad.existing_holders || 'If position exceeds 15–20% of your total equity assets, trim 25–35% into recent strength to reduce single-stock exposure.'}\n`
+        resp += `* **🚨 Hard Exit Triggers (When to Sell Immediately):**\n  * ${ad.sell_triggers}\n`
+        resp += `* **⏳ Long-Term Thesis Safeguard:** ${ad.long_term_directive}`
+        resp += metricsBlock
+        resp += `\n\n**🛡️ Capital Protection:** Set a disciplined trailing stop (10–12% below recent peak) to protect accumulated capital against market-wide downturns.\n`
+        return resp
+      } else if (isBuyIntent) {
+        let resp = `### 🚀 Capital Allocation & Buy Evaluation: ${ad.headline}\n\n`
+        resp += `Here is your direct analysis for deploying fresh capital into **${targetName}** for maximum future profit:\n\n`
+        resp += `* **🎯 Buy Directives & Strategy:** ${ad.fresh_buyers}\n`
+        resp += `* **📈 Compounding Runway & Horizon:** ${ad.long_term_directive}\n`
+        resp += `* **⏱️ Short-Term Execution:** ${ad.short_term_directive}`
+        resp += metricsBlock
+        resp += `\n\n**🛡️ Entry Safeguards:** ${ad.sell_triggers}\n`
+        return resp
+      }
+
       let resp = `### 🎯 Action Recommendation: ${ad.headline}\n\n`
       resp += `Here is a plain-English, professional breakdown of what you should do with **${targetName}** based on our audited report:\n\n`
       resp += `* **If You Currently Hold Shares:** ${ad.existing_holders}\n`
@@ -403,6 +426,20 @@ export default function ArthaCopilot({
       // If backend QA did not find specific text or question asks about metrics/bull/bear/findings:
       if (!answerText) {
         answerText = synthesizeReportAnswer(q, reportData, companyName, ticker, user)
+      }
+
+      if (answerText === 'USE_BACKEND_CHAT') {
+        try {
+          const priorHistory = messages.slice(-6).map((m) => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.text,
+          }))
+          const chatRes = await api.copilotChat(q, priorHistory, jobId)
+          answerText = chatRes.answer || ''
+          sources = chatRes.sources || []
+        } catch (_) {
+          answerText = `### 💡 Copilot Financial Intelligence\n\nI am currently operating with local report evidence for **${companyName}**. Please run an audit on a specific ticker or ask about metrics in this report.`
+        }
       }
 
       setMessages((prev) => [

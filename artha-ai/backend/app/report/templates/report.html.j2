@@ -6,7 +6,7 @@
 <style>
   @page {
     size: A4 portrait;
-    margin: 8.5mm 10mm 10mm 10mm;
+    margin: 6mm 8mm 6.5mm 8mm;
     @top-center { content: none; }
     @bottom-center { content: none; }
   }
@@ -940,15 +940,15 @@
       <div style="display: flex; gap: 5px; margin-bottom: 2px;">
         <div style="flex: 1; background: #f0fdf4; border: 1px solid #86efac; border-radius: 2px; padding: 2.5px 5px;">
           <strong style="color: #166534; font-size: 5.8pt; text-transform: uppercase;">Existing Shareholders:</strong>
-          <div style="color: #334155; font-size: 6.2pt;">{{ ad.existing_holders }}</div>
+          <div style="color: #334155; font-size: 6.2pt;">{{ ad.existing_holders | bold_directive }}</div>
         </div>
         <div style="flex: 1; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 2px; padding: 2.5px 5px;">
           <strong style="color: #1e40af; font-size: 5.8pt; text-transform: uppercase;">Fresh Capital Deployment:</strong>
-          <div style="color: #334155; font-size: 6.2pt;">{{ ad.fresh_buyers }}</div>
+          <div style="color: #334155; font-size: 6.2pt;">{{ ad.fresh_buyers | bold_directive }}</div>
         </div>
       </div>
       <div class="actionable-directive-banner">
-        <strong>Horizon &amp; Exit Trigger:</strong> {{ ad.long_term_directive }} | <strong>When to Sell:</strong> {{ ad.sell_triggers }}
+        <strong>Horizon &amp; Exit Trigger:</strong> {{ ad.long_term_directive | bold_directive }} | <strong>When to Sell:</strong> {{ ad.sell_triggers | bold_directive }}
       </div>
     </div>
   {% elif dp.headline %}
@@ -1104,9 +1104,7 @@
   <span class="sec-sub-tag">• Multi-Agent Consensus</span>
 </div>
 <div class="synthesis-box">
-  {% for para in report.executive_summary.split('\n\n') %}
-    <p>{{ para }}</p>
-  {% endfor %}
+  {{ report.executive_summary | bold_headings }}
   <div style="margin-top: 3px; padding-top: 2.5px; border-top: 1px dashed #cbd5e1; font-size: 5.6pt; color: #475569; display: flex; flex-wrap: wrap; gap: 3px 8px;">
     {% for n in report.agent_notes if n.agent in ['workforce', 'management', 'news', 'growth'] and n.findings %}
       {% set badge_color = '#0284c7' if n.agent == 'workforce' else ('#334155' if n.agent == 'management' else ('#d97706' if n.agent == 'news' else '#16a34a')) %}
