@@ -18,6 +18,8 @@ import threading
 import time
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 
 from .config import settings, _usable_key
 
@@ -130,6 +132,32 @@ def next_gemini_key() -> str:
     if not keys:
         raise RuntimeError("gemini provider selected but no usable key is set")
     return keys[_next_rr_index("gemini") % len(keys)]
+
+
+def cloudflare_urls() -> list[str]:
+    """Usable Cloudflare Workers AI gateway endpoints."""
+    return list(settings.cloudflare_url_list)
+
+
+def next_cloudflare_url() -> str:
+    """Round-robin across Cloudflare Workers AI endpoints."""
+    urls = cloudflare_urls()
+    if not urls:
+        raise RuntimeError("cloudflare provider selected but no URL configured")
+    return urls[_next_rr_index("cloudflare") % len(urls)]
+
+
+def mistral_keys() -> list[str]:
+    """Usable Mistral AI keys."""
+    return list(settings.mistral_key_list)
+
+
+def next_mistral_key() -> str:
+    """Round-robin across Mistral keys."""
+    keys = mistral_keys()
+    if not keys:
+        raise RuntimeError("mistral provider selected but no usable key is set")
+    return keys[_next_rr_index("mistral") % len(keys)]
 
 
 # --- Gemini free-tier pacing -------------------------------------------------
@@ -275,6 +303,106 @@ def _agentrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
     )
 
 
+def _mistral_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(
+        model=model or settings.mistral_model,
+        api_key=next_mistral_key(),
+        base_url=settings.mistral_base_url,
+        temperature=temperature,
+        max_retries=1,
+        timeout=18,
+        default_headers={"X-Title": "Artha AI Copilot"},
+    )
+
+
+def _cloudflare_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(
+        model=model or settings.cloudflare_model,
+        api_key="dummy_cf_key",
+        base_url=next_cloudflare_url(),
+        temperature=temperature,
+        max_retries=1,
+        timeout=18,
+        default_headers={"X-Title": "Artha AI Copilot", "User-Agent": "Mozilla/5.0"},
+    )
+
+
+class MultiProviderFallbackChatModel(BaseChatModel):
+    """Resilient Multi-Provider Rotating Chat Model.
+
+    Prioritizes ultra-fast LPUs (Groq gpt-oss-120b). If Groq or gpt-oss-120b
+    experiences timeouts, rate-limits, or outage, this wrapper automatically
+    rotates across all verified active providers:
+      1. Groq (openai/gpt-oss-120b native reasoning)
+      2. Groq Fallback (qwen/qwen3.8-27b)
+      3. InceptionLabs (mercury-2.5 ultra-fast diffusion LLM)
+      4. Google Gemini (gemini-flash-lite-latest across 6 keys)
+      5. Mistral AI (open-mistral-nemo, if configured)
+      6. OpenRouter (google/gemma-4-31b-it:free) & VyceAI (deepseek-v4-flash)
+      7. Cloudflare Workers AI (@cf/meta/llama-3.1-8b-instruct-fast)
+      8. Nvidia NIM (nvidia/nemotron-3-super-120b-a12b)
+    """
+
+    role: str = "specialist"
+    temperature: float = 0.0
+
+    @property
+    def _llm_type(self) -> str:
+        return "multiprovider-fallback-rotator"
+
+    def get_tier_factories(self):
+        factories = []
+        # Tier 1A: Groq gpt-oss-120b
+        if groq_keys():
+            groq_m = _role_model(self.role) or settings.groq_model
+            factories.append(("Groq (gpt-oss-120b)", lambda: _groq_chat(groq_m, self.temperature)))
+            # Tier 1B: Groq fallback model qwen3.8
+            if settings.groq_model_fallback:
+                factories.append(("Groq (qwen3.8)", lambda: _groq_chat(settings.groq_model_fallback, self.temperature)))
+        # Tier 2: InceptionLabs mercury-2.5
+        if inception_keys():
+            factories.append(("InceptionLabs (mercury-2.5)", lambda: _inception_chat(model=settings.inception_model, temperature=self.temperature)))
+        # Tier 3: Google Gemini
+        if gemini_keys():
+            gem_m = _role_model(self.role) or settings.gemini_model
+            factories.append(("Google Gemini", lambda: _gemini_chat(gem_m, self.temperature)))
+        # Tier 4: Mistral AI (if keys set)
+        if mistral_keys():
+            factories.append(("Mistral AI", lambda: _mistral_chat(model=settings.mistral_model, temperature=self.temperature)))
+        # Tier 5: OpenRouter & VyceAI
+        if openrouter_keys():
+            factories.append(("OpenRouter", lambda: _openrouter_chat(settings.openrouter_model, self.temperature)))
+        if _usable_key(settings.vyce_api_key):
+            factories.append(("VyceAI", lambda: _vyce_chat(model=settings.vyce_model, temperature=self.temperature)))
+        # Tier 6: Cloudflare Workers Fleet
+        if cloudflare_urls():
+            factories.append(("Cloudflare Workers AI", lambda: _cloudflare_chat(model=settings.cloudflare_model, temperature=self.temperature)))
+        # Tier 7: Nvidia NIM
+        if nvidia_keys():
+            factories.append(("Nvidia NIM", lambda: _nvidia_chat(model=settings.nvidia_model, temperature=self.temperature)))
+        return factories
+
+    def _generate(self, messages: list[BaseMessage], stop: list[str] | None = None, run_manager=None, **kwargs) -> ChatResult:
+        factories = self.get_tier_factories()
+        if not factories:
+            raise RuntimeError("No LLM providers configured in MultiProviderFallbackChatModel")
+        last_exc = None
+        for name, factory in factories:
+            try:
+                model = factory()
+                return model._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+            except Exception as exc:
+                last_exc = exc
+                logger.warning("Tier %s encountered issue: %s. Automatically rotating to next provider...", name, exc)
+                continue
+        raise RuntimeError(f"All configured fallback tiers exhausted. Last error: {last_exc}")
+
+    def with_structured_output(self, schema, **kwargs):
+        return _RobustStructured(role=self.role, schema=schema)
+
+
 def get_llm(role: str = "specialist", temperature: float = 0.0) -> BaseChatModel:
     provider = settings.effective_provider
     model = _role_model(role)
@@ -283,24 +411,7 @@ def get_llm(role: str = "specialist", temperature: float = 0.0) -> BaseChatModel
             "Mock mode: no LLM configured. Callers must branch on "
             "llm.is_mock() and use app.llm_mock helpers instead.")
     if provider in ("groq", "sota"):
-        # Prioritize ultra-fast Groq LPU with reasoning (~0.8s)
-        if groq_keys():
-            groq_m = model or settings.groq_model
-            return _groq_chat(groq_m, temperature)
-    if provider == "sota":
-        if settings.inception_key_list:
-            return _inception_chat(model or settings.inception_model, temperature)
-        if _usable_key(settings.vyce_api_key):
-            return _vyce_chat(model or settings.vyce_model, temperature)
-        if gemini_keys():
-            return _gemini_chat(model or settings.gemini_model, temperature)
-        if openrouter_keys():
-            return _openrouter_chat(model or settings.openrouter_model, temperature)
-        if settings.nvidia_key_list:
-            return _nvidia_chat(model or settings.nvidia_model, temperature)
-        return _inception_chat(model or settings.inception_model, temperature)
-    if provider == "groq":
-        return _groq_chat(model or settings.groq_model, temperature)
+        return MultiProviderFallbackChatModel(role=role, temperature=temperature)
     if provider == "vyce":
         return _vyce_chat(model or settings.vyce_model, temperature)
     if provider == "nvidia":
@@ -309,6 +420,10 @@ def get_llm(role: str = "specialist", temperature: float = 0.0) -> BaseChatModel
         return _inception_chat(model or settings.inception_model, temperature)
     if provider == "gemini":
         return _gemini_chat(model or settings.gemini_model, temperature)
+    if provider == "mistral":
+        return _mistral_chat(model or settings.mistral_model, temperature)
+    if provider == "cloudflare":
+        return _cloudflare_chat(model or settings.cloudflare_model, temperature)
     if provider == "openrouter":
         return _openrouter_chat(model or settings.openrouter_model, temperature)
     if provider == "agentrouter":
@@ -320,28 +435,21 @@ def get_llm(role: str = "specialist", temperature: float = 0.0) -> BaseChatModel
             base_url=settings.ollama_base_url,
             temperature=temperature,
         )
-    raise ValueError(f"Unknown model provider: {settings.model_provider}")
+    return MultiProviderFallbackChatModel(role=role, temperature=temperature)
 
 
 _TIER_ROTATOR = itertools.count()
 
 
 class _RobustStructured:
-    """Structured invoke that survives provider flakiness.
-
-    In SOTA mode, attempts cycle across the best available high-speed tiers:
-    Attempt 1: Groq (openai/gpt-oss-120b & qwen3.8-27b on LPUs, ~0.8s)
-    Attempt 2: InceptionLabs (mercury-2.5 ultra-fast diffusion LLM, ~2s)
-    Attempt 3: VyceAI (deepseek-v4-flash)
-    Attempt 4: OpenRouter / Gemini
-    """
+    """Structured invoke that survives provider flakiness with automated multi-tier rotation."""
 
     _RETRY_AFTER = re.compile(r"retry in ([0-9.]+)\s*s", re.I)
 
-    def __init__(self, role: str, schema, attempts: int = 2):
+    def __init__(self, role: str, schema, attempts: int = 6):
         self._role = role
         self._schema = schema
-        self._attempts = attempts
+        self._attempts = max(attempts, 6)
 
     @classmethod
     def _backoff_seconds(cls, exc: Exception) -> float:
@@ -353,49 +461,12 @@ class _RobustStructured:
         return 0.0
 
     def _get_base_llm(self, attempt: int) -> BaseChatModel:
-        provider = settings.effective_provider
-        if provider == "groq":
-            groq_m = _role_model(self._role) or settings.groq_model
-            return _groq_chat(groq_m)
-
-        if provider == "sota":
-            tier_factories = []
-            if groq_keys():
-                tier_factories.append(lambda: _groq_chat(settings.groq_model))
-                tier_factories.append(lambda: _groq_chat(settings.groq_model))
-            if settings.inception_key_list:
-                tier_factories.append(lambda: _inception_chat())
-            if _usable_key(settings.vyce_api_key):
-                tier_factories.append(lambda: _vyce_chat())
-            if settings.nvidia_key_list:
-                tier_factories.append(lambda: _nvidia_chat())
-            if gemini_keys():
-                tier_factories.append(lambda: _gemini_chat(_role_model(self._role) or settings.gemini_model))
-            if openrouter_keys():
-                models = settings.openrouter_model_chain
-                m = models[(attempt - 1) % len(models)]
-                tier_factories.append(lambda: _openrouter_chat(m))
-
-            if not tier_factories:
-                return get_llm(self._role)
-            factory = tier_factories[(attempt - 1) % len(tier_factories)]
-            return factory()
-
-        if provider == "vyce":
-            return _vyce_chat()
-        if provider == "nvidia":
-            return _nvidia_chat()
-        if provider == "inception":
-            return _inception_chat()
-        if provider == "openrouter":
-            models = settings.openrouter_model_chain
-            model = models[(attempt - 1) % len(models)]
-            return _openrouter_chat(model)
-        if provider == "gemini":
-            return _gemini_chat(_role_model(self._role) or settings.gemini_model)
-        if provider == "agentrouter":
-            return _agentrouter_chat(settings.agentrouter_model)
-        return get_llm(self._role)
+        rotator = MultiProviderFallbackChatModel(role=self._role)
+        factories = rotator.get_tier_factories()
+        if not factories:
+            return get_llm(self._role)
+        name, factory = factories[(attempt - 1) % len(factories)]
+        return factory()
 
     def _extract_via_json_prompt(self, base_llm: BaseChatModel, prompt, config=None, **kwargs):
         import json

@@ -49,13 +49,23 @@ class Settings(BaseSettings):
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "openai/gpt-oss-120b"
     groq_model_fast: str = "openai/gpt-oss-120b"
+    groq_model_fallback: str = "qwen/qwen3.8-27b"
+
+    # --- Mistral AI ---
+    mistral_api_keys: str = ""
+    mistral_base_url: str = "https://api.mistral.ai/v1"
+    mistral_model: str = "open-mistral-nemo"
+
+    # --- Cloudflare Workers Fleet ---
+    cloudflare_workers_urls: str = "https://free-llm-api.anuj-keshari.workers.dev/v1,https://free-llm-api.stardust108.workers.dev/v1"
+    cloudflare_model: str = "@cf/meta/llama-3.1-8b-instruct-fast"
 
     gemini_api_key: str | None = None
     # Extra Gemini keys (comma-separated) round-robin with the primary for
     # free-tier rate-limit headroom.
     gemini_backup_keys: str = ""
-    gemini_model: str = "gemini-2.5-flash"
-    gemini_model_fast: str | None = "gemini-2.5-flash"  # cheap model for extraction roles
+    gemini_model: str = "gemini-flash-lite-latest"
+    gemini_model_fast: str | None = "gemini-flash-lite-latest"  # cheap model for extraction roles
     # OpenRouter: free models; keys are used round-robin so parallel
     # specialists don't exhaust one free-tier rate limit.
     openrouter_api_key: str | None = None
@@ -145,6 +155,16 @@ class Settings(BaseSettings):
         extras = [k.strip() for k in self.gemini_backup_keys.split(",") if k.strip()]
         return list(dict.fromkeys(
             k for k in [self.gemini_api_key, *extras] if _usable_key(k)))
+
+    @property
+    def mistral_key_list(self) -> list[str]:
+        """Usable Mistral keys de-duplicated in configured order."""
+        return list(dict.fromkeys(k.strip() for k in self.mistral_api_keys.split(",") if _usable_key(k.strip())))
+
+    @property
+    def cloudflare_url_list(self) -> list[str]:
+        """Usable Cloudflare Workers AI gateway endpoints."""
+        return list(dict.fromkeys(u.strip() for u in self.cloudflare_workers_urls.split(",") if u.strip()))
 
     @property
     def tavily_enabled(self) -> bool:
