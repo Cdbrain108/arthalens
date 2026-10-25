@@ -224,7 +224,7 @@ def _nvidia_chat(model: str | None = None, temperature: float = 0.0) -> BaseChat
         base_url=settings.nvidia_base_url,
         temperature=temperature,
         max_retries=1,
-        timeout=20,
+        timeout=10,
         default_headers={"X-Title": "Bullseye"},
     )
 
@@ -239,7 +239,7 @@ def _vyce_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatMo
         base_url=settings.vyce_base_url,
         temperature=temperature,
         max_retries=0,
-        timeout=22,
+        timeout=10,
         default_headers={"X-Title": "Bullseye", "User-Agent": "Claude-Desktop/1.0.0"},
     )
 
@@ -252,7 +252,7 @@ def _inception_chat(model: str | None = None, temperature: float = 0.0) -> BaseC
         base_url=settings.inception_base_url,
         temperature=temperature,
         max_retries=1,
-        timeout=35,
+        timeout=8,
         default_headers={"X-Title": "ArthaLens"},
     )
 
@@ -279,7 +279,7 @@ def _openrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
         base_url=settings.openrouter_base_url,
         temperature=temperature,
         max_retries=1,  # fast-fail; wrapper retries rotate keys AND models
-        timeout=60,
+        timeout=10,
         default_headers={"X-Title": "Bullseye"},
     )
 
@@ -294,7 +294,7 @@ def _agentrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
         base_url=settings.agentrouter_base_url,
         temperature=temperature,
         max_retries=1,
-        timeout=90,
+        timeout=40,
         # Thinking models spend tokens before answering; headroom required.
         max_tokens=6000,
         # Gateway allowlists known client UAs; default httpx UA is rejected.
@@ -311,7 +311,7 @@ def _mistral_chat(model: str | None = None, temperature: float = 0.0) -> BaseCha
         base_url=settings.mistral_base_url,
         temperature=temperature,
         max_retries=1,
-        timeout=18,
+        timeout=8,
         default_headers={"X-Title": "Artha AI Copilot"},
     )
 
@@ -324,7 +324,7 @@ def _cloudflare_chat(model: str | None = None, temperature: float = 0.0) -> Base
         base_url=next_cloudflare_url(),
         temperature=temperature,
         max_retries=1,
-        timeout=18,
+        timeout=8,
         default_headers={"X-Title": "Artha AI Copilot", "User-Agent": "Mozilla/5.0"},
     )
 
