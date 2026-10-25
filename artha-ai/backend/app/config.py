@@ -123,6 +123,10 @@ class Settings(BaseSettings):
     def edgar_user_agent(self) -> str:
         return f"Bullseye {self.edgar_contact_email}"
 
+    @property
+    def BASE_DIR(self) -> str:
+        return str(BASE_DIR)
+
     @model_validator(mode="after")
     def _anchor_relative_paths(self):
         # Env-supplied relative paths (.env.example documents them as
