@@ -61,21 +61,26 @@ TICKER_ALIASES = {
 }
 
 
-def _suffix(ticker: str, exchange: str) -> str:
+def _suffix(ticker: str, exchange: str | None = None) -> str:
     # Index/benchmark symbols (^NSEI, ^GSPC) and pre-suffixed tickers pass through.
-    # Models often prefix tickers with $ ($TCS, $NIFTY) — strip that first.
     from .base import clean_str
+    from ..llm_mock import KNOWN_COMPANIES
     raw = (clean_str(ticker, "") or "").lstrip("$").strip().upper()
     base = raw.replace(".NS", "").replace(".BO", "")
     if base in TICKER_ALIASES:
         base = TICKER_ALIASES[base]
-    if exchange == "":
-        pass
-    else:
-        exchange = clean_str(exchange, "NSE") or "NSE"
-    if not base or "." in base or base.startswith("^") or not exchange:
+    exchange = clean_str(exchange, "")
+    if not exchange:
+        meta = KNOWN_COMPANIES.get(base) or KNOWN_COMPANIES.get(raw)
+        if meta and meta.get("exchange"):
+            exchange = meta["exchange"]
+        else:
+            exchange = "NSE"
+    if not base or "." in base or base.startswith("^"):
         return base
     ex = exchange.upper()
+    if ex in ("NASDAQ", "NYSE", "AMEX", "US", "USA"):
+        return base
     return base + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
 
 
@@ -102,6 +107,34 @@ def _get_quote(ticker: str, exchange: str = "NSE") -> dict:
                     price = float(hist["Close"].iloc[-1])
                     as_of = str(hist.index[-1].date())
                     quote_type = 'historical daily close'
+            except Exception:
+                pass
+        # Fallback: if suffixed symbol failed on Indian exchange, try bare symbol (US listing)
+        if price is None and symbol.endswith((".NS", ".BO")):
+            try:
+                alt_symbol = ticker.split(".")[0].strip().upper()
+                alt_t = yf.Ticker(alt_symbol)
+                alt_fi = alt_t.fast_info
+                alt_price = alt_fi.get("lastPrice") if hasattr(alt_fi, "get") else getattr(alt_fi, "last_price", None)
+                if alt_price is not None:
+                    price = alt_price
+                    symbol = alt_symbol
+                    curr = alt_fi.get("currency") if hasattr(alt_fi, "get") else "USD"
+                    quote_type = 'provider quote'
+            except Exception:
+                pass
+        # Fallback: if bare symbol failed, try with .NS
+        if price is None and not symbol.endswith((".NS", ".BO")) and "." not in symbol:
+            try:
+                alt_symbol = symbol + ".NS"
+                alt_t = yf.Ticker(alt_symbol)
+                alt_fi = alt_t.fast_info
+                alt_price = alt_fi.get("lastPrice") if hasattr(alt_fi, "get") else getattr(alt_fi, "last_price", None)
+                if alt_price is not None:
+                    price = alt_price
+                    symbol = alt_symbol
+                    curr = alt_fi.get("currency") if hasattr(alt_fi, "get") else "INR"
+                    quote_type = 'provider quote'
             except Exception:
                 pass
         if price is None:

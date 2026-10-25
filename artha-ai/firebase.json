@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "arthalens",
     "public": "frontend/dist",
     "ignore": [
       "firebase.json",

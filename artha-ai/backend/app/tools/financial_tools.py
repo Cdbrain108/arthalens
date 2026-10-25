@@ -139,18 +139,27 @@ TICKER_ALIASES = {
 }
 
 
-def _resolve_symbol(ticker: str, exchange: str) -> str:
+def _resolve_symbol(ticker: str, exchange: str | None = None) -> str:
     """Append the yfinance exchange suffix (Indian listings need .NS/.BO;
-    US tickers like AAPL are used bare). Also resolve known restructured/NSE aliases."""
+    US tickers like AAPL/NVDA are used bare). Also resolve known restructured/NSE aliases."""
     from .base import clean_str
+    from ..llm_mock import KNOWN_COMPANIES
     raw = (clean_str(ticker, "") or "").lstrip("$").strip().upper()
     base = raw.replace(".NS", "").replace(".BO", "")
     if base in TICKER_ALIASES:
         base = TICKER_ALIASES[base]
-    exchange = clean_str(exchange, "NSE") or "NSE"
-    if "." in base or base.startswith("^") or not exchange:
+    exchange = clean_str(exchange, "")
+    if not exchange:
+        meta = KNOWN_COMPANIES.get(base) or KNOWN_COMPANIES.get(raw)
+        if meta and meta.get("exchange"):
+            exchange = meta["exchange"]
+        else:
+            exchange = "NSE"
+    if not base or "." in base or base.startswith("^"):
         return base
     ex = exchange.upper()
+    if ex in ("NASDAQ", "NYSE", "AMEX", "US", "USA"):
+        return base
     return base + (".NS" if ex == "NSE" else ".BO" if ex == "BSE" else "")
 
 
@@ -181,9 +190,17 @@ def _get_financials(ticker: str, statement: str = "income", period: str = "annua
             "cashflow": ("quarterly_cashflow" if period == "quarterly" else "cashflow"),
         }
         stmt = getattr(t, fields[statement], None)
-        if stmt is None or getattr(stmt, "empty", True) or len(getattr(stmt, "columns", [])) == 0:
-            # Do not substitute a different listing/currency after a failure.
-            pass
+        # Alternate fallback: if initial symbol returned no statements, test alternate exchange
+        if (stmt is None or getattr(stmt, "empty", True) or len(getattr(stmt, "columns", [])) == 0):
+            alt_symbol = (ticker.split(".")[0].strip().upper() if symbol.endswith((".NS", ".BO"))
+                          else (symbol + ".NS" if "." not in symbol else None))
+            if alt_symbol:
+                alt_t = yf.Ticker(alt_symbol)
+                alt_stmt = getattr(alt_t, fields[statement], None)
+                if alt_stmt is not None and not getattr(alt_stmt, "empty", True) and len(getattr(alt_stmt, "columns", [])) > 0:
+                    stmt = alt_stmt
+                    t = alt_t
+                    symbol = alt_symbol
         if stmt is None or getattr(stmt, "empty", True) or len(getattr(stmt, "columns", [])) == 0:
             return {"ok": False, "error": "statement unavailable (empty provider response)",
                     "data": {"ticker": ticker, "statement": statement, "line_items": {}},
@@ -210,12 +227,22 @@ def _get_company_metrics(ticker: str, exchange: str = "NSE") -> dict:
     try:
         import yfinance as yf
         symbol = _resolve_symbol(ticker, exchange)
+        info = {}
         try:
             info = yf.Ticker(symbol).info or {}
-        except Exception as exc:
-            return {"ok": False, "error": f"info unavailable: {exc}",
-                    "data": {"ticker": ticker},
-                    "source": _source(f"yfinance info {ticker}")}
+        except Exception:
+            pass
+        if not info.get("longName") and not info.get("shortName"):
+            alt_symbol = (ticker.split(".")[0].strip().upper() if symbol.endswith((".NS", ".BO"))
+                          else (symbol + ".NS" if "." not in symbol else None))
+            if alt_symbol:
+                try:
+                    alt_info = yf.Ticker(alt_symbol).info or {}
+                    if alt_info.get("longName") or alt_info.get("shortName"):
+                        info = alt_info
+                        symbol = alt_symbol
+                except Exception:
+                    pass
         if not info.get("longName") and not info.get("shortName"):
             return {"ok": False, "error": "metrics unavailable (provider returned no company)",
                     "data": {"ticker": ticker},

@@ -17,6 +17,19 @@ def finite(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
+def _resolve_ent_exchange(ent: dict) -> str | None:
+    ex = ent.get('exchange')
+    if ex and str(ex).strip() and str(ex).strip().lower() != 'none':
+        return str(ex).strip()
+    from ..llm_mock import KNOWN_COMPANIES
+    t = (ent.get('ticker') or '').strip().upper()
+    n = (ent.get('name') or '').strip().upper()
+    meta = KNOWN_COMPANIES.get(t) or KNOWN_COMPANIES.get(n)
+    if meta and meta.get('exchange'):
+        return meta['exchange']
+    return None
+
+
 class Collector:
     def __init__(self, name, state):
         self.name, self.state = name, state
@@ -94,7 +107,7 @@ class Collector:
                      period=period, basis=basis, sentiment=sentiment or "neutral", **kwargs)
 
     def financial(self, ent):
-        ticker, exchange = ent['ticker'], ent.get('exchange') or 'NSE'
+        ticker, exchange = ent['ticker'], _resolve_ent_exchange(ent)
         args = dict(ticker=ticker, exchange=exchange)
         metrics = self.call(ft.get_company_metrics, **args)
         md = metrics.get('data') or {}
@@ -151,7 +164,7 @@ class Collector:
                                 formula=gd.get('formula'), inputs=gd.get('inputs'))
 
     def valuation(self, ent):
-        ticker, exchange = ent['ticker'], ent.get('exchange') or 'NSE'
+        ticker, exchange = ent['ticker'], _resolve_ent_exchange(ent)
         args = dict(ticker=ticker, exchange=exchange)
         metrics, quote = self.call(ft.get_company_metrics, **args), self.call(mt.get_quote, **args)
         md, qd = metrics.get('data') or {}, quote.get('data') or {}
@@ -176,7 +189,7 @@ class Collector:
         history = self.call(ft.get_historical_multiples, **args, period='1y')
 
     def market(self, ent):
-        ticker, exchange = ent['ticker'], ent.get('exchange') or 'NSE'
+        ticker, exchange = ent['ticker'], _resolve_ent_exchange(ent)
         args = dict(ticker=ticker, exchange=exchange)
         quote = self.call(mt.get_quote, **args)
         qd = quote.get('data') or {}
