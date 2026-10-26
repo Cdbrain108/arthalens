@@ -276,4 +276,21 @@ test('getCopilotResponse and getFollowupSuggestions handle organizations dynamic
   assert.ok(!zohoWithTcsLoaded.includes('Tata Consultancy Services'), 'Must not answer with TCS when asking about Zoho')
 })
 
+test('natural conversational queries route to backend LLM chat and action triggers dispatch research', () => {
+  // Conversational questions route to backend chat with live web search
+  const f16Query = 'Buddy does F-16 jet company is listed in Stock Market?'
+  assert.strictEqual(detectQueryType(f16Query), 'conversational')
+  assert.strictEqual(getCopilotResponse(f16Query), 'USE_BACKEND_CHAT')
+
+  const spacexQuery = 'Does SpaceX have a stock or is it private?'
+  assert.strictEqual(detectQueryType(spacexQuery), 'conversational')
+  assert.strictEqual(getCopilotResponse(spacexQuery), 'USE_BACKEND_CHAT')
+
+  // Action buttons and research triggers dispatch full multi-agent research
+  assert.strictEqual(detectQueryType('Analyze LMT fundamentals'), 'stock')
+  assert.strictEqual(detectQueryType('🚀 Yes, create full research report for LMT'), 'stock')
+  assert.strictEqual(detectQueryType('🚀 Create research report on Sarvam'), 'stock')
+  assert.strictEqual(detectQueryType('Compare All: LMT vs HAL'), 'stock')
+})
+
 

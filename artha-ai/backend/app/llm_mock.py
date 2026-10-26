@@ -75,6 +75,22 @@ KNOWN_COMPANIES = {
     "ZOMATO": {"ticker": "ZOMATO", "exchange": "NSE"},
     "BAJAJ FINANCE": {"ticker": "BAJFINANCE", "exchange": "NSE"},
     "BAJFINANCE": {"ticker": "BAJFINANCE", "exchange": "NSE"},
+    "LOCKHEED": {"ticker": "LMT", "exchange": "NYSE"},
+    "LOCKHEED MARTIN": {"ticker": "LMT", "exchange": "NYSE"},
+    "LMT": {"ticker": "LMT", "exchange": "NYSE"},
+    "BOEING": {"ticker": "BA", "exchange": "NYSE"},
+    "BA": {"ticker": "BA", "exchange": "NYSE"},
+    "NORTHROP": {"ticker": "NOC", "exchange": "NYSE"},
+    "NORTHROP GRUMMAN": {"ticker": "NOC", "exchange": "NYSE"},
+    "NOC": {"ticker": "NOC", "exchange": "NYSE"},
+    "GENERAL DYNAMICS": {"ticker": "GD", "exchange": "NYSE"},
+    "GD": {"ticker": "GD", "exchange": "NYSE"},
+    "HAL": {"ticker": "HAL", "exchange": "NSE"},
+    "HINDUSTAN AERONAUTICS": {"ticker": "HAL", "exchange": "NSE"},
+    "BEL": {"ticker": "BEL", "exchange": "NSE"},
+    "BHARAT ELECTRONICS": {"ticker": "BEL", "exchange": "NSE"},
+    "PALANTIR": {"ticker": "PLTR", "exchange": "NYSE"},
+    "PLTR": {"ticker": "PLTR", "exchange": "NYSE"},
 }
 INTENT_RULES = [
     (r"\b(compare|comparison|vs|versus|difference\s+b(?:etween|tw)|which\s+(?:is\s+)?better)\b", "compare"),
@@ -109,6 +125,25 @@ def mock_analyze(query: str) -> dict:
             entities.append({"name": ticker, "ticker": ticker,
                              "exchange": "NSE" if suffix == "NS" else "BSE", "confidence": "medium"})
             seen.add(ticker)
+    # Dynamic standalone ticker extraction for unknown uppercase symbols in original query (e.g. RTX, DE, NOC)
+    _EXCLUDED_CAPS = {
+        "THE", "AND", "FOR", "BUY", "SELL", "HOLD", "YES", "NOT", "CAN", "WHAT",
+        "WHY", "HOW", "WHO", "ARE", "ALL", "NEW", "TOP", "NSE", "BSE", "NYSE",
+        "NASDAQ", "USD", "INR", "REPORT", "AUDIT", "FULL", "AI", "ANALYZE", "VS"
+    }
+    for word in re.findall(r"\b([A-Z]{2,6})\b", query):
+        w_up = word.upper()
+        if w_up not in seen and w_up not in _EXCLUDED_CAPS:
+            from .tools.base import resolve_ticker_info
+            t_info = resolve_ticker_info(w_up)
+            if t_info.get("ticker"):
+                entities.append({
+                    "name": t_info.get("name") or w_up,
+                    "ticker": t_info["ticker"],
+                    "exchange": t_info.get("exchange") or "NYSE",
+                    "confidence": "high"
+                })
+                seen.add(t_info["ticker"])
     if not entities:
         # Check strategic archetype queries where user asks about concepts/strategies rather than naming a ticker
         if any(k in lower for k in ["dividend", "growth investing", "sip vs lumpsum", "passive income"]):

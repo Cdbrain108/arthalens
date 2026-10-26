@@ -24,10 +24,18 @@ export const KNOWN_STOCK_ENTITIES = [
   'aapl', 'apple', 'msft', 'microsoft', 'nvda', 'nvidia', 'tsla', 'tesla',
   'amzn', 'amazon', 'goog', 'googl', 'google', 'alphabet', 'meta', 'meta platforms',
   'amd', 'intel', 'intc', 'netflix', 'nflx', 'jpm', 'jpmorgan', 'berkshire',
-  'palantir', 'pltr', 'coinbase', 'coin', 'uber'
+  'palantir', 'pltr', 'coinbase', 'coin', 'uber',
+  // Global Aerospace & Defense
+  'lmt', 'lockheed', 'lockheed martin', 'ba', 'boeing', 'noc', 'northrop',
+  'northrop grumman', 'gd', 'general dynamics', 'rtx', 'raytheon'
 ]
 
 export const STOCK_PRICE_DIRECTORY = {
+  lmt: { name: 'Lockheed Martin Corporation', ticker: 'LMT', price: '$462.50', range52w: '$410.00 – $614.00', pe: '17.8x', trend: '+1.2% (Global defense backlog growth)', exchange: 'NYSE' },
+  'lockheed martin': { name: 'Lockheed Martin Corporation', ticker: 'LMT', price: '$462.50', range52w: '$410.00 – $614.00', pe: '17.8x', trend: '+1.2% (Global defense backlog growth)', exchange: 'NYSE' },
+  lockheed: { name: 'Lockheed Martin Corporation', ticker: 'LMT', price: '$462.50', range52w: '$410.00 – $614.00', pe: '17.8x', trend: '+1.2% (Global defense backlog growth)', exchange: 'NYSE' },
+  boeing: { name: 'The Boeing Company', ticker: 'BA', price: '$152.30', range52w: '$136.00 – $243.00', pe: 'Turnaround', trend: '+0.5% (Commercial delivery recovery)', exchange: 'NYSE' },
+  ba: { name: 'The Boeing Company', ticker: 'BA', price: '$152.30', range52w: '$136.00 – $243.00', pe: 'Turnaround', trend: '+0.5% (Commercial delivery recovery)', exchange: 'NYSE' },
   tcs: { name: 'Tata Consultancy Services', ticker: 'TCS', price: '₹3,850.50', range52w: '₹3,400.00 – ₹4,592.25', pe: '26.2x', trend: '-5.2% (Consolidating near support)', exchange: 'NSE / BSE' },
   'tata consultancy services': { name: 'Tata Consultancy Services', ticker: 'TCS', price: '₹3,850.50', range52w: '₹3,400.00 – ₹4,592.25', pe: '26.2x', trend: '-5.2% (Consolidating near support)', exchange: 'NSE / BSE' },
   infosys: { name: 'Infosys Limited', ticker: 'INFY', price: '₹1,745.20', range52w: '₹1,358.30 – ₹1,975.00', pe: '23.4x', trend: '-7.4% (Value accumulation band)', exchange: 'NSE / BSE / NYSE' },
@@ -352,11 +360,26 @@ export function detectQueryType(query = '') {
     return 'stock'
   }
 
-  // Explicit directive to analyze / research / audit ANY company or ticker
-  const isExplicitCompanyAction = /^(?:analyze|research|audit|deep dive on|coverage on|dossier for)\s+([a-z0-9&.-]+)/i.test(s)
-  const isGenericEducationPhrase = /(?:balance sheet|cash flow|financial statement|annual report|fundamentals|ratios?|stocks?|companies|equities|market|shares?|pe|roe|ebitda|dcf|options|futures|derivatives)$/i.test(s)
-  if (isExplicitCompanyAction && !isGenericEducationPhrase && !matchesFinancialConcept && !isOutOfScopeQuery(s)) {
+  // 1-Click option button triggers to generate research reports or compare all agents:
+  if (/(?:create|generate|start|dispatch|run).*(?:research report|report|dossier|audit)/i.test(s)) {
     return 'stock'
+  }
+  if (/compare\s+all/i.test(s) || /(?:compare|versus|\bvs\b).*(?:all|agents|stocks|between)/i.test(s)) {
+    return 'stock'
+  }
+
+  // Explicit directive to analyze / research / audit ANY company or ticker
+  const explicitActionMatch = s.match(/^(?:analyze|research|audit|deep dive on|coverage on|dossier for)\s+([a-z0-9&.-]+)(?:\s+(?:fundamentals|valuation|metrics|financials|results|risks))?$/i)
+  if (explicitActionMatch) {
+    const candidate = explicitActionMatch[1].toLowerCase()
+    const genericEducationalWords = new Set([
+      'balance', 'cash', 'financial', 'statement', 'annual', 'fundamentals',
+      'ratios', 'ratio', 'stocks', 'stock', 'companies', 'equities', 'market',
+      'shares', 'pe', 'roe', 'ebitda', 'dcf', 'options', 'futures', 'derivatives'
+    ])
+    if (!genericEducationalWords.has(candidate) && !matchesFinancialConcept && !isOutOfScopeQuery(s)) {
+      return 'stock'
+    }
   }
 
   // Open-ended stock recommendation / screening / selection queries without specific ticker entities:
@@ -1280,7 +1303,7 @@ ArthaLens doesn't rely on a single generic AI. It orchestrates **11 domain-speci
 
 
 
-  // 18. Default Contextual response for general financial questions (when no report loaded)
-  const short = q.length > 90 ? q.slice(0, 90) + '…' : q
-  return `### 💡 Copilot Financial Intelligence: *"${short}"*\n\nTo evaluate this thoroughly, our multi-agent framework examines **solvency, valuation multiples (P/E, P/B, EV/EBITDA), competitive moats, and cash flow durability**.\n\nYou can:\n• **Analyze a specific company:** e.g., *"Analyze TCS fundamentals"* or *"Analyze Reliance Industries"*\n• **Compare industry peers:** e.g., *"Compare Infosys vs Wipro"*\n• **Clarify financial metrics:** e.g., *"Explain P/E ratio"*, *"What is ROE and ROCE?"*\n\nSelect a prompt below or type any ticker to begin!`
+  // 18. Any open-ended financial, company, market, or product query routes to the backend Copilot Chat LLM
+  // with live search, intelligent ChatGPT-like analysis, and actionable research triggers.
+  return 'USE_BACKEND_CHAT'
 }

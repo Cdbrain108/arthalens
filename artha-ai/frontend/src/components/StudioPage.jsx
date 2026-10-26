@@ -1048,6 +1048,18 @@ export default function StudioPage({
     if (activeQuery && !isNewResearchActive) {
       const isStock = detectQueryType(activeQuery) === 'stock'
       const copilotResp = getCopilotResponse(activeQuery, user)
+      if (!isStock && copilotResp === 'USE_BACKEND_CHAT') {
+        return [
+          { id: 'u_init', role: 'user', text: activeQuery },
+          {
+            id: 'a_init',
+            role: 'assistant',
+            text: 'Analyzing inquiry with live market intelligence...',
+            isStreaming: true,
+            suggestions: [],
+          },
+        ]
+      }
       const text = typeof copilotResp === 'object' && copilotResp?.text ? copilotResp.text : String(copilotResp || '')
       const clarification = typeof copilotResp === 'object' ? copilotResp?.clarification : null
       return [
@@ -1088,6 +1100,70 @@ export default function StudioPage({
     if (activeQuery && !isNewResearchActive) {
       const isStock = detectQueryType(activeQuery) === 'stock'
       const copilotResp = getCopilotResponse(activeQuery, user)
+
+      if (!isStock && copilotResp === 'USE_BACKEND_CHAT') {
+        const uId = `u_${Date.now()}`
+        const aId = `a_${Date.now() + 1}`
+        setCopilotMessages((prev) => {
+          if (prev.length > 1 && prev.some((m) => m.role === 'user' && m.text === activeQuery)) {
+            return prev
+          }
+          return [
+            { id: uId, role: 'user', text: activeQuery },
+            {
+              id: aId,
+              role: 'assistant',
+              text: 'Analyzing inquiry with live market intelligence...',
+              isStreaming: true,
+              suggestions: [],
+            },
+          ]
+        })
+
+        api.copilotChat(activeQuery, [], currentJobId || job?.job_id || null)
+          .then((chatResponse) => {
+            const validTickers = chatResponse.suggested_tickers || []
+            const compareAllChip = validTickers.length >= 2 ? [{
+              label: `Compare All: ${validTickers.slice(0, 3).join(' vs ')}`,
+              type: 'stock',
+              isCompareAll: true,
+            }] : []
+
+            const tickerSuggestions = validTickers.map((t) => ({
+              label: `Analyze ${t} fundamentals`,
+              type: 'stock',
+            }))
+            const allSuggestions = [...compareAllChip, ...tickerSuggestions, ...getFollowupSuggestions(activeQuery)].slice(0, 5)
+
+            setCopilotMessages([
+              { id: uId, role: 'user', text: activeQuery },
+              {
+                id: aId,
+                role: 'assistant',
+                text: chatResponse.answer || '*(No response from server)*',
+                suggestions: allSuggestions,
+                searchUsed: chatResponse.search_used,
+                sources: chatResponse.sources || [],
+                suggestedTickers: chatResponse.suggested_tickers || [],
+                clarification: chatResponse.clarification || null,
+              },
+            ])
+            requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+          })
+          .catch((err) => {
+            setCopilotMessages([
+              { id: uId, role: 'user', text: activeQuery },
+              {
+                id: aId,
+                role: 'assistant',
+                text: `### ⚠️ Copilot Temporarily Unavailable\n\nUnable to reach the research server. Please check your connection and try again.\n\n*Error: ${err.message}*`,
+              },
+            ])
+            requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
+          })
+        return
+      }
+
       const text = typeof copilotResp === 'object' && copilotResp?.text ? copilotResp.text : String(copilotResp || '')
       const clarification = typeof copilotResp === 'object' ? copilotResp?.clarification : null
       setCopilotMessages((prev) => {
@@ -1108,7 +1184,7 @@ export default function StudioPage({
         ]
       })
     }
-  }, [activeQuery, isNewResearchActive])
+  }, [activeQuery, isNewResearchActive, user])
 
   // Automatically announce report completion with tailored inquiry examples directly into Copilot thread
   const hasAnnouncedCompletionRef = useRef(null)
@@ -1527,7 +1603,17 @@ export default function StudioPage({
           text: `### 🚀 Dispatching Autonomous Multi-Agent Research: **${text}**\n\nI have routed your inquiry to our **11 autonomous specialist agents** cross-examining balance sheets, valuation multiples, news catalysts, and adversarial Bull vs Bear risk audit in real-time.\n\n*Review live progress in the execution stream below.*`,
         },
       ])
-      onStartResearch(text)
+
+      // Clean query for dispatching research if it came from a template chip/option:
+      let dispatchQuery = text
+      const reportOptMatch = text.match(/(?:create full research report for|create research report on|analyze\s+([a-zA-Z0-9&.-]+)\s+fundamentals)\s*(.*)/i)
+      if (reportOptMatch) {
+        dispatchQuery = reportOptMatch[1] || reportOptMatch[2] || text
+        dispatchQuery = dispatchQuery.replace(/^[🚀📊🥊⚠️⚡\s]+/, '').trim()
+      } else if (text.toLowerCase().startsWith('compare all:')) {
+        dispatchQuery = text.replace(/^compare all:\s*/i, 'Compare ')
+      }
+      onStartResearch(dispatchQuery)
       requestAnimationFrame(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }))
       return
     }

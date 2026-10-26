@@ -1,7 +1,9 @@
 // ArthaLens API client.
+const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {}
 const rawBase = (
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.PROD ? 'https://bullseye-backend-923160450523.us-central1.run.app' : '')
+  env.VITE_API_URL ||
+  (env.PROD ? 'https://bullseye-backend-923160450523.us-central1.run.app' : '') ||
+  ''
 ).trim().replace(/\/+$/, '')
 const BASE = rawBase ? (rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`) : '/api'
 

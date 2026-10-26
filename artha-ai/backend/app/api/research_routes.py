@@ -602,6 +602,9 @@ KNOWN_TICKERS_MAP = {
     "amazon": "AMZN", "amzn": "AMZN", "google": "GOOGL", "alphabet": "GOOGL",
     "meta": "META", "netflix": "NFLX", "amd": "AMD", "intel": "INTC",
     "palantir": "PLTR", "pltr": "PLTR",
+    "lockheed": "LMT", "lockheed martin": "LMT", "lmt": "LMT",
+    "boeing": "BA", "ba": "BA", "northrop": "NOC", "northrop grumman": "NOC",
+    "general dynamics": "GD", "gd": "GD", "rtx": "RTX", "raytheon": "RTX",
 }
 
 _COMMON_MARKDOWN_WORDS = {
@@ -664,19 +667,21 @@ def _copilot_chat_llm(message: str, history: list[dict], search_results: list[di
             history_block = "\n\n**Prior Conversation:**\n" + "\n".join(turns)
 
     system_msg = (
-        "You are Artha AI Copilot — an expert equity research intelligence assistant. "
+        "You are Artha AI Copilot — a world-class conversational financial intelligence assistant (like ChatGPT or Perplexity for finance). "
         "You have access to live web search results provided below. "
-        "Use the search results to give a grounded, accurate, and insightful answer. "
+        "Use the search results to give a grounded, accurate, direct, and insightful answer to any corporate, product, market, or investment question. "
         "RULES: "
-        "1. Ground every stock recommendation or claim in the search results provided. "
-        "2. When recommending stocks, name specific company tickers in bold (e.g. **TCS**, **TRENT**, **MAZDOCK**, **DIXON**, **RELIANCE**). "
-        "3. Highlight real growth catalysts found in the news: such as recent contract / order book wins, quarterly margin expansions, capacity expansion, or turnaround potential. Do not only recommend the same mega-caps; include breakout small/mid-cap opportunities if highlighted in the search. "
-        "4. Differentiate between Short-Term momentum/catalysts (earnings surprises, fresh government/defense contracts, sector rotations) vs Long-Term compounding (moats, clean balance sheets, return on capital). "
-        "5. Explain WHY each stock is relevant with facts, numbers, or contract details from the search. "
-        "6. Format your response in clean GitHub Markdown with headers, bullet points, and a comparison table. "
-        "7. Always conclude by inviting the user to choose between a quick breakdown or dispatching our 11 autonomous agents for a deep multi-agent institutional report. "
-        "8. Never make up financial figures. If the search has numbers, cite them. "
-        "9. You are Artha AI Copilot — never say you are OpenAI, Google, or any base LLM."
+        "1. DIRECT & INTELLIGENT ANSWERS: Directly answer the user's specific inquiry upfront. "
+        "   - If asked whether a company, aircraft, defense program, product, or division is listed in the stock market (e.g. F-16, ChatGPT, iPhone, Sukhoi, Rafale), immediately identify the manufacturing parent corporation (e.g. Lockheed Martin for F-16), its primary stock exchange (e.g. NYSE: LMT), and its exact ticker symbol in bold. "
+        "   - If the company is private or unlisted (e.g. OpenAI, SpaceX), clearly state that it is privately held and explain listed companies that provide exposure (e.g. Microsoft for OpenAI, Google/Baillie Gifford for SpaceX). "
+        "   - Mention relevant listed peers, competitors, and domestic counterparts (e.g. HAL, Bharat Dynamics, Tata Advanced Systems for Indian defense) with tickers in bold. "
+        "2. Ground every factual claim, valuation multiple, revenue figure, or contract catalyst in the search results provided or verified market data. "
+        "3. When recommending stocks, name specific company tickers in bold (e.g. **LMT**, **HAL**, **TCS**, **TRENT**, **RELIANCE**). "
+        "4. Differentiate between Short-Term momentum/catalysts (earnings surprises, contract wins, order book backlogs) vs Long-Term compounding (moats, clean balance sheets, return on capital). "
+        "5. Format your response in clean GitHub Markdown with headers, bullet points, and a comparison table. "
+        "6. Conclude by inviting the user to choose between a quick breakdown or dispatching our 11 autonomous specialist agents for a deep multi-agent institutional report. "
+        "7. Never make up financial figures. If the search has numbers, cite them. "
+        "8. You are Artha AI Copilot — never say you are OpenAI, Google, or any base LLM."
     )
 
     prompt_text = (
@@ -784,17 +789,28 @@ async def copilot_chat(req: ChatRequest):
     search_used = False
     suggested_tickers: list[str] = []
 
+    # Clean search construction without forcing Indian exchanges on global queries
+    has_india_context = bool(re.search(r'\b(india|indian|nse|bse|nifty|sensex|inr|rupee|rupees|crore|crores)\b', message, re.I))
+
     # For discovery queries: ALWAYS search the web
     if is_discovery:
         is_short_term = bool(re.search(r'short.?term|quick|swing|momentum|breakout', message, re.I))
         is_contract_or_smallcap = bool(re.search(r'contract|order|small.?cap|cheap|penny|hidden|potential|multibagger', message, re.I))
 
-        if is_short_term:
-            search_query = f"{message} Indian stocks NSE BSE news breakout catalysts 2025"
-        elif is_contract_or_smallcap:
-            search_query = f"{message} Indian small cap stocks huge contracts orders news growth potential 2025"
+        if has_india_context:
+            if is_short_term:
+                search_query = f"{message} Indian stocks NSE BSE news breakout catalysts"
+            elif is_contract_or_smallcap:
+                search_query = f"{message} Indian small cap stocks huge contracts orders news growth potential"
+            else:
+                search_query = f"{message} India NSE fundamentals stocks to buy"
         else:
-            search_query = f"best stocks to buy {message} 2025 India NSE fundamentals"
+            if is_short_term:
+                search_query = f"{message} stock market news breakout catalysts momentum"
+            elif is_contract_or_smallcap:
+                search_query = f"{message} small cap growth stocks contracts orders potential"
+            else:
+                search_query = f"{message} stock market equities fundamentals"
 
         search_results = await asyncio.to_thread(_chat_web_search, search_query)
         search_used = bool(search_results)
@@ -810,15 +826,21 @@ async def copilot_chat(req: ChatRequest):
         )
         suggested_tickers = _extract_tickers_from_text(combined_text)
 
-    # For educational queries with no specific company: minimal search for context
+    # For educational queries with no specific company: search for context
     elif is_educational and not suggested_tickers:
-        search_results = await asyncio.to_thread(_chat_web_search, f"{message} stock market India 2024")
+        search_query = f"{message} Indian stock market NSE" if has_india_context else f"{message} stock market finance"
+        search_results = await asyncio.to_thread(_chat_web_search, search_query)
         search_used = bool(search_results)
 
-    # Default: search for context
+    # Default / corporate / listing / product inquiries (e.g. "Does F-16 jet company is listed in Stock Market?")
     else:
-        search_results = await asyncio.to_thread(_chat_web_search, f"{message} stocks India NSE 2024")
+        search_query = f"{message} stocks India NSE" if has_india_context else f"{message} stock company listing ticker"
+        search_results = await asyncio.to_thread(_chat_web_search, search_query)
         search_used = bool(search_results)
+        if not search_results or len(search_results) < 2:
+            more_results = await asyncio.to_thread(_chat_web_search, message)
+            search_results = search_results + [r for r in more_results if r not in search_results]
+            search_used = bool(search_results)
         combined_text = " ".join(
             (r.get("title", "") + " " + r.get("body", "") + " " + r.get("snippet", ""))
             for r in search_results
