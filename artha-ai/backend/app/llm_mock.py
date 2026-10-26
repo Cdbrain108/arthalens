@@ -145,6 +145,22 @@ def mock_analyze(query: str) -> dict:
                 })
                 seen.add(t_info["ticker"])
     if not entities:
+        # Dynamic company extraction for any organization in any sector (e.g. "Analyze Novo Nordisk", "Ferrari fundamentals")
+        cand_match = re.sub(r'^(?:analyze|research|audit|deep dive on|coverage on|dossier for|compare|report on|about)\s+', '', query, flags=re.I).strip()
+        cand_match = re.sub(r'\s+(?:fundamentals|valuation|metrics|financials|results|risks|stock|shares?|company)$', '', cand_match, flags=re.I).strip()
+        if cand_match and cand_match.upper() not in _EXCLUDED_CAPS and len(cand_match) >= 2:
+            from .tools.base import resolve_ticker_info
+            t_info = resolve_ticker_info(cand_match)
+            if t_info.get("ticker") and t_info.get("exchange"):
+                entities.append({
+                    "name": t_info.get("name") or cand_match,
+                    "ticker": t_info["ticker"],
+                    "exchange": t_info["exchange"],
+                    "confidence": "high"
+                })
+                seen.add(t_info["ticker"])
+
+    if not entities:
         # Check strategic archetype queries where user asks about concepts/strategies rather than naming a ticker
         if any(k in lower for k in ["dividend", "growth investing", "sip vs lumpsum", "passive income"]):
             entities = [

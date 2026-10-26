@@ -93,10 +93,16 @@ export function extractStockEntities(text = '') {
   const lower = text.toLowerCase().trim()
   const found = []
 
-  // Check explicit tickers with exchange suffixes (e.g. INFY.NS, TCS.BO)
-  const tickerSuffixMatch = lower.match(/\b([a-z0-9-]+)\.(ns|bo)\b/g)
+  // Check explicit tickers with exchange suffixes (e.g. INFY.NS, TCS.BO, MC.PA, RACE.MI)
+  const tickerSuffixMatch = lower.match(/\b([a-z0-9-]+)\.(ns|bo|l|pa|de|as|to|ax|hk|t)\b/g)
   if (tickerSuffixMatch) {
     found.push(...tickerSuffixMatch)
+  }
+
+  // Check explicit ticker prefixes like $NVO, $RACE, $CAT, $ASML
+  const dollarTickerMatch = text.match(/\$([A-Za-z0-9-]{1,6})\b/g)
+  if (dollarTickerMatch) {
+    found.push(...dollarTickerMatch.map(t => t.replace('$', '').toLowerCase()))
   }
 
   // Check against known company entities using word boundaries
@@ -368,10 +374,10 @@ export function detectQueryType(query = '') {
     return 'stock'
   }
 
-  // Explicit directive to analyze / research / audit ANY company or ticker
-  const explicitActionMatch = s.match(/^(?:analyze|research|audit|deep dive on|coverage on|dossier for)\s+([a-z0-9&.-]+)(?:\s+(?:fundamentals|valuation|metrics|financials|results|risks))?$/i)
+  // Explicit directive to analyze / research / audit ANY company or ticker in ANY sector
+  const explicitActionMatch = s.match(/^(?:analyze|research|audit|deep dive on|coverage on|dossier for)\s+([a-z0-9&.\s-]+?)(?:\s+(?:fundamentals|valuation|metrics|financials|results|risks))?$/i)
   if (explicitActionMatch) {
-    const candidate = explicitActionMatch[1].toLowerCase()
+    const candidate = explicitActionMatch[1].toLowerCase().trim()
     const genericEducationalWords = new Set([
       'balance', 'cash', 'financial', 'statement', 'annual', 'fundamentals',
       'ratios', 'ratio', 'stocks', 'stock', 'companies', 'equities', 'market',

@@ -573,9 +573,11 @@ def _chat_fetch_page(url: str) -> str:
     return ""
 
 
-_TICKER_EXTRACTION_RE = re.compile(
-    r'\b(?:NSE|BSE|NASDAQ|NYSE):\s*([A-Z]{2,10})\b'
-    r'|\b([A-Z]{2,6})\b(?=\s*(?:\(NSE\)|\(BSE\)|\(NASDAQ\)|\(NYSE\)))',
+_EXCHANGE_TICKER_RE = re.compile(
+    r'\b(?:NYSE|NASDAQ|NSE|BSE|LSE|XETRA|AMS|EPA|TSX|ASX|HKEX|TYO|SWX|OTC)[:\s]+([A-Z0-9.-]{1,10})\b'
+    r'|\(([A-Za-z]+):\s*([A-Z0-9.-]{1,10})\)'
+    r'|\b(?:ticker|symbol)[:\s]+\*?\*?([A-Z0-9.-]{1,10})\*?\*?\b'
+    r'|\$([A-Z]{2,6})\b',
     re.I
 )
 
@@ -611,27 +613,51 @@ _COMMON_MARKDOWN_WORDS = {
     "WHY", "WHAT", "NOTE", "PRO", "CON", "RISK", "BULL", "BEAR", "RULE", "HIGH",
     "LOW", "PE", "ROE", "ROCE", "DCF", "EPS", "NSE", "BSE", "NYSE", "NASDAQ",
     "USD", "INR", "CAGR", "THE", "AND", "FOR", "BUY", "SELL", "HOLD", "VIEW",
-    "BEST", "TOP", "KEY", "ALL", "NEW", "NOW", "YES", "NOT", "TAX", "CAP", "NET"
+    "BEST", "TOP", "KEY", "ALL", "NEW", "NOW", "YES", "NOT", "TAX", "CAP", "NET",
+    "CEO", "EUV", "GLP", "FDA", "SEC", "RBI", "FED", "GDP", "CPI", "IPO", "ETF"
 }
 
 def _extract_tickers_from_text(text: str) -> list[str]:
-    """Extract likely stock tickers from LLM output and web snippets."""
+    """Extract and dynamically validate stock tickers across global markets and any sector."""
+    from ..tools.base import resolve_ticker_info
     found = []
     lower = text.lower()
+
+    # 1. Fast-path check for common recognized names
     for name, ticker in KNOWN_TICKERS_MAP.items():
         if re.search(r'(?<![a-z])' + re.escape(name) + r'(?![a-z])', lower):
             if ticker not in found:
                 found.append(ticker)
-    # Also grab explicit NSE:/BSE: patterns
-    for m in _TICKER_EXTRACTION_RE.finditer(text):
-        t = (m.group(1) or m.group(2) or "").upper()
-        if t and t not in found and len(t) >= 2 and t not in _COMMON_MARKDOWN_WORDS:
-            found.append(t)
-    # Also grab bold uppercase tickers like **TRENT** or **PLTR**
+
+    # 2. Extract tickers from exchange patterns, ticker tags, and $TICKER
+    candidates = []
+    for m in _EXCHANGE_TICKER_RE.finditer(text):
+        cand = (m.group(1) or m.group(3) or m.group(4) or m.group(5) or "").upper()
+        if cand and cand not in candidates and cand not in found and len(cand) >= 2 and cand not in _COMMON_MARKDOWN_WORDS:
+            candidates.append(cand)
+
+    # 3. Extract bold uppercase tokens like **ASML** or **NVO**
     for m in re.finditer(r'\*\*([A-Z0-9-]{2,10})\*\*', text):
-        t = m.group(1).upper()
-        if t not in found and t not in _COMMON_MARKDOWN_WORDS and not t.isdigit():
-            found.append(t)
+        cand = m.group(1).upper()
+        if cand not in candidates and cand not in found and cand not in _COMMON_MARKDOWN_WORDS and not cand.isdigit():
+            candidates.append(cand)
+
+    # 4. Dynamically validate extracted candidates against live global market data
+    for cand in candidates:
+        if len(found) >= 4:
+            break
+        try:
+            info = resolve_ticker_info(cand)
+            if info and info.get("exchange"):
+                ticker = info.get("ticker") or cand
+                if ticker not in found:
+                    found.append(ticker)
+            elif cand not in found and len(cand) <= 5:
+                found.append(cand)
+        except Exception:
+            if cand not in found and len(cand) <= 5:
+                found.append(cand)
+
     return found[:4]  # max 4 tickers for auto-research
 
 
@@ -669,14 +695,14 @@ def _copilot_chat_llm(message: str, history: list[dict], search_results: list[di
     system_msg = (
         "You are Artha AI Copilot — a world-class conversational financial intelligence assistant (like ChatGPT or Perplexity for finance). "
         "You have access to live web search results provided below. "
-        "Use the search results to give a grounded, accurate, direct, and insightful answer to any corporate, product, market, or investment question. "
+        "Use the search results to give a grounded, accurate, direct, and insightful answer to any corporate, product, market, or investment question across ANY industry (defense, healthcare, pharma, tech, luxury, automotive, agriculture, energy, consumer, finance, etc.). "
         "RULES: "
         "1. DIRECT & INTELLIGENT ANSWERS: Directly answer the user's specific inquiry upfront. "
-        "   - If asked whether a company, aircraft, defense program, product, or division is listed in the stock market (e.g. F-16, ChatGPT, iPhone, Sukhoi, Rafale), immediately identify the manufacturing parent corporation (e.g. Lockheed Martin for F-16), its primary stock exchange (e.g. NYSE: LMT), and its exact ticker symbol in bold. "
-        "   - If the company is private or unlisted (e.g. OpenAI, SpaceX), clearly state that it is privately held and explain listed companies that provide exposure (e.g. Microsoft for OpenAI, Google/Baillie Gifford for SpaceX). "
-        "   - Mention relevant listed peers, competitors, and domestic counterparts (e.g. HAL, Bharat Dynamics, Tata Advanced Systems for Indian defense) with tickers in bold. "
+        "   - If asked about ANY company, brand, product, medication/drug (e.g. Ozempic, Keytruda, Wegovy), vehicle/aircraft (e.g. F-16, Model Y, Rafale), microchip/hardware (e.g. EUV lithography, H100), software, or service across ANY sector: immediately identify its parent company/manufacturer, its public listing status (e.g. NYSE, NASDAQ, NSE, BSE, LSE, Euronext, etc. vs privately held), and its exact ticker symbol in bold like **(NYSE: LMT)**, **(NYSE: NVO)**, **(NASDAQ: ASML)**, **(NSE: HAL)**. "
+        "   - If the company is private or unlisted (e.g. OpenAI, SpaceX, Stripe), clearly state that it is privately held and explain listed companies that provide exposure (e.g. Microsoft for OpenAI, Google/Baillie Gifford for SpaceX) or key public competitors. "
+        "   - Mention relevant listed peers, competitors, and supply chain partners across global and domestic markets with tickers in bold. "
         "2. Ground every factual claim, valuation multiple, revenue figure, or contract catalyst in the search results provided or verified market data. "
-        "3. When recommending stocks, name specific company tickers in bold (e.g. **LMT**, **HAL**, **TCS**, **TRENT**, **RELIANCE**). "
+        "3. When mentioning or recommending stocks, ALWAYS include their exchange and ticker in bold (e.g. **(NYSE: LMT)**, **(NYSE: NVO)**, **(NASDAQ: ASML)**, **(NSE: TCS)**). "
         "4. Differentiate between Short-Term momentum/catalysts (earnings surprises, contract wins, order book backlogs) vs Long-Term compounding (moats, clean balance sheets, return on capital). "
         "5. Format your response in clean GitHub Markdown with headers, bullet points, and a comparison table. "
         "6. Conclude by inviting the user to choose between a quick breakdown or dispatching our 11 autonomous specialist agents for a deep multi-agent institutional report. "
