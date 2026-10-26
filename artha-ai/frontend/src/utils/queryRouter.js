@@ -18,6 +18,8 @@ export const KNOWN_STOCK_ENTITIES = [
   'bajaj finserv', 'kotak', 'kotak mahindra', 'asian paints', 'titan',
   'sun pharma', 'dr reddy', 'axis bank', 'zomato', 'swiggy', 'paytm',
   'nykaa', 'ola electric', 'bel', 'hal', 'bhel', 'ntpc', 'powergrid', 'coal india',
+  'hindustan aeronautics', 'hindustan aeronautics limited',
+  'hindustan aeronautical', 'hindustan aeronautical limited',
   'trent', 'siemens', 'polycab', 'dixon', 'mazagon dock', 'mazdock', 'bharat forge',
   'suzlon', 'ireda', 'rvnl', 'irfc', 'cdsl', 'angel one', 'vedanta', 'hindalco',
   // Top Global / US stocks
@@ -58,6 +60,70 @@ export const STOCK_PRICE_DIRECTORY = {
   msft: { name: 'Microsoft Corporation', ticker: 'MSFT', price: '$445.00', range52w: '$380.00 – $468.00', pe: '35.8x', trend: '+2.0% (Azure cloud momentum)', exchange: 'NASDAQ' },
   tesla: { name: 'Tesla Inc.', ticker: 'TSLA', price: '$218.00', range52w: '$138.00 – $271.00', pe: '62.4x', trend: '+1.8% (Autonomous delivery ramp)', exchange: 'NASDAQ' },
   tsla: { name: 'Tesla Inc.', ticker: 'TSLA', price: '$218.00', range52w: '$138.00 – $271.00', pe: '62.4x', trend: '+1.8% (Autonomous delivery ramp)', exchange: 'NASDAQ' },
+}
+
+const COMPANY_TICKER_DIRECTORY = {
+  hal: { name: 'Hindustan Aeronautics Limited', ticker: 'HAL', exchange: 'NSE', bseCode: '541154' },
+  'hindustan aeronautics': { name: 'Hindustan Aeronautics Limited', ticker: 'HAL', exchange: 'NSE', bseCode: '541154' },
+  'hindustan aeronautics limited': { name: 'Hindustan Aeronautics Limited', ticker: 'HAL', exchange: 'NSE', bseCode: '541154' },
+  'hindustan aeronautical': { name: 'Hindustan Aeronautics Limited', ticker: 'HAL', exchange: 'NSE', bseCode: '541154' },
+  'hindustan aeronautical limited': { name: 'Hindustan Aeronautics Limited', ticker: 'HAL', exchange: 'NSE', bseCode: '541154' },
+  tcs: { name: 'Tata Consultancy Services', ticker: 'TCS', exchange: 'NSE', bseCode: '532540' },
+  'tata consultancy services': { name: 'Tata Consultancy Services', ticker: 'TCS', exchange: 'NSE', bseCode: '532540' },
+  reliance: { name: 'Reliance Industries Limited', ticker: 'RELIANCE', exchange: 'NSE', bseCode: '500325' },
+  'reliance industries': { name: 'Reliance Industries Limited', ticker: 'RELIANCE', exchange: 'NSE', bseCode: '500325' },
+  infosys: { name: 'Infosys Limited', ticker: 'INFY', exchange: 'NSE', bseCode: '500209' },
+  infy: { name: 'Infosys Limited', ticker: 'INFY', exchange: 'NSE', bseCode: '500209' },
+  wipro: { name: 'Wipro Limited', ticker: 'WIPRO', exchange: 'NSE', bseCode: '507685' },
+  'hdfc bank': { name: 'HDFC Bank Limited', ticker: 'HDFCBANK', exchange: 'NSE', bseCode: '500180' },
+  hdfc: { name: 'HDFC Bank Limited', ticker: 'HDFCBANK', exchange: 'NSE', bseCode: '500180' },
+  'icici bank': { name: 'ICICI Bank Limited', ticker: 'ICICIBANK', exchange: 'NSE', bseCode: '532174' },
+  icici: { name: 'ICICI Bank Limited', ticker: 'ICICIBANK', exchange: 'NSE', bseCode: '532174' },
+  'state bank of india': { name: 'State Bank of India', ticker: 'SBIN', exchange: 'NSE', bseCode: '500112' },
+  sbi: { name: 'State Bank of India', ticker: 'SBIN', exchange: 'NSE', bseCode: '500112' },
+  'tata motors': { name: 'Tata Motors Limited', ticker: 'TATAMOTORS', exchange: 'NSE', bseCode: '500570' },
+  tatamotors: { name: 'Tata Motors Limited', ticker: 'TATAMOTORS', exchange: 'NSE', bseCode: '500570' },
+  'bharat electronics': { name: 'Bharat Electronics Limited', ticker: 'BEL', exchange: 'NSE', bseCode: '500049' },
+  bel: { name: 'Bharat Electronics Limited', ticker: 'BEL', exchange: 'NSE', bseCode: '500049' },
+  itc: { name: 'ITC Limited', ticker: 'ITC', exchange: 'NSE', bseCode: '500875' },
+  zomato: { name: 'Eternal (Zomato)', ticker: 'ZOMATO', exchange: 'NSE', bseCode: '543320' },
+  swiggy: { name: 'Swiggy Limited', ticker: 'SWIGGY', exchange: 'NSE', bseCode: '544280' },
+  'l&t': { name: 'Larsen & Toubro Limited', ticker: 'LT', exchange: 'NSE', bseCode: '500510' },
+  'larsen & toubro': { name: 'Larsen & Toubro Limited', ticker: 'LT', exchange: 'NSE', bseCode: '500510' },
+}
+
+function getTickerLookup(query = '') {
+  const lower = query.toLowerCase().trim()
+  const isLookup = /\b(?:ticker|stock symbol|trading symbol|share symbol)\b/i.test(lower) &&
+    /\b(?:what|which|find|tell|give|symbol|ticker|for|of)\b/i.test(lower)
+  if (!isLookup) return null
+
+  const aliases = Object.keys(COMPANY_TICKER_DIRECTORY).sort((a, b) => b.length - a.length)
+  const alias = aliases.find((name) => {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(lower)
+  })
+
+  if (alias) {
+    return COMPANY_TICKER_DIRECTORY[alias]
+  }
+
+  // Also check STOCK_PRICE_DIRECTORY
+  const priceAliases = Object.keys(STOCK_PRICE_DIRECTORY).sort((a, b) => b.length - a.length)
+  const priceAlias = priceAliases.find((name) => {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(lower)
+  })
+  if (priceAlias) {
+    const item = STOCK_PRICE_DIRECTORY[priceAlias]
+    return {
+      name: item.name,
+      ticker: item.ticker,
+      exchange: item.exchange,
+    }
+  }
+
+  return { unresolved: true }
 }
 
 const CONCEPTUAL_FINANCIAL_PATTERNS = [
@@ -142,11 +208,15 @@ export function extractTargetOrganization(query = '') {
     if (STOCK_PRICE_DIRECTORY[key]?.name) {
       return STOCK_PRICE_DIRECTORY[key].name
     }
+    if (COMPANY_TICKER_DIRECTORY[key]?.name) {
+      return COMPANY_TICKER_DIRECTORY[key].name
+    }
     return known[0].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
   }
 
   // 2. Patterns where an organization is introduced or queried:
   const patterns = [
+    /(?:ticker|stock symbol|trading symbol|share symbol)\s+(?:for|of)\s+([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,4})/i,
     /(?:tell me about|what is|who is|details on|overview of|research on|analyze|audit|how is|performance of|about)\s+([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,3})/i,
     /([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,2})\s+(?:ai|tech|technologies|labs|inc|corp|corporation|pvt|ltd|limited|holdings|group|motors|steel|power|bank|finance|enterprises|startup)\b/i,
     /^([a-zA-Z0-9&.-]+(?:\s+[a-zA-Z0-9&.-]+){0,2})\s+(?:fundamentals|valuation|stock|share|company|overview|business model)\b/i,
@@ -159,6 +229,7 @@ export function extractTargetOrganization(query = '') {
     'investment', 'investing', 'market cap', 'debt to equity', 'bull market', 'bear market',
     'dual thesis', 'agents', 'specialist', 'specialists', 'yourself', 'arthalens', 'artha', 'artha ai',
     'creator', 'author', 'developer', 'who', 'what', 'how', 'why', 'when', 'which', 'explain', 'simply',
+    'ticker', 'symbol', 'for', 'of',
     'indian', 'us', 'global', 'good', 'best', 'top', 'cheap',
     'risk', 'risks', 'bull', 'bear', 'margin', 'margins', 'operating', 'profit', 'profits', 'cash', 'flow',
     'opm', 'npm', 'valuation', 'fundamentals', 'verdict', 'summary', 'overview', 'options', 'horizon',
@@ -231,6 +302,10 @@ export const EXPLICIT_NON_FINANCIAL_PATTERNS = [
   /\b(dating|relationship|girlfriend|boyfriend|love|breakup)\b/i,
   /\b(quicksort|bubble sort|binary search tree|linked list|leetcode|reverse (?:a |the )?string|write (?:a )?python (?:code|script)|write (?:a )?javascript (?:code|script))\b/i,
   /\b(capital of|tallest mountain|distance to the moon|who was napoleon|history of egypt)\b/i,
+  /\b(president|prime minister|politician|election|parliament|war|country|countries|capital city|geography|historical figure)\b/i,
+  /\b(photosynthesis|biology|chemistry|physics|planet|solar system|human body|medical advice|diagnosis|symptom|medicine dosage)\b/i,
+  /\b(translate|translation|write (?:an? )?(?:email|essay|letter|resume|cover letter)|grammar|language homework)\b/i,
+  /\b(travel|tourism|vacation|flight booking|train ticket|hotel booking|tourist|itinerary)\b/i,
   /\b(solve|equation|equations|algebra|calculus|geometry|homework|integral|derivative|matrix|matrices|trigonometry)\b/i,
   /[a-z0-9]\s*[\^=]\s*[0-9a-z]/i,
   /(?:^|\s)\d+\s*[\^=+*\/]\s*\d+(?:\s|$)/i,
@@ -249,6 +324,8 @@ export const FINANCIAL_KEYWORDS = [
   'rupees', 'crore', 'dollar', 'capital', 'holding', 'overvalued', 'undervalued',
   'business', 'company', 'companies', 'industry', 'sector', 'landscape', 'peers', 'management',
   'strategy', 'guidance', 'outlook', 'forecast', 'fundamentals', 'report',
+  'ticker', 'symbol', 'listed', 'listing', 'exchange', 'publicly traded', 'public company',
+  'private company', 'market capitalization', 'scrip code',
   'ai', 'startup', 'startups', 'tech', 'technology', 'firm', 'firms', 'enterprise',
   'unicorn', 'unicorns', 'venture', 'fund', 'funding', 'seed', 'series a', 'series b',
   'founder', 'founders', 'ceo', 'unlisted', 'private', 'product', 'products', 'software',
@@ -256,7 +333,8 @@ export const FINANCIAL_KEYWORDS = [
 ]
 
 export function isOutOfScopeQuery(query = '') {
-  const s = (query || '').toLowerCase().trim()
+  const raw = (query || '').trim()
+  const s = raw.toLowerCase()
   if (!s) return false
 
   // 1. Meta / greetings / platform identity questions are in-scope
@@ -276,6 +354,12 @@ export function isOutOfScopeQuery(query = '') {
   if (/(?:what work are we doing|what are we doing|what are we working on|current work|what work is going on|what project is this|what is artha ai|what is arthalens|how does this work|basics of artha|everything basics|what do we do)/i.test(s)) return false
   if (/(?:who am i|my profile|user profile|my account|my details)/i.test(s)) return false
 
+  // Explicit non-financial requests are rejected unless the user clearly asks about
+  // the related company, stock, listing, or investment angle.
+  const isExplicitNonFinance = EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(s))
+  const hasExplicitMarketAngle = /\b(stock|stocks|share|shares|ticker|listed|listing|exchange|public company|publicly traded|invest|investment|valuation|revenue|profit)\b/i.test(s)
+  if (isExplicitNonFinance && !hasExplicitMarketAngle) return true
+
   // 2. Contains any stock entity or ticker
   if (extractStockEntities(s).length > 0) return false
 
@@ -289,10 +373,18 @@ export function isOutOfScopeQuery(query = '') {
   })
   if (hasFinanceKeyword) return false
 
-  // 5. Matches explicit non-financial domain patterns (cooking, sports, poems, weather, dating, leetcode, equations)
-  if (EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(s))) return true
+  // 5. Allow clear organization discovery prompts so new companies and startups
+  // remain usable without maintaining a hardcoded company list.
+  const targetOrg = extractTargetOrganization(raw)
+  const isOrganizationInquiry = Boolean(targetOrg) && (
+    /\b(?:tell me about|details on|overview of|information on|company profile of|business of)\b/i.test(raw) ||
+    /[a-z][A-Z]/.test(raw) ||
+    /\b(?:ai|tech|technologies|labs|inc|corp|corporation|pvt|ltd|limited|holdings|group|motors|steel|power|bank|finance|enterprises|startup)\b/i.test(raw)
+  )
+  if (isOrganizationInquiry) return false
 
-  return false
+  // Unknown general-purpose questions stay outside the product boundary.
+  return true
 }
 
 /**
@@ -311,6 +403,11 @@ export function detectQueryType(query = '') {
   }
 
   const matchedEntities = extractStockEntities(s)
+
+  // A ticker lookup needs a concise answer, not an expensive full research run.
+  if (getTickerLookup(query)) {
+    return 'conversational'
+  }
 
   // Explicit chit-chat / greetings
   const isGreeting = [
@@ -768,7 +865,20 @@ export function getCopilotResponse(rawQuery = '', user, context = {}) {
   const hasActiveReport = Boolean(context.job?.report || context.reportData || context.report)
   const isExplicitNonFinance = EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(q))
   if (isExplicitNonFinance || (!hasActiveReport && (detectQueryType(q) === 'out_of_scope' || isOutOfScopeQuery(q)))) {
-    return `### 🛡️ Out of Scope — Equity Research & Finance Only\n\nI am **ArthaLens AI Copilot**, designed exclusively for **equity research, stock fundamental analysis, financial valuation, and investment intelligence**.\n\nI cannot assist with queries outside the financial and investment domain (such as general knowledge, creative writing, cooking, programming, sports, or entertainment).\n\n---\n\n**💡 Here is how you can use ArthaLens:**\n* **Company Diligence:** *"Analyze TCS fundamentals"* or *"NVIDIA risk audit"*\n* **Action Directives:** *"Should I hold Reliance for 5 years?"* or *"Should I buy HDFC Bank?"*\n* **Competitor Head-to-Head:** *"Compare Infosys vs Wipro on margins & valuation"*\n* **Financial Concept Explainers:** *"Explain P/E ratio simply"* or *"What is EBITDA and Operating Margin?"*`
+    return `### 🛡️ Out of Scope — Stock Research & Finance Only\n\nSorry, as I am a specialized **Stock Researcher System**, I cannot process general or non-financial requests in a perfect manner.\n\nHowever, if your question is related to a **company, stock ticker, financial metric, valuation, market analysis, or investment concept**, I will answer and analyze it thoroughly!\n\n---\n\n**💡 Try asking questions like:**\n* **Company diligence:** *"Analyze TCS fundamentals"* or *"NVIDIA risk audit"*\n* **Ticker lookup:** *"What is the ticker for Hindustan Aeronautics?"*\n* **Stock comparison:** *"Compare Infosys vs Wipro"*\n* **Financial concepts:** *"Explain P/E ratio simply"* or *"What is Free Cash Flow?"*`
+  }
+
+  // Direct ticker / trading-symbol lookup. This must run before the broad
+  // organization handler so phrases such as "ticker for X" are never treated
+  // as part of the organization name.
+  const tickerLookup = getTickerLookup(q)
+  if (tickerLookup && !tickerLookup.unresolved) {
+    const bse = tickerLookup.bseCode ? ` and on the **BSE under scrip code ${tickerLookup.bseCode}**` : ''
+    return `### 📈 Ticker for ${tickerLookup.name}\n\n**${tickerLookup.name}** trades on the **${tickerLookup.exchange} under the ticker \`${tickerLookup.ticker}\`**${bse}.\n\nYou can ask *"Analyze ${tickerLookup.ticker} fundamentals"* to start the full equity research report.`
+  }
+
+  if (tickerLookup?.unresolved) {
+    return 'USE_BACKEND_CHAT'
   }
 
   // Live stock price inquiry lookup

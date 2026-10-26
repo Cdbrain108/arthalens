@@ -154,6 +154,10 @@ test('detectQueryType classifies non-financial queries as out_of_scope and getCo
     'write a python script for sorting an array',
     'what is the weather today',
     'solve x^2 + 5x + 6 = 0',
+    'who is the prime minister of India',
+    'what is photosynthesis',
+    'write an email asking for leave',
+    'plan a 5 day vacation in Goa',
   ]
 
   for (const q of outOfScopeQueries) {
@@ -165,9 +169,40 @@ test('detectQueryType classifies non-financial queries as out_of_scope and getCo
     )
 
     const refusal = getCopilotResponse(q)
-    assert.ok(refusal.includes('Out of Scope — Equity Research & Finance Only'), `Refusal missing header for "${q}"`)
-    assert.ok(refusal.includes('designed exclusively for **equity research'), `Refusal missing boundary text for "${q}"`)
+    assert.ok(refusal.includes('Out of Scope — Stock Research & Finance Only'), `Refusal missing header for "${q}"`)
+    assert.ok(refusal.includes('Stock Researcher System'), `Refusal missing boundary text for "${q}"`)
   }
+})
+
+test('ticker lookup answers directly without inventing an organization name or dispatching research', () => {
+  const queries = [
+    'what is ticker for Hindustan Aeronautical Limited?',
+    'What is the stock symbol of Hindustan Aeronautics Limited?',
+  ]
+
+  for (const query of queries) {
+    assert.strictEqual(detectQueryType(query), 'conversational')
+    const response = getCopilotResponse(query)
+    assert.ok(response.includes('Hindustan Aeronautics Limited'))
+    assert.ok(response.includes('`HAL`'))
+    assert.ok(response.includes('541154'))
+    assert.ok(!response.includes('Ticker For Hindustan'))
+    assert.ok(!response.clarification)
+  }
+
+  // Also verify directory lookup for Apple and TCS
+  const appleResp = getCopilotResponse('what is ticker for Apple?')
+  assert.ok(appleResp.includes('`AAPL`'))
+
+  const tcsResp = getCopilotResponse('what is the ticker for TCS?')
+  assert.ok(tcsResp.includes('`TCS`'))
+})
+
+test('unknown general-purpose questions are refused while company and finance questions remain in scope', () => {
+  assert.strictEqual(detectQueryType('how do black holes form?'), 'out_of_scope')
+  assert.strictEqual(detectQueryType('tell me about Zoho'), 'conversational')
+  assert.strictEqual(detectQueryType('Does SpaceX have a stock or is it private?'), 'conversational')
+  assert.strictEqual(detectQueryType('Explain free cash flow simply'), 'conversational')
 })
 
 test('getCopilotResponse routes open-ended long-term stock discovery to backend chat', () => {

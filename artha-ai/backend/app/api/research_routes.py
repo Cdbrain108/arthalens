@@ -78,6 +78,12 @@ NON_FINANCIAL_PATTERNS = [
     r"\b(weather|temperature|forecast|rain|climate|humidity|cyclone)\b",
     r"\b(dating|relationship|girlfriend|boyfriend|love|breakup)\b",
     r"\b(quicksort|bubble sort|binary search tree|linked list|leetcode)\b",
+    r"\b(write (?:a )?(?:python|javascript|java|c\+\+) (?:code|script|program)|debug (?:my )?code|programming tutorial)\b",
+    r"\b(president|prime minister|politician|election|parliament|capital city|geography|historical figure)\b",
+    r"\b(photosynthesis|biology|chemistry|physics|planet|solar system|medical advice|diagnosis|symptom|medicine dosage)\b",
+    r"\b(translate|translation|write (?:an? )?(?:email|essay|letter|resume|cover letter)|grammar|language homework)\b",
+    r"\b(travel|tourism|vacation|flight booking|train ticket|hotel booking|tourist|itinerary)\b",
+    r"\b(solve|equation|algebra|calculus|geometry|integral|derivative|trigonometry)\b",
 ]
 
 FINANCIAL_PATTERNS = [
@@ -88,17 +94,45 @@ FINANCIAL_PATTERNS = [
     r"\b(10-k|10-q|sec|nse|bse|nifty|sensex|sp500|nasdaq|nyse|fed|rbi|yield|bond|etf)\b",
     r"\b(tcs|infosys|infy|reliance|ril|wipro|hdfc|icici|sbi|apple|aapl|microsoft|msft|nvda|nvidia|tesla|tsla|amd|intel|intc|meta|google|googl|amzn)\b",
     r"\b(ai|startup|startups|venture|company|companies|firm|enterprise|unicorn|founder|ceo|funding|valuation|business|product|products|tech|technology|technologies|software|saas)\b",
+    r"\b(ticker|stock symbol|trading symbol|scrip code|listed|listing|exchange|publicly traded|public company|private company|unlisted)\b",
+    r"\b(fundamentals|financials|research report|risk audit|peer comparison|market capitalization)\b",
+    r"\b(agent|agents|specialist|specialists|report|findings|verdict|results|catalyst|guidance|outlook|comparison|performance)\b",
 ]
 
 def is_financial_or_stock_query(text: str) -> bool:
-    lower = (text or "").lower().strip()
+    raw = (text or "").strip()
+    lower = raw.lower()
     if not lower:
+        return True
+
+    if re.search(
+        r"^(?:hi|hello|hey|help|thanks|thank you|bye|goodbye|who are you|what can you do|"
+        r"how are you|what is artha(?:lens| ai)?|how does this work)\b",
+        lower,
+    ):
         return True
     has_finance = any(re.search(pat, lower) for pat in FINANCIAL_PATTERNS)
     is_irrelevant = any(re.search(pat, lower) for pat in NON_FINANCIAL_PATTERNS)
-    if is_irrelevant and not has_finance:
+
+    has_market_angle = bool(re.search(
+        r"\b(stock|stocks|share|shares|ticker|listed|listing|exchange|public company|"
+        r"publicly traded|invest|investment|valuation|revenue|profit)\b",
+        lower,
+    ))
+    if is_irrelevant and not has_market_angle:
         return False
-    return True
+
+    if has_finance:
+        return True
+
+    # Support discovery of new organizations while rejecting arbitrary
+    # general-purpose questions that do not belong in a finance product.
+    if re.search(r"\b(?:tell me about|details on|overview of|information on|company profile of|business of)\s+[A-Z][\w&.-]*", raw):
+        return True
+    if re.search(r"\b[A-Za-z]+(?:AI|Tech|Labs|Inc|Corp)\b", raw):
+        return True
+
+    return False
 
 
 def _extractive_report_answer(question: str, report: dict, context: dict | None) -> ReportAnswer:
@@ -783,10 +817,17 @@ async def copilot_chat(req: ChatRequest):
     if not is_financial_or_stock_query(message):
         return ChatResponse(
             answer=(
-                "### 🛡️ Out of Scope — Finance & Equity Research Only\n\n"
-                "I am **Artha AI Copilot**, specialized exclusively in equity research, "
-                "stock fundamental analysis, financial valuation, and investment intelligence.\n\n"
-                "Please ask a question related to stocks, financial metrics, or investment analysis."
+                "### 🛡️ Out of Scope — Stock Research & Finance Only\n\n"
+                "Sorry, as I am a specialized **Stock Researcher System**, I cannot process general "
+                "or non-financial requests in a perfect manner.\n\n"
+                "However, if your question is related to a **company, stock ticker, financial metric, "
+                "valuation, market analysis, or investment concept**, I will answer and analyze it thoroughly!\n\n"
+                "---\n\n"
+                "**💡 Try asking questions like:**\n"
+                "* **Company diligence:** *\"Analyze TCS fundamentals\"*\n"
+                "* **Ticker lookup:** *\"What is the ticker for Hindustan Aeronautics?\"*\n"
+                "* **Competitor comparison:** *\"Compare Infosys vs Wipro\"*\n"
+                "* **Financial concepts:** *\"Explain P/E ratio simply\"*"
             )
         ).model_dump()
 
