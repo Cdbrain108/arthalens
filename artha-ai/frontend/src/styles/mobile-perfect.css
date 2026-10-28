@@ -1582,19 +1582,27 @@
     overflow: hidden !important;
   }
 
-  /* Compact Mobile Studio Top Header */
+  /* Compact Mobile Studio Top Header — Anti-collision & perfect spacing */
   .studio-top-header {
-    height: 50px !important;
-    min-height: 50px !important;
-    padding: 0 10px !important;
-    gap: 6px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 6px !important;
+    gap: 4px !important;
     background: #0f172a !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
   }
 
   .studio-top-header button {
-    height: 34px !important;
-    padding: 0 8px !important;
+    height: 32px !important;
+  }
+
+  .studio-top-header button:not(.rounded-full) {
+    padding: 0 6px !important;
   }
 
   /* Single Line Mobile Pipeline Flow */

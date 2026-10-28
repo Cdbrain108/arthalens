@@ -484,7 +484,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, pdfBytes, pdfBlob, onClo
               <a
                 href={rawBlobUrl}
                 download={`arthalens_research_${cleanJobId}.pdf`}
-                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-3 py-1.5 text-[11.5px] font-bold text-black shadow transition hover:brightness-110 cursor-pointer"
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-3 py-1.5 text-[11.5px] font-extrabold text-slate-950 shadow transition hover:brightness-110 cursor-pointer"
                 title="Download PDF file"
               >
                 <Download size={13} />
@@ -540,7 +540,7 @@ export default function PdfViewerModal({ jobId, pdfUrl, pdfBytes, pdfBlob, onClo
               <button
                 type="button"
                 onClick={handleSwitchToReport}
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2.5 text-xs font-bold text-black shadow-lg shadow-emerald-500/25 hover:brightness-110 cursor-pointer active:scale-95"
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg shadow-emerald-500/25 hover:brightness-110 cursor-pointer active:scale-95"
                 style={{ backgroundColor: '#34d399', color: '#04120c' }}
               >
                 <FileText size={14} />

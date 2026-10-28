@@ -453,24 +453,26 @@ class _RobustStructured:
         if attempts is not None:
             self._attempts = max(1, attempts)
         elif role in FAST_ROLES:
-            self._attempts = 2
+            self._attempts = 1
         else:
-            self._attempts = 3
+            self._attempts = 2
 
     @classmethod
     def _backoff_seconds(cls, exc: Exception) -> float:
         """Seconds to wait after a rate-limit rejection (0 for other errors)."""
         text = str(exc)
         if "429" in text or "RESOURCE_EXHAUSTED" in text or "quota" in text.lower():
-            match = cls._RETRY_AFTER.search(text)
-            return min(float(match.group(1)) + 1.0, 5.0) if match else 1.0
+            return 0.5
         return 0.0
 
     def _get_base_llm(self, attempt: int) -> BaseChatModel:
+        if self._role in FAST_ROLES and groq_keys():
+            # Dedicated Groq LPU ultra-fast engine for query understanding & planning (<0.2s)
+            groq_m = settings.groq_model_fast or "qwen/qwen3.8-27b"
+            return _groq_chat(model=groq_m, temperature=0.0)
         rotator = MultiProviderFallbackChatModel(role=self._role)
         factories = rotator.get_tier_factories()
         if self._role in FAST_ROLES:
-            # Exclude slow rate-paced / sleeping providers for extraction & routing
             factories = [(n, f) for n, f in factories if "Gemini" not in n]
         if not factories:
             return get_llm(self._role)

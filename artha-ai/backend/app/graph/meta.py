@@ -75,8 +75,19 @@ def analyze(query: str) -> QueryAnalysis:
     try:
         llm = get_structured_llm("analyzer", QueryAnalysis, attempts=2)
         analysis = llm.invoke(prompt)
-        from ..tools.base import resolve_ticker_info
+        from ..tools.base import resolve_ticker_info, KNOWN_COMPANIES
         for ent in analysis.entities:
+            # Fast in-memory resolution for known equities (<0.1ms)
+            name_key = (ent.name or "").lower().strip()
+            ticker_key = (ent.ticker or "").lower().strip()
+            matched_info = KNOWN_COMPANIES.get(name_key) or KNOWN_COMPANIES.get(ticker_key)
+            if matched_info:
+                if not ent.ticker:
+                    ent.ticker = matched_info.get("ticker")
+                if not ent.exchange or ent.exchange in ("None", "null", ""):
+                    ent.exchange = matched_info.get("exchange", "NSE")
+                continue
+
             if not ent.exchange or ent.exchange in ("None", "null", ""):
                 info = resolve_ticker_info(ent.ticker or ent.name)
                 if info and info.get("exchange"):
@@ -202,7 +213,7 @@ def synthesize(state: dict[str, Any]) -> ReportJSON:
         "Use NOT ASSESSED unless the collected financial, valuation and risk evidence supports a balanced assessment.\n"
         f"Context: {json.dumps(context, default=str)}"
     )
-    llm = get_structured_llm("synthesizer", SynthesisNarrative)
+    llm = get_structured_llm("synthesizer", SynthesisNarrative, attempts=1)
     try:
         narrative: SynthesisNarrative = llm.invoke(prompt)
     except Exception as e:

@@ -129,8 +129,8 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
 
         if (isUser) {
           return (
-            <div key={msg.id || idx} className="flex justify-end studio-fade-up">
-              <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-emerald-500/15 to-emerald-600/20 border border-emerald-500/30 px-4 py-2.5 shadow-md">
+            <div key={msg.id || idx} className="studio-user-query-card flex justify-end studio-fade-up scroll-mt-6" tabIndex={-1}>
+              <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-emerald-500/20 to-teal-500/25 border border-emerald-400/40 px-4 py-2.5 shadow-lg ring-1 ring-emerald-400/30">
                 <p className="text-[13.5px] font-medium text-emerald-50 leading-relaxed">{msg.text}</p>
               </div>
             </div>
@@ -141,7 +141,7 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
           <div key={msg.id || idx} className="rounded-2xl border border-white/10 bg-[#1e2026] p-4 sm:p-5 shadow-lg space-y-4 studio-fade-up">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-emerald-600 shadow-sm">
-                <Bot size={15} className="text-black" />
+                <Bot size={15} className="text-slate-950" />
               </div>
               <span className="text-[12px] font-bold text-white">Artha AI Copilot</span>
               {!hasFinishedTyping && (
@@ -237,7 +237,7 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
                   />
                   <button
                     type="submit"
-                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 border border-emerald-400/50 px-4 py-2.5 min-h-[42px] text-xs font-bold text-black transition-all shrink-0 active:scale-95 cursor-pointer"
+                    className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 border border-emerald-400/50 px-4 py-2.5 min-h-[42px] text-xs font-extrabold text-slate-950 transition-all shrink-0 active:scale-95 cursor-pointer"
                   >
                     Submit
                   </button>
@@ -306,7 +306,7 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
           <button
             type="button"
             onClick={onOpenAuth}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-3 py-1.5 text-[11.5px] font-bold text-black shadow hover:brightness-110 transition cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-3 py-1.5 text-[11.5px] font-extrabold text-slate-950 shadow hover:brightness-110 transition cursor-pointer shrink-0"
           >
             <LogIn size={13} />
             <span>Sign In</span>
@@ -495,7 +495,7 @@ function InlineReportBriefCard({ job, pdfUrl, onViewPdf, onOpenReport, researchM
             <button
               type="button"
               onClick={onOpenReport}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-black px-3.5 py-2 text-xs font-bold transition shadow-md cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 px-3.5 py-2 text-xs font-extrabold transition shadow-md cursor-pointer active:scale-95"
             >
               <FileText size={13} />
               <span>Open In-App Report ({researchMode})</span>
@@ -566,17 +566,17 @@ function StudioTopHeader({
   const userInitials = (user?.displayName || user?.name || user?.email || 'A').trim().charAt(0).toUpperCase()
 
   return (
-    <header className="studio-top-header flex shrink-0 items-center justify-between border-b border-white/10 bg-[#16181e] px-2 sm:px-6 z-20 min-h-[52px]">
+    <header className="studio-top-header flex shrink-0 items-center justify-between border-b border-white/10 bg-[#16181e] px-1.5 sm:px-6 z-20 min-h-[48px] sm:min-h-[52px]">
       {/* Left: Clean Home button (compact on mobile) */}
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2.5">
         <button
           type="button"
           onClick={onBackToStart}
-          className="flex h-10 w-10 sm:h-9 sm:w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-3 text-[12px] font-semibold text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
+          className="flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-lg sm:rounded-xl border border-white/15 bg-white/5 sm:px-3 text-[12px] font-semibold text-[#f1f3f4] transition hover:bg-white/10 hover:text-white cursor-pointer active:scale-95"
           aria-label="Back to home"
           title="Back to home"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={15} />
           <span className="hidden sm:inline text-xs">Home</span>
         </button>
 
@@ -588,9 +588,9 @@ function StudioTopHeader({
         </div>
       </div>
 
-      {/* Center: Sleek View Mode Switcher styled with the Reasoning Block aesthetic */}
-      <div className="flex items-center justify-center min-w-0 flex-1 px-1 sm:px-2 text-center">
-        <div className="inline-flex items-center rounded-2xl bg-gradient-to-tr from-[#161f1a]/95 via-[#131720]/95 to-[#11141b]/95 border border-emerald-500/35 p-1 shadow-[0_4px_24px_rgba(0,0,0,0.65)] backdrop-blur-md transition-all duration-300">
+      {/* Center: Sleek View Mode Switcher styled with anti-collision ergonomics */}
+      <div className="flex items-center justify-center shrink-0 sm:flex-1 px-1 sm:px-2 text-center">
+        <div className="inline-flex items-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-[#161f1a]/95 via-[#131720]/95 to-[#11141b]/95 border border-emerald-500/35 p-0.5 sm:p-1 shadow-[0_4px_24px_rgba(0,0,0,0.65)] backdrop-blur-md transition-all duration-300">
           {/* ── Chat Button ── */}
           <button
             type="button"
@@ -599,11 +599,11 @@ function StudioTopHeader({
               setActiveView?.('chat')
             }}
             disabled={running || submitting}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer min-h-[38px] active:scale-95 ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer min-h-[30px] sm:min-h-[38px] active:scale-95 ${
               running || submitting
                 ? 'opacity-40 cursor-not-allowed text-slate-400'
                 : activeView === 'chat'
-                ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-black font-bold shadow-[0_0_16px_rgba(52,211,153,0.45)]'
+                ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-extrabold shadow-[0_0_16px_rgba(52,211,153,0.45)]'
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
             title={
@@ -613,25 +613,25 @@ function StudioTopHeader({
             }
           >
             <Sparkles
-              size={13}
+              size={12}
               className={
                 activeView === 'chat' && !running && !submitting
-                  ? 'text-black'
+                  ? 'text-slate-950'
                   : 'text-emerald-400'
               }
             />
             <span>Chat</span>
           </button>
 
-          {/* ── Report Button (Reasoning Block Theme & Real-time Live Highlight while generating) ── */}
+          {/* ── Report Button ── */}
           <button
             type="button"
             onClick={() => setActiveView?.('report')}
-            className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11.5px] sm:text-xs font-semibold transition-all duration-300 cursor-pointer relative min-h-[38px] active:scale-95 ${
+            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-300 cursor-pointer relative min-h-[30px] sm:min-h-[38px] active:scale-95 ${
               running || submitting
                 ? 'bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-emerald-500/25 border border-emerald-400/80 text-emerald-300 ring-1 ring-emerald-400/50 shadow-[0_0_22px_rgba(16,185,129,0.5)] animate-pulse'
                 : activeView === 'report'
-                ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-black font-bold shadow-[0_0_16px_rgba(52,211,153,0.45)]'
+                ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 font-extrabold shadow-[0_0_16px_rgba(52,211,153,0.45)]'
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
             title={
@@ -647,10 +647,10 @@ function StudioTopHeader({
               </span>
             ) : (
               <FileText
-                size={13}
+                size={12}
                 className={
                   activeView === 'report'
-                    ? 'text-black'
+                    ? 'text-slate-950'
                     : 'text-emerald-400'
                 }
               />
@@ -660,8 +660,8 @@ function StudioTopHeader({
 
             {/* Mode / Compilation Badge */}
             {running || submitting ? (
-              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-200 font-bold uppercase tracking-wider animate-pulse">
-                <Sparkles size={9} className="animate-spin text-emerald-300" style={{ animationDuration: '3s' }} />
+              <span className="inline-flex items-center gap-1 text-[8.5px] sm:text-[9px] font-mono px-1 sm:px-1.5 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-200 font-bold uppercase tracking-wider animate-pulse">
+                <Sparkles size={8} className="animate-spin text-emerald-300" style={{ animationDuration: '3s' }} />
                 <span className="hidden sm:inline">Generating...</span>
                 <span className="sm:hidden">...</span>
               </span>
@@ -669,7 +669,7 @@ function StudioTopHeader({
               <span
                 className={`hidden sm:inline-block text-[9.5px] px-1.5 py-0.5 rounded-md font-mono uppercase font-bold tracking-wider transition-colors ${
                   activeView === 'report'
-                    ? 'bg-black/25 text-black'
+                    ? 'bg-black/35 text-white font-bold'
                     : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
                 }`}
               >
@@ -680,28 +680,28 @@ function StudioTopHeader({
         </div>
       </div>
 
-      {/* Right: Actions */}
+      {/* Right: Actions (compact, non-colliding spacing on mobile) */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
         <button
           type="button"
           onClick={onNewResearch}
           disabled={running}
-          className="flex h-10 w-10 sm:h-9 sm:w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 sm:px-2.5 text-[11.5px] font-medium text-[#f1f3f4] transition hover:bg-white/10 disabled:opacity-40 cursor-pointer active:scale-95"
+          className="flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-lg sm:rounded-xl border border-white/15 bg-white/5 sm:px-2.5 text-[11.5px] font-medium text-[#f1f3f4] transition hover:bg-white/10 disabled:opacity-40 cursor-pointer active:scale-95"
           title="Start new research"
           aria-label="Start new research"
         >
-          <Sparkles size={14} className="text-emerald-400" />
+          <Sparkles size={13} className="text-emerald-400" />
           <span className="hidden sm:inline">New</span>
         </button>
 
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="flex h-10 w-10 sm:h-9 sm:w-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-xl border border-white/15 bg-white/5 text-slate-300 hover:text-white sm:px-2.5 cursor-pointer active:scale-95"
+          className="flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-lg sm:rounded-xl border border-white/15 bg-white/5 text-slate-300 hover:text-white sm:px-2.5 cursor-pointer active:scale-95"
           title="Past research history"
           aria-label="Past research history"
         >
-          <Menu size={16} />
+          <Menu size={15} />
           <span className="hidden lg:inline text-xs">History</span>
         </button>
 
@@ -710,7 +710,7 @@ function StudioTopHeader({
             type="button"
             onClick={onViewPdf}
             disabled={!isDone || running}
-            className={`flex h-10 sm:h-9 items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
+            className={`flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-lg sm:rounded-xl border sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
               isDone
                 ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
                 : 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed opacity-50'
@@ -721,7 +721,7 @@ function StudioTopHeader({
                 : 'PDF dossier compiles upon research completion'
             }
           >
-            <FileText size={14} />
+            <FileText size={13} />
             <span className="hidden sm:inline">PDF</span>
           </button>
         )}
@@ -730,11 +730,11 @@ function StudioTopHeader({
           <button
             type="button"
             onClick={onOpenAuth}
-            className="flex h-10 sm:h-9 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer active:scale-95 shadow-sm"
+            className="flex h-8 sm:h-9 items-center gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2 sm:px-2.5 text-[11px] sm:text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition cursor-pointer active:scale-95 shadow-sm"
             title="Sign in to your account"
           >
-            <LogIn size={14} />
-            <span className="hidden min-[400px]:inline text-xs">Sign In</span>
+            <LogIn size={13} />
+            <span className="hidden sm:inline text-xs">Sign In</span>
           </button>
         ) : (
           <div className="relative">
@@ -742,7 +742,7 @@ function StudioTopHeader({
               type="button"
               onClick={() => setProfileOpen((prev) => !prev)}
               title={`Signed in as ${user?.displayName || user?.name || user?.email || 'Researcher'}`}
-              className="flex h-10 w-10 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#22c55e] to-[#16a34a] text-[10.5px] sm:text-[11px] font-bold text-white shadow hover:ring-2 hover:ring-white/20 transition cursor-pointer active:scale-95"
             >
               {userInitials}
             </button>
@@ -1495,10 +1495,22 @@ export default function StudioPage({
     }
   }
 
-  // Auto-scroll chat on Q&A messages, copilot messages, completion, or active generation
+  // Auto-scroll & focus smoothly whenever user asks any question or new response is generated
+  const focusOnLatestQuery = useCallback(() => {
+    requestAnimationFrame(() => {
+      const userCards = document.querySelectorAll('.studio-user-query-card')
+      const latestCard = userCards[userCards.length - 1]
+      if (latestCard) {
+        latestCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      } else if (chatScrollRef.current) {
+        chatScrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }
+    })
+  }, [])
+
   useEffect(() => {
-    chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [qaMessages?.length, copilotMessages?.length, isDone, askingReport, isGenerating])
+    focusOnLatestQuery()
+  }, [qaMessages?.length, copilotMessages?.length, isDone, askingReport, isGenerating, focusOnLatestQuery])
 
   const handleCopilotAction = async (rawText) => {
     let text = (rawText || '').trim()
@@ -2038,8 +2050,9 @@ export default function StudioPage({
                     return (
                       <div
                         key={`${message.role}-${index}`}
+                        tabIndex={isUser ? -1 : undefined}
                         className={isUser
-                          ? 'ml-8 rounded-2xl rounded-tr-sm border border-emerald-500/30 bg-gradient-to-r from-emerald-500/15 to-emerald-600/20 px-4 py-2.5 text-[13px] leading-relaxed text-[#f1f3f4] shadow-md'
+                          ? 'studio-user-query-card ml-8 rounded-2xl rounded-tr-sm border border-emerald-400/40 bg-gradient-to-r from-emerald-500/20 to-teal-500/25 px-4 py-2.5 text-[13px] leading-relaxed text-[#f1f3f4] shadow-lg ring-1 ring-emerald-400/30 scroll-mt-6'
                           : 'mr-3 rounded-2xl rounded-tl-sm border border-white/10 bg-[#1e2026] p-4 text-[13px] leading-relaxed text-[#d2d6dc] shadow-md'}
                       >
                         <div className="flex items-center gap-1.5 mb-1.5">

@@ -137,10 +137,7 @@ export default function ArthaReasoningBlock({
   const isPlanning = Boolean(
     isStockResearch && (
       submitting ||
-      (!job?.selected_agents || job.selected_agents.length === 0) ||
-      job?.current_node === 'analyze_query' ||
-      job?.current_node === 'create_plan' ||
-      job?.current_node === 'apply_routing_policy'
+      (!job?.selected_agents || job.selected_agents.length === 0)
     ) && !isDone
   )
 
@@ -315,11 +312,11 @@ export default function ArthaReasoningBlock({
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-500 shadow-md">
             {active && !isDone ? (
-              <Sparkles size={15} className="text-black animate-spin" />
+              <Sparkles size={15} className="text-slate-950 animate-spin" />
             ) : isConversationalMode ? (
-              <BookOpen size={15} className="text-black" />
+              <BookOpen size={15} className="text-slate-950" />
             ) : (
-              <CheckCircle2 size={16} className="text-black" />
+              <CheckCircle2 size={16} className="text-slate-950" />
             )}
           </div>
           <div className="min-w-0">
@@ -403,7 +400,7 @@ export default function ArthaReasoningBlock({
           <button
             type="button"
             onClick={onViewReport}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1.5 text-[11.5px] font-bold shadow-md hover:shadow-emerald-500/25 transition cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 px-3 py-1.5 text-[11.5px] font-extrabold shadow-md hover:shadow-emerald-500/25 transition cursor-pointer shrink-0"
           >
             <span>View Full Report</span>
             <ArrowRight size={12} />
@@ -606,7 +603,7 @@ export default function ArthaReasoningBlock({
                   <button
                     type="button"
                     onClick={onViewReport}
-                    className="flex items-center gap-1 rounded-lg bg-emerald-500 text-black px-2.5 py-1 text-[11px] font-bold hover:brightness-110 transition cursor-pointer"
+                    className="flex items-center gap-1 rounded-lg bg-emerald-400 text-slate-950 px-2.5 py-1 text-[11px] font-extrabold hover:brightness-110 transition cursor-pointer"
                   >
                     <span>View Full Report</span>
                     <ArrowRight size={11} />

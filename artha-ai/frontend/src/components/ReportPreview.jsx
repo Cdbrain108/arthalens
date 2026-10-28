@@ -3709,7 +3709,7 @@ export default function ReportPreview({
           <button
             type="button"
             onClick={onAskMoreAboutReport}
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 min-h-[44px] w-full sm:w-auto text-[13px] font-bold text-black shadow-lg hover:brightness-110 active:scale-95 transition cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 min-h-[44px] w-full sm:w-auto text-[13px] font-extrabold text-slate-950 shadow-lg hover:brightness-110 active:scale-95 transition cursor-pointer shrink-0"
           >
             <span>Ask Artha Copilot</span>
             <Sparkles size={14} />

@@ -833,7 +833,7 @@ export default function ArthaCopilot({
                         />
                         <button
                           type="submit"
-                          className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 border border-emerald-400/50 px-4 py-2.5 min-h-[42px] text-xs font-bold text-black transition-all shrink-0 active:scale-95 cursor-pointer"
+                          className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 border border-emerald-400/50 px-4 py-2.5 min-h-[42px] text-xs font-extrabold text-slate-950 transition-all shrink-0 active:scale-95 cursor-pointer"
                         >
                           Submit
                         </button>

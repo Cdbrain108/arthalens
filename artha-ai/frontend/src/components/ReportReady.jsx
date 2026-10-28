@@ -144,7 +144,7 @@ export default function ReportReady({ job, onReset, user }) {
               <a
                 href={pdf.url}
                 download={`arthalens_research_${jobId}.pdf`}
-                className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2 text-[13px] font-semibold text-black shadow-md hover:brightness-110"
+                className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#22c55e] to-[#16a34a] px-4 py-2 text-[13px] font-extrabold text-slate-950 shadow-md hover:brightness-110"
               >
                 <Download size={14} /> Download PDF
               </a>
