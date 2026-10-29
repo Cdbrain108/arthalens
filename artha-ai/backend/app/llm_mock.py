@@ -262,6 +262,11 @@ def mock_synthesize(state: dict) -> dict:
     bear = state.get("bear_case") or []
     evidence = state.get("evidence") or []
 
+    if evidence and (not bull or not bear):
+        chal = mock_challenge(evidence, state.get("query", ""))
+        bull = bull or chal.get("bull_case", [])
+        bear = bear or chal.get("bear_case", [])
+
     if not evidence:
         return ReportJSON(
             query=state.get("query", ""), company=company,

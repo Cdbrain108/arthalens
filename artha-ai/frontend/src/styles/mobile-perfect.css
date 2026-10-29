@@ -145,14 +145,7 @@
   white-space: nowrap !important;
 }
 
-@media (max-width: 410px) {
-  .arg-nav-mobile-page-pill {
-    max-width: 85px !important;
-    padding: 3px 7px !important;
-  }
-}
-
-@media (max-width: 340px) {
+@media (max-width: 480px) {
   .arg-nav-mobile-page-pill {
     display: none !important;
   }

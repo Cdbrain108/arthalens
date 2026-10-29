@@ -310,13 +310,13 @@ export default function ArthaReasoningBlock({
       {/* ── Top Bar: Title + Timer + Reasoning Collapse Toggle ── */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-500 shadow-md">
+          <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 shadow-md">
             {active && !isDone ? (
-              <Sparkles size={15} className="text-slate-950 animate-spin" />
+              <Sparkles size={15} className="text-white drop-shadow-sm animate-spin" />
             ) : isConversationalMode ? (
-              <BookOpen size={15} className="text-slate-950" />
+              <BookOpen size={15} className="text-white drop-shadow-sm" />
             ) : (
-              <CheckCircle2 size={16} className="text-slate-950" />
+              <CheckCircle2 size={16} className="text-white drop-shadow-sm" />
             )}
           </div>
           <div className="min-w-0">

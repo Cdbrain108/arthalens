@@ -140,8 +140,8 @@ function ConversationalCopilot({ messages = [], onAction, user, onOpenAuth, runn
         return (
           <div key={msg.id || idx} className="rounded-2xl border border-white/10 bg-[#1e2026] p-4 sm:p-5 shadow-lg space-y-4 studio-fade-up">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-400 to-emerald-600 shadow-sm">
-                <Bot size={15} className="text-slate-950" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 shadow-sm">
+                <Bot size={15} className="text-white drop-shadow-sm" />
               </div>
               <span className="text-[12px] font-bold text-white">Artha AI Copilot</span>
               {!hasFinishedTyping && (
@@ -710,7 +710,7 @@ function StudioTopHeader({
             type="button"
             onClick={onViewPdf}
             disabled={!isDone || running}
-            className={`flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-lg sm:rounded-xl border sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
+            className={`hidden sm:flex h-8 w-8 sm:h-9 sm:w-auto shrink-0 items-center justify-center sm:gap-1.5 rounded-lg sm:rounded-xl border sm:px-2.5 py-1 text-[11px] sm:text-[11.5px] font-semibold transition cursor-pointer active:scale-95 ${
               isDone
                 ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
                 : 'bg-white/5 border-white/10 text-slate-500 cursor-not-allowed opacity-50'
@@ -841,7 +841,7 @@ function StudioChatInputBar({
 
           <button
             type="button"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white cursor-pointer"
+            className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[#9aa0a6] transition hover:bg-white/10 hover:text-white cursor-pointer"
             title="Voice input"
           >
             <Mic size={15} />
@@ -1497,15 +1497,17 @@ export default function StudioPage({
 
   // Auto-scroll & focus smoothly whenever user asks any question or new response is generated
   const focusOnLatestQuery = useCallback(() => {
-    requestAnimationFrame(() => {
-      const userCards = document.querySelectorAll('.studio-user-query-card')
-      const latestCard = userCards[userCards.length - 1]
-      if (latestCard) {
-        latestCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      } else if (chatScrollRef.current) {
+    setTimeout(() => {
+      if (chatScrollRef.current) {
         chatScrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      } else {
+        const userCards = document.querySelectorAll('.studio-user-query-card')
+        const latestCard = userCards[userCards.length - 1]
+        if (latestCard) {
+          latestCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }
       }
-    })
+    }, 60)
   }, [])
 
   useEffect(() => {

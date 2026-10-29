@@ -49,6 +49,8 @@ def _role_model(role: str) -> str | None:
             return settings.groq_model_fast
         if settings.effective_provider == "gemini" and settings.gemini_model_fast:
             return settings.gemini_model_fast
+    if role == "specialist" and settings.effective_provider in ("groq", "sota") and settings.groq_model_fast:
+        return settings.groq_model_fast
     return None
 
 

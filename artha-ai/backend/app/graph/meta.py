@@ -6,11 +6,13 @@ invocations that map prompts to validated Pydantic contracts.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from ..llm import get_structured_llm, is_mock
 from ..schemas.models import (
     ChallengeOutput,
+    Entity,
     QueryAnalysis,
     ReportAnswer,
     ReportJSON,
@@ -41,8 +43,38 @@ def _balanced_evidence(evidence, per_agent=2):
     return selected
 
 
+def _try_single_ticker_resolution(query: str) -> QueryAnalysis | None:
+    q = query.strip()
+    # Check if query is a single ticker or symbol like RELIANCE.NS, TCS.BO, INFY, NVDA, AAPL
+    if re.match(r"^[A-Za-z0-9_&-]+(\.[A-Za-z]{2,4})?$", q, re.IGNORECASE):
+        from ..tools.base import resolve_ticker_info
+        from ..llm_mock import KNOWN_COMPANIES
+        info = resolve_ticker_info(q)
+        if info:
+            ticker = info.get("ticker")
+            exchange = info.get("exchange") or "NSE"
+            name = info.get("name") or ticker
+            # Check known companies for full official name
+            for k in (ticker.lower(), name.lower(), q.lower()):
+                if k in KNOWN_COMPANIES:
+                    name = KNOWN_COMPANIES[k].get("name", name)
+                    exchange = KNOWN_COMPANIES[k].get("exchange", exchange)
+                    break
+            return QueryAnalysis(
+                entities=[Entity(name=name, ticker=ticker, exchange=exchange, confidence="high")],
+                intent="general",
+                time_horizon="medium_term",
+                compare_mode=False,
+                reasoning=f"Direct ticker resolution for {q} on {exchange}."
+            )
+    return None
+
+
 def analyze(query: str) -> QueryAnalysis:
     """Analyze query dynamically via fast LLM to extract entities, intent, horizon, and comparison mode."""
+    single_res = _try_single_ticker_resolution(query)
+    if single_res is not None:
+        return single_res
     if is_mock():
         from ..llm_mock import mock_analyze
         return QueryAnalysis.model_validate(mock_analyze(query))
@@ -69,13 +101,16 @@ def analyze(query: str) -> QueryAnalysis:
         "Bharti Airtel, ITC, SBI, L&T, etc.), default exchange to 'NSE' (never 'NYSE' or 'NASDAQ') with the "
         "standard NSE ticker (e.g. INFY, TCS, RELIANCE) so primary INR market data is retrieved, unless the "
         "user explicitly requests US ADR or US listings. "
+        "CRITICAL TICKER RULE: Exchange suffixes like .NS (NSE India), .BO (BSE India), .L (London), .TO (Toronto) belong strictly to the preceding ticker symbol (e.g. 'RELIANCE.NS' is ONE entity: Reliance on NSE, NEVER interpret '.NS' as Norfolk Southern or a second entity). NEVER split a ticker suffix into a separate company. "
         "Do not infer financial facts.\n"
         f"Query: {query}"
     )
     try:
-        llm = get_structured_llm("analyzer", QueryAnalysis, attempts=2)
+        llm = get_structured_llm("analyzer", Entity,
+    QueryAnalysis, attempts=2)
         analysis = llm.invoke(prompt)
-        from ..tools.base import resolve_ticker_info, KNOWN_COMPANIES
+        from ..tools.base import resolve_ticker_info
+        from ..llm_mock import KNOWN_COMPANIES
         for ent in analysis.entities:
             # Fast in-memory resolution for known equities (<0.1ms)
             name_key = (ent.name or "").lower().strip()
@@ -94,6 +129,13 @@ def analyze(query: str) -> QueryAnalysis:
                     ent.exchange = info["exchange"]
                 if info and info.get("ticker") and not ent.ticker:
                     ent.ticker = info["ticker"]
+        # Safeguard against hallucinated extra entities from suffixes like .NS / .BO
+        is_explicit_compare = any(w in query.lower() for w in (" vs ", " vs. ", " versus ", " compare ", " between ", " better "))
+        if not is_explicit_compare and len(analysis.entities) > 1:
+            first_ticker = (analysis.entities[0].ticker or "").upper()
+            if first_ticker and first_ticker in query.upper():
+                analysis.entities = [analysis.entities[0]]
+                analysis.compare_mode = False
         return analysis
     except Exception:
         from ..llm_mock import mock_analyze
@@ -220,6 +262,14 @@ def synthesize(state: dict[str, Any]) -> ReportJSON:
         from ..llm_mock import mock_synthesize
         return ReportJSON.model_validate(mock_synthesize(state))
 
+    bull = narrative.bull_case
+    bear = narrative.bear_case
+    if not bull or not bear:
+        from ..llm_mock import mock_challenge
+        chal = mock_challenge(context.get("evidence", []), state.get("query", ""))
+        bull = bull or chal.get("bull_case", [])
+        bear = bear or chal.get("bear_case", [])
+
     return ReportJSON(
         query=state.get("query", ""),
         company=(state.get("entities") or [{}])[0],
@@ -228,8 +278,8 @@ def synthesize(state: dict[str, Any]) -> ReportJSON:
             "classification": narrative.assessment_classification,
             "rationale": narrative.assessment_rationale,
         },
-        bull_case=narrative.bull_case,
-        bear_case=narrative.bear_case,
+        bull_case=bull,
+        bear_case=bear,
         what_could_change_view=narrative.what_could_change_view,
         evidence_gaps=state.get("evidence_gaps", []),
     )

@@ -204,28 +204,55 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
     )
 
     keywords = _derived_keywords(state)
-    try:
-        envelope = news_tools.search_news.invoke({
-            "query": query,
-            "since": since_text,
-            "deep": True,
-            "keywords": keywords,
-        })
-    except Exception as exc:
-        return _empty_result(
-            company, timestamp,
-            [f"News retrieval failed: {exc}", "No dated news evidence was available."],
-            base_reasoning,
-        )
+    entities = state.get("entities") or []
+    raw_items: list[dict[str, Any]] = []
+    envelope: dict[str, Any] = {}
 
-    if not isinstance(envelope, dict):
-        return _empty_result(
-            company, timestamp,
-            ["News retrieval returned an invalid provider response; no evidence was available."],
-            base_reasoning,
-        )
-    data = envelope.get("data") or {}
-    raw_items = data.get("items") if isinstance(data, dict) else []
+    if len(entities) > 1:
+        # Search news for each entity individually to ensure full coverage across all peers
+        for ent in entities:
+            ent_name = ent.get("name") if isinstance(ent, dict) else str(ent)
+            ent_ticker = ent.get("ticker") if isinstance(ent, dict) else ""
+            ent_q = f"{ent_name} {ent_ticker}".strip() or ent_name
+            try:
+                env = news_tools.search_news.invoke({
+                    "query": ent_q,
+                    "since": since_text,
+                    "deep": False,
+                })
+                if isinstance(env, dict) and isinstance((env.get("data") or {}).get("items"), list):
+                    raw_items.extend(env["data"]["items"][:5])
+                    if not envelope:
+                        envelope = env
+            except Exception:
+                pass
+    else:
+        try:
+            envelope = news_tools.search_news.invoke({
+                "query": query,
+                "since": since_text,
+                "deep": True,
+                "keywords": keywords,
+            })
+            if isinstance(envelope, dict):
+                data = envelope.get("data") or {}
+                raw_items = data.get("items") if isinstance(data, dict) else []
+        except Exception:
+            raw_items = []
+
+    # Fallback to simple company headline query if deep search returned 0 items
+    if not raw_items and entities:
+        for ent in entities[:2]:
+            ent_name = ent.get("name") if isinstance(ent, dict) else str(ent)
+            try:
+                fb_env = news_tools.search_news.invoke({"query": ent_name, "since": since_text, "deep": False})
+                if isinstance(fb_env, dict) and isinstance((fb_env.get("data") or {}).get("items"), list):
+                    raw_items.extend(fb_env["data"]["items"][:4])
+                    if not envelope:
+                        envelope = fb_env
+            except Exception:
+                pass
+
     if not isinstance(raw_items, list):
         raw_items = []
 

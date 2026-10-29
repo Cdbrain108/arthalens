@@ -13,6 +13,12 @@ def test_financial_and_company_questions_remain_in_scope():
         "tell me about Zoho",
         "What did each agent find in the report?",
         "Who are you?",
+        "Analyze JIO IPO",
+        "Jio IPO",
+        "Yes, create full research report for JIO IPO",
+        "Check valuation & financial metrics for JIO IPO",
+        "Compare JIO IPO with industry peers",
+        "Swiggy IPO grey market premium",
     ]
 
     for query in queries:

@@ -88,15 +88,17 @@ NON_FINANCIAL_PATTERNS = [
 
 FINANCIAL_PATTERNS = [
     r"\b(stock|stocks|share|shares|equity|equities|market|markets|invest|investing|investment|investor)\b",
+    r"\b(ipo|ipos|fpo|drhp|rhp|allotment|listing|gmp|grey market|ofss|offer for sale|red herring|fresh issue|anchor investor|qib|retail quota|hni)\b",
     r"\b(portfolio|dividend|dividends|valuation|multiple|pe|p/e|roe|roce|ebitda|opm|npm)\b",
     r"\b(revenue|profit|margin|margins|loss|earnings|balance sheet|cash flow|debt|leverage)\b",
     r"\b(capex|cagr|moat|moats|bull|bear|hold|buy|sell|quarter|quarterly|fiscal|annual report)\b",
-    r"\b(10-k|10-q|sec|nse|bse|nifty|sensex|sp500|nasdaq|nyse|fed|rbi|yield|bond|etf)\b",
-    r"\b(tcs|infosys|infy|reliance|ril|wipro|hdfc|icici|sbi|apple|aapl|microsoft|msft|nvda|nvidia|tesla|tsla|amd|intel|intc|meta|google|googl|amzn)\b",
+    r"\b(10-k|10-q|sec|nse|bse|nifty|sensex|sp500|nasdaq|nyse|fed|rbi|yield|bond|etf|derivatives|futures|options)\b",
+    r"\b(tcs|infosys|infy|reliance|ril|jio|reliance jio|wipro|hdfc|icici|sbi|apple|aapl|microsoft|msft|nvda|nvidia|tesla|tsla|amd|intel|intc|meta|google|googl|amzn|swiggy|zomato|paytm|ola|nykaa|zoho|zerodha|tata|adani|itc|l&t|bajaj|airtel|bharti|maruti|mahindra|lic|vedanta)\b",
     r"\b(ai|startup|startups|venture|company|companies|firm|enterprise|unicorn|founder|ceo|funding|valuation|business|product|products|tech|technology|technologies|software|saas)\b",
     r"\b(ticker|stock symbol|trading symbol|scrip code|listed|listing|exchange|publicly traded|public company|private company|unlisted)\b",
     r"\b(fundamentals|financials|research report|risk audit|peer comparison|market capitalization)\b",
     r"\b(agent|agents|specialist|specialists|report|findings|verdict|results|catalyst|guidance|outlook|comparison|performance)\b",
+    r"\b(analyze|analysis|research|audit|evaluate|evaluation|inspect|forecast|projections|thesis|deep-dive|dossier|breakdown|fair value)\b",
 ]
 
 def is_financial_or_stock_query(text: str) -> bool:
@@ -127,9 +129,9 @@ def is_financial_or_stock_query(text: str) -> bool:
 
     # Support discovery of new organizations while rejecting arbitrary
     # general-purpose questions that do not belong in a finance product.
-    if re.search(r"\b(?:tell me about|details on|overview of|information on|company profile of|business of)\s+[A-Z][\w&.-]*", raw):
+    if re.search(r"\b(?:tell me about|details on|overview of|information on|company profile of|business of|analyze|research|audit|inspect|forecast)\s+[A-Za-z0-9&.-]+", raw, re.IGNORECASE):
         return True
-    if re.search(r"\b[A-Za-z]+(?:AI|Tech|Labs|Inc|Corp)\b", raw):
+    if re.search(r"\b[A-Za-z]+(?:AI|Tech|Labs|Inc|Corp|Ltd|Limited|Ventures|Cap|Capital)\b", raw):
         return True
 
     return False
