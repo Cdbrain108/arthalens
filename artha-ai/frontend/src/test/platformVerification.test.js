@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import MobileLanding from '../components/MobileLanding'
 import LandingExperience from '../components/LandingExperience'
 import StudioPage from '../components/StudioPage'
-import ReportPreview from '../components/ReportPreview'
+import ReportPreview, { SynthesisNarrativeBlock } from '../components/ReportPreview'
 import ArthaReasoningBlock from '../components/ArthaReasoningBlock'
 import ArthaCopilot from '../components/ArthaCopilot'
 import Sidebar from '../components/Sidebar'
@@ -283,6 +283,28 @@ test('ReportPreview formats synthesis narrative into bold headings and action pi
   assert.ok(html.includes('BUY SLOWLY IN STAGES (Do Not Buy All At Once)'))
   assert.ok(html.includes('TIME HORIZON EXPECTATION'))
   assert.ok(html.includes('EXACT RULES FOR WHEN TO SELL'))
+})
+
+test('SynthesisNarrativeBlock never renders empty cards or stray pin emojis on unstructured or trailing bullets', () => {
+  const textWithEmptyBullets = `Plain English Executive Summary: High conviction compounder.
+• 
+• WHAT EXISTING SHAREHOLDERS SHOULD DO: HOLD: Maintain position.
+• 
+• Key operational moat in software ecosystem without a colon
+• `
+
+  const html = renderToStaticMarkup(
+    React.createElement(SynthesisNarrativeBlock, {
+      text: textWithEmptyBullets,
+      sources: [],
+    })
+  )
+
+  assert.ok(html.includes('The Short Answer (Plain English Verdict)'))
+  assert.ok(html.includes('WHAT EXISTING SHAREHOLDERS SHOULD DO'))
+  assert.ok(html.includes('Key operational moat in software ecosystem without a colon'))
+  // Must NOT include raw pushpin emoji 📌
+  assert.ok(!html.includes('📌'))
 })
 
 test('ArthaReasoningBlock automatically shifts to Pipeline Flow when agents finish', () => {

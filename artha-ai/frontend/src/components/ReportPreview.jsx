@@ -521,6 +521,8 @@ export function SynthesisNarrativeBlock({ text, sources = [] }) {
     const isBullet = line.startsWith('•') || line.startsWith('*') || line.startsWith('-')
     if (isBullet) {
       const clean = line.replace(/^[•*-]\s*/, '').trim()
+      if (!clean) return
+
       const firstColon = clean.indexOf(':')
       if (firstColon !== -1) {
         const headerTitle = clean.substring(0, firstColon).trim()
@@ -538,16 +540,25 @@ export function SynthesisNarrativeBlock({ text, sources = [] }) {
           pill = remainder.substring(0, secondColon).trim()
           body = remainder.substring(secondColon + 1).trim()
         }
-        bulletCards.push({ headerTitle, pill, body, raw: clean })
+        if (headerTitle || body) {
+          bulletCards.push({ headerTitle, pill, body, raw: clean })
+        }
       } else {
-        bulletCards.push({ headerTitle: '', pill: '', body: clean, raw: clean })
+        // Bullet without colon is key takeaway narrative; never create a blank card with a lone icon
+        if (clean.length > 0) {
+          introBlocks.push(clean)
+        }
       }
     } else {
       introBlocks.push(line)
     }
   })
 
-  if (bulletCards.length === 0) {
+  const validCards = bulletCards.filter(
+    (card) => (card.headerTitle && card.headerTitle.trim()) || (card.body && card.body.trim())
+  )
+
+  if (validCards.length === 0 && introBlocks.length === 0) {
     return (
       <div className="space-y-2.5 text-left text-[13px] leading-relaxed text-[#e2e8f0]">
         {rawLines.map((l, i) => (
@@ -629,7 +640,7 @@ export function SynthesisNarrativeBlock({ text, sources = [] }) {
       badgeBg: 'bg-white/10',
       badgeText: 'text-slate-300',
       titleColor: 'text-white',
-      icon: '📌',
+      icon: '📊',
     }
   }
 
@@ -659,34 +670,44 @@ export function SynthesisNarrativeBlock({ text, sources = [] }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-2.5">
-        {bulletCards.map((card, idx) => {
-          const style = getStyleForTitle(card.headerTitle)
-          return (
-            <div
-              key={idx}
-              className={`rounded-xl border ${style.border} ${style.bg} p-3.5 sm:p-4 text-left transition-all hover:bg-white/[0.04] shadow-sm`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[13px]">{style.icon}</span>
-                  <h4 className={`text-[12px] sm:text-[13px] font-extrabold uppercase tracking-wider ${style.titleColor}`}>
-                    {card.headerTitle}
-                  </h4>
-                </div>
-                {card.pill && (
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-[10px] sm:text-[10.5px] font-bold uppercase tracking-wider border ${style.badgeBorder} ${style.badgeBg} ${style.badgeText}`}
-                  >
-                    {card.pill}
-                  </span>
+      {validCards.length > 0 && (
+        <div className="grid grid-cols-1 gap-2.5">
+          {validCards.map((card, idx) => {
+            const style = getStyleForTitle(card.headerTitle)
+            const hasTitle = Boolean(card.headerTitle && card.headerTitle.trim())
+            const hasBody = Boolean(card.body && card.body.trim())
+            if (!hasTitle && !hasBody) return null
+
+            return (
+              <div
+                key={idx}
+                className={`rounded-xl border ${style.border} ${style.bg} p-3.5 sm:p-4 text-left transition-all hover:bg-white/[0.04] shadow-sm`}
+              >
+                {hasTitle && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[13px]">{style.icon}</span>
+                      <h4 className={`text-[12px] sm:text-[13px] font-extrabold uppercase tracking-wider ${style.titleColor}`}>
+                        {card.headerTitle}
+                      </h4>
+                    </div>
+                    {card.pill && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-[10px] sm:text-[10.5px] font-bold uppercase tracking-wider border ${style.badgeBorder} ${style.badgeBg} ${style.badgeText}`}
+                      >
+                        {card.pill}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {hasBody && (
+                  <FormattedCardBody text={card.body} pill={card.pill} headerTitle={card.headerTitle} sources={sources} />
                 )}
               </div>
-              <FormattedCardBody text={card.body} pill={card.pill} headerTitle={card.headerTitle} sources={sources} />
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
