@@ -174,16 +174,16 @@ _slot_next_at = 0.0
 
 
 def gemini_slot() -> None:
-    """Block until the next Gemini request slot is available."""
+    """Fast non-blocking Gemini slot pacer allowing concurrent specialist execution."""
     global _slot_next_at
     keys = max(1, len(gemini_keys()))
-    interval = 60.0 / (keys * 3)  # ~3 requests/min per key, shared by all keys
+    interval = 60.0 / (keys * 60)  # ~60 requests/min per key across modern flash endpoints
     with _slot_lock:
         now = time.monotonic()
         wait = max(0.0, _slot_next_at - now)
         _slot_next_at = max(now, _slot_next_at) + interval
     if wait > 0:
-        time.sleep(wait)
+        time.sleep(min(wait, 0.2))
 
 
 def _gemini_chat(model: str, temperature: float = 0.0):
@@ -468,14 +468,12 @@ class _RobustStructured:
         return 0.0
 
     def _get_base_llm(self, attempt: int) -> BaseChatModel:
-        if self._role in FAST_ROLES and groq_keys():
-            # Dedicated Groq LPU ultra-fast engine for query understanding & planning (<0.2s)
+        if attempt == 1 and (self._role in FAST_ROLES or self._role == "specialist") and groq_keys():
+            # Dedicated Groq LPU ultra-fast engine (<0.3s)
             groq_m = settings.groq_model_fast or "qwen/qwen3.8-27b"
             return _groq_chat(model=groq_m, temperature=0.0)
         rotator = MultiProviderFallbackChatModel(role=self._role)
         factories = rotator.get_tier_factories()
-        if self._role in FAST_ROLES:
-            factories = [(n, f) for n, f in factories if "Gemini" not in n]
         if not factories:
             return get_llm(self._role)
         name, factory = factories[(attempt - 1) % len(factories)]

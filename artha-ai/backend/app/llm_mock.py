@@ -129,7 +129,10 @@ def mock_analyze(query: str) -> dict:
     _EXCLUDED_CAPS = {
         "THE", "AND", "FOR", "BUY", "SELL", "HOLD", "YES", "NOT", "CAN", "WHAT",
         "WHY", "HOW", "WHO", "ARE", "ALL", "NEW", "TOP", "NSE", "BSE", "NYSE",
-        "NASDAQ", "USD", "INR", "REPORT", "AUDIT", "FULL", "AI", "ANALYZE", "VS"
+        "NASDAQ", "USD", "INR", "REPORT", "AUDIT", "FULL", "AI", "ANALYZE", "VS",
+        "IPO", "IPOS", "FPO", "FPOS", "NFO", "ETF", "ETFS", "PE", "EPS", "ROE",
+        "ROCE", "OPM", "NPM", "PB", "DCF", "FCF", "CAGR", "EBITDA", "DRHP", "RHP",
+        "GMP", "CEO", "CFO", "SEC", "RBI", "SEBI", "NS", "BO", "NSC"
     }
     for word in re.findall(r"\b([A-Z]{2,6})\b", query):
         w_up = word.upper()

@@ -129,13 +129,25 @@ def analyze(query: str) -> QueryAnalysis:
                     ent.exchange = info["exchange"]
                 if info and info.get("ticker") and not ent.ticker:
                     ent.ticker = info["ticker"]
-        # Safeguard against hallucinated extra entities from suffixes like .NS / .BO
-        is_explicit_compare = any(w in query.lower() for w in (" vs ", " vs. ", " versus ", " compare ", " between ", " better "))
+        # Filter out pseudo-entities from common acronyms (e.g. 'IPO' interpreted as Renaissance IPO ETF)
+        PSEUDO_TICKERS = {"IPO", "ETF", "PE", "EPS", "ROE", "NIFTY", "SENSEX", "NSE", "BSE", "NSC", "NS"}
+        filtered_entities = []
+        for ent in analysis.entities:
+            t_upper = (ent.ticker or "").upper().strip()
+            n_upper = (ent.name or "").upper().strip()
+            # If ticker is in PSEUDO_TICKERS (e.g. IPO) and query didn't explicitly ask for that fund
+            if t_upper in PSEUDO_TICKERS and not any(w in query.upper() for w in ("RENAISSANCE", "INDEX", "BENCHMARK")):
+                continue
+            if n_upper in PSEUDO_TICKERS:
+                continue
+            filtered_entities.append(ent)
+        analysis.entities = filtered_entities or analysis.entities[:1]
+
+        # Safeguard against hallucinated extra entities from suffixes like .NS / .BO or non-comparison queries
+        is_explicit_compare = any(w in query.lower() for w in (" vs ", " vs. ", " versus ", " compare ", " between ", " better ", " which one "))
         if not is_explicit_compare and len(analysis.entities) > 1:
-            first_ticker = (analysis.entities[0].ticker or "").upper()
-            if first_ticker and first_ticker in query.upper():
-                analysis.entities = [analysis.entities[0]]
-                analysis.compare_mode = False
+            analysis.entities = [analysis.entities[0]]
+            analysis.compare_mode = False
         return analysis
     except Exception:
         from ..llm_mock import mock_analyze

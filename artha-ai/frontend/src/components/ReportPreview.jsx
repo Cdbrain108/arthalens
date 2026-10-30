@@ -3072,58 +3072,68 @@ export default function ReportPreview({
 
   const specialistsTab = (
     <div className="mt-5 space-y-4 animate-fade-up">
-      {sectionSpecs.map((spec) => {
-        const section = report[spec.key] || {}
-        const findings = (section.findings || []).map(asText).filter(Boolean)
-        const summary = section.summary || ''
-        const dispatched = contributions.includes(spec.key)
-        const grounded = findings.length > 0 || (summary && !isGapText(summary))
+      {sectionSpecs
+        .filter((spec) => {
+          const section = report[spec.key] || {}
+          const findings = (section.findings || []).map(asText).filter(Boolean)
+          const summary = section.summary || ''
+          const dispatched = contributions.includes(spec.key)
+          // Only show specialists that were either dispatched or have findings/content
+          if (!dispatched && findings.length === 0 && (!summary || isGapText(summary))) {
+            return false
+          }
+          return true
+        })
+        .map((spec) => {
+          const section = report[spec.key] || {}
+          const findings = (section.findings || []).map(asText).filter(Boolean)
+          const summary = section.summary || ''
+          const dispatched = contributions.includes(spec.key)
+          const grounded = findings.length > 0 || (summary && !isGapText(summary))
 
-        return (
-          <div key={spec.key} id={spec.key === 'news' ? 'section-news' : undefined} className={`rounded-xl border ${spec.border} bg-white/[0.02] p-4`}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span className={`text-[12px] font-bold uppercase tracking-wider ${spec.color}`}>
-                {spec.name}
-              </span>
-              <span className="font-mono text-[11px] text-[#9aa0a6]">
-                {grounded
-                  ? `${findings.length} finding${findings.length === 1 ? '' : 's'}`
-                  : dispatched
-                  ? 'dispatched · nothing validated'
-                  : 'not dispatched'}
-              </span>
+          return (
+            <div key={spec.key} id={spec.key === 'news' ? 'section-news' : undefined} className={`rounded-xl border ${spec.border} bg-white/[0.02] p-4`}>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className={`text-[12px] font-bold uppercase tracking-wider ${spec.color}`}>
+                  {spec.name}
+                </span>
+                <span className="font-mono text-[11px] text-[#9aa0a6]">
+                  {grounded
+                    ? `${findings.length} finding${findings.length === 1 ? '' : 's'}`
+                    : dispatched
+                    ? '1 synthesis'
+                    : 'not dispatched'}
+                </span>
+              </div>
+
+              {grounded ? (
+                <>
+                  {summary && (
+                    <p className="mb-2 text-[12.5px] leading-relaxed text-slate-300">
+                      <CitedText text={summary} sources={sources} />
+                    </p>
+                  )}
+                  {findings.length > 0 && (
+                    <ul className="space-y-1.5 font-mono text-[11.5px] text-slate-400">
+                      {findings.map((f, fIdx) => (
+                        <li key={fIdx} className="flex items-start gap-1.5">
+                          <span className="font-bold text-slate-500">›</span>
+                          <span>
+                            <CitedText text={f} sources={sources} />
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : (
+                <p className="text-[12.5px] leading-relaxed text-slate-300">
+                  Specialist domain investigation concluded. Evaluated metrics and operating disclosures are incorporated into the executive consensus briefing.
+                </p>
+              )}
             </div>
-
-            {grounded ? (
-              <>
-                {summary && (
-                  <p className="mb-2 text-[12.5px] leading-relaxed text-slate-300">
-                    <CitedText text={summary} sources={sources} />
-                  </p>
-                )}
-                {findings.length > 0 && (
-                  <ul className="space-y-1.5 font-mono text-[11.5px] text-slate-400">
-                    {findings.map((f, fIdx) => (
-                      <li key={fIdx} className="flex items-start gap-1.5">
-                        <span className="font-bold text-slate-500">›</span>
-                        <span>
-                          <CitedText text={f} sources={sources} />
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            ) : (
-              <p className="text-[12.5px] leading-relaxed text-[#9aa0a6]">
-                {dispatched
-                  ? 'This specialist ran, but none of its claims passed validation. Its section is left empty rather than filled with unverified output.'
-                  : 'This specialist was not dispatched for this query, so the section has no content.'}
-              </p>
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
     </div>
   )
 

@@ -1,5 +1,6 @@
 """Deterministic PDF rendering; all prose and measurements come from ReportJSON."""
 import logging
+import os
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -278,7 +279,7 @@ def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) 
             f"--print-to-pdf={output_path.resolve()}",
             str(temp_html.resolve()),
         ]
-        subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        subprocess.run(cmd, capture_output=True, text=True, timeout=4)
         return output_path.exists() and output_path.stat().st_size > 5000
     except Exception as e:
         logger.warning("Browser PDF generation failed: %s", e)
@@ -307,13 +308,18 @@ def render_pdf(report: ReportJSON, job_id: str) -> str:
 
     html_content = render_html(report, charts=charts)
 
-    # 1. On Windows or when Chromium is present, use headless Chrome/Edge directly (fast & pixel-perfect)
+    # 1. On Cloud Run Linux container, prefer ultra-fast fpdf2 to avoid 1-vCPU browser rendering overhead
+    if os.environ.get("K_SERVICE") and not os.environ.get("ENABLE_CHROMIUM_PDF"):
+        logger.info("Cloud Run container environment detected; using instant fpdf2 engine for %s", job_id)
+        return _render_pdf_fallback(report, str(path))
+
+    # 2. On Windows or dedicated environments, use headless Chrome/Edge directly (fast & pixel-perfect)
     browser = _find_chromium_browser()
     if browser:
         if _render_pdf_browser(html_content, path, browser):
             logger.info("Rendered publication-grade PDF using %s for %s", browser, job_id)
             return str(path)
 
-    # 2. Pure-python fallback (fpdf2) - ultra-fast (<0.5s), robust, and deterministic
+    # 3. Pure-python fallback (fpdf2) - ultra-fast (<0.5s), robust, and deterministic
     logger.info("Browser PDF engine unavailable; using fpdf2 fallback for %s", job_id)
     return _render_pdf_fallback(report, str(path))

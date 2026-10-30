@@ -45,6 +45,9 @@ export const STOCK_PRICE_DIRECTORY = {
   wipro: { name: 'Wipro Limited', ticker: 'WIPRO', price: '₹465.10', range52w: '₹398.00 – ₹585.00', pe: '18.2x', trend: '-6.1% (Turnaround value range)', exchange: 'NSE / BSE / NYSE' },
   hcltech: { name: 'HCL Technologies', ticker: 'HCLTECH', price: '₹1,620.00', range52w: '₹1,235.00 – ₹1,885.00', pe: '24.1x', trend: '+0.8% (Resilient channel)', exchange: 'NSE / BSE' },
   reliance: { name: 'Reliance Industries', ticker: 'RELIANCE', price: '₹2,940.00', range52w: '₹2,220.00 – ₹3,217.00', pe: '27.4x', trend: '+1.4% (Consolidating near high)', exchange: 'NSE / BSE' },
+  jio: { name: 'Reliance Jio Infocomm', ticker: 'RELIANCE', price: '₹2,940.00', range52w: '₹2,220.00 – ₹3,217.00', pe: '27.4x', trend: '+1.4% (Telecom & 5G market leadership)', exchange: 'NSE / BSE' },
+  'reliance jio': { name: 'Reliance Jio Infocomm', ticker: 'RELIANCE', price: '₹2,940.00', range52w: '₹2,220.00 – ₹3,217.00', pe: '27.4x', trend: '+1.4% (Telecom & 5G market leadership)', exchange: 'NSE / BSE' },
+  'jio platforms': { name: 'Jio Platforms Limited', ticker: 'RELIANCE', price: '₹2,940.00', range52w: '₹2,220.00 – ₹3,217.00', pe: '27.4x', trend: '+1.4% (Digital & Cloud services anchor)', exchange: 'NSE / BSE' },
   tatamotors: { name: 'Tata Motors', ticker: 'TATAMOTORS', price: '₹920.00', range52w: '₹660.00 – ₹1,179.00', pe: '10.8x', trend: '-8.5% (Turnaround value zone)', exchange: 'NSE / BSE' },
   'tata motors': { name: 'Tata Motors', ticker: 'TATAMOTORS', price: '₹920.00', range52w: '₹660.00 – ₹1,179.00', pe: '10.8x', trend: '-8.5% (Turnaround value zone)', exchange: 'NSE / BSE' },
   tatapower: { name: 'Tata Power', ticker: 'TATAPOWER', price: '₹345.00', range52w: '₹285.00 – ₹494.85', pe: '31.2x', trend: '-5.8% (Value support band)', exchange: 'NSE / BSE' },
@@ -72,6 +75,9 @@ const COMPANY_TICKER_DIRECTORY = {
   'tata consultancy services': { name: 'Tata Consultancy Services', ticker: 'TCS', exchange: 'NSE', bseCode: '532540' },
   reliance: { name: 'Reliance Industries Limited', ticker: 'RELIANCE', exchange: 'NSE', bseCode: '500325' },
   'reliance industries': { name: 'Reliance Industries Limited', ticker: 'RELIANCE', exchange: 'NSE', bseCode: '500325' },
+  jio: { name: 'Reliance Jio Infocomm', ticker: 'RELIANCE', exchange: 'NSE', bseCode: '500325' },
+  'reliance jio': { name: 'Reliance Jio Infocomm', ticker: 'RELIANCE', exchange: 'NSE', bseCode: '500325' },
+  'jio platforms': { name: 'Jio Platforms Limited', ticker: 'RELIANCE', exchange: 'NSE', bseCode: '500325' },
   infosys: { name: 'Infosys Limited', ticker: 'INFY', exchange: 'NSE', bseCode: '500209' },
   infy: { name: 'Infosys Limited', ticker: 'INFY', exchange: 'NSE', bseCode: '500209' },
   wipro: { name: 'Wipro Limited', ticker: 'WIPRO', exchange: 'NSE', bseCode: '507685' },
@@ -233,7 +239,8 @@ export function extractTargetOrganization(query = '') {
     'indian', 'us', 'global', 'good', 'best', 'top', 'cheap',
     'risk', 'risks', 'bull', 'bear', 'margin', 'margins', 'operating', 'profit', 'profits', 'cash', 'flow',
     'opm', 'npm', 'valuation', 'fundamentals', 'verdict', 'summary', 'overview', 'options', 'horizon',
-    'catalyst', 'catalysts', 'guidance', 'recommendation', 'advice', 'findings', 'results', 'thesis'
+    'catalyst', 'catalysts', 'guidance', 'recommendation', 'advice', 'findings', 'results', 'thesis',
+    'ipo', 'ipos', 'fpo', 'drhp', 'rhp', 'allotment', 'listing', 'gmp', 'issue', 'nfo'
   ])
 
   const questionWords = new Set(['who', 'what', 'where', 'when', 'why', 'how', 'which', 'is', 'am', 'are', 'can', 'do', 'does', 'did', 'i', 'you', 'me', 'my', 'your', 'we', 'our', 'he', 'she', 'it', 'they', 'them', 'hi', 'hello', 'hey', 'help', 'thanks', 'bye', 'yes', 'no'])
@@ -277,10 +284,11 @@ export function extractTargetOrganization(query = '') {
 
   // 3. Short 1 to 2 word input that isn't a greeting, concept, or stopword
   const words = s.split(/\s+/)
-  if (words.length >= 1 && words.length <= 2) {
-    const candidate = s.replace(/[?!.,;:]+$/, '').trim()
+  if (words.length >= 1 && words.length <= 3) {
+    let candidate = s.replace(/[?!.,;:]+$/, '').trim()
+    candidate = candidate.replace(/\b(?:ipo|ipos|fpo|drhp|rhp|gmp)\b/gi, '').trim()
     const lowerCandidate = candidate.toLowerCase()
-    const candidateTokens = lowerCandidate.split(/\s+/)
+    const candidateTokens = lowerCandidate.split(/\s+/).filter(Boolean)
     const containsStopword = candidateTokens.some(t => stopwords.has(t) || questionWords.has(t))
     if (!containsStopword && !stopwords.has(lowerCandidate) && candidate.length >= 2 && !EXPLICIT_NON_FINANCIAL_PATTERNS.some(pat => pat.test(s))) {
       if (STOCK_PRICE_DIRECTORY[lowerCandidate]?.name) {

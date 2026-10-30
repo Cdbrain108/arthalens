@@ -80,7 +80,7 @@ NON_FINANCIAL_PATTERNS = [
     r"\b(quicksort|bubble sort|binary search tree|linked list|leetcode)\b",
     r"\b(write (?:a )?(?:python|javascript|java|c\+\+) (?:code|script|program)|debug (?:my )?code|programming tutorial)\b",
     r"\b(president|prime minister|politician|election|parliament|capital city|geography|historical figure)\b",
-    r"\b(photosynthesis|biology|chemistry|physics|planet|solar system|medical advice|diagnosis|symptom|medicine dosage)\b",
+    r"\b(black hole|black holes|photosynthesis|biology|chemistry|physics|planet|solar system|medical advice|diagnosis|symptom|medicine dosage)\b",
     r"\b(translate|translation|write (?:an? )?(?:email|essay|letter|resume|cover letter)|grammar|language homework)\b",
     r"\b(travel|tourism|vacation|flight booking|train ticket|hotel booking|tourist|itinerary)\b",
     r"\b(solve|equation|algebra|calculus|geometry|integral|derivative|trigonometry)\b",
@@ -113,28 +113,37 @@ def is_financial_or_stock_query(text: str) -> bool:
         lower,
     ):
         return True
-    has_finance = any(re.search(pat, lower) for pat in FINANCIAL_PATTERNS)
-    is_irrelevant = any(re.search(pat, lower) for pat in NON_FINANCIAL_PATTERNS)
 
+    is_irrelevant = any(re.search(pat, lower) for pat in NON_FINANCIAL_PATTERNS)
     has_market_angle = bool(re.search(
         r"\b(stock|stocks|share|shares|ticker|listed|listing|exchange|public company|"
-        r"publicly traded|invest|investment|valuation|revenue|profit)\b",
+        r"publicly traded|invest|investment|valuation|revenue|profit|margin|ipo|ipos)\b",
         lower,
     ))
+
+    # Explicit non-financial query (e.g. recipe, dating, weather, coding tutorial)
     if is_irrelevant and not has_market_angle:
         return False
 
+    has_finance = any(re.search(pat, lower) for pat in FINANCIAL_PATTERNS)
     if has_finance:
         return True
 
-    # Support discovery of new organizations while rejecting arbitrary
-    # general-purpose questions that do not belong in a finance product.
-    if re.search(r"\b(?:tell me about|details on|overview of|information on|company profile of|business of|analyze|research|audit|inspect|forecast)\s+[A-Za-z0-9&.-]+", raw, re.IGNORECASE):
+    # Single ticker or symbol (e.g. HAL, BEL, NTPC, TRENT, AAPL, RELIANCE.NS, TCS.BO)
+    if re.match(r"^[A-Za-z0-9_&.-]{1,25}(\.[A-Za-z]{2,4})?$", raw):
+        return True
+
+    # Short query (1 to 4 words) that is not non-financial (e.g. "HAL vs BEL", "Tata Motors DVR")
+    if not is_irrelevant and len(raw.split()) <= 4:
+        return True
+
+    # Support discovery of new organizations, companies, startups, or financial inquiries
+    if re.search(r"\b(?:tell me about|details on|overview of|information on|company profile of|business of|analyze|research|audit|inspect|forecast|compare|between|vs|versus)\s+[A-Za-z0-9&.-]+", raw, re.IGNORECASE):
         return True
     if re.search(r"\b[A-Za-z]+(?:AI|Tech|Labs|Inc|Corp|Ltd|Limited|Ventures|Cap|Capital)\b", raw):
         return True
 
-    return False
+    return not is_irrelevant
 
 
 def _extractive_report_answer(question: str, report: dict, context: dict | None) -> ReportAnswer:
@@ -1187,6 +1196,22 @@ async def get_chart(job_id: str, chart_name: str):
         alt_path = os.path.join(settings.reports_dir, "charts", alt)
         if os.path.exists(alt_path):
             chart_path = alt_path
+    if not os.path.exists(chart_path):
+        # Dynamically generate chart on demand if not present on disk
+        try:
+            report_data = jobs.get_report(job_id)
+            if report_data:
+                from ..report.charts import generate_report_charts
+                charts_dir = os.path.join(settings.reports_dir, "charts")
+                generate_report_charts(report_data, charts_dir)
+                if os.path.exists(chart_path):
+                    return FileResponse(chart_path, media_type="image/png")
+                for alt_name in (f"{chart_clean}.png", "thematic_balance.png", "financial_metrics.png"):
+                    p = os.path.join(charts_dir, alt_name)
+                    if os.path.exists(p):
+                        return FileResponse(p, media_type="image/png")
+        except Exception as exc:
+            logger.warning("Dynamic chart generation failed for %s: %s", job_id, exc)
     if not os.path.exists(chart_path):
         raise HTTPException(404, "chart not found")
     return FileResponse(chart_path, media_type="image/png")
