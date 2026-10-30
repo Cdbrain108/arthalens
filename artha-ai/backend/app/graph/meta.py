@@ -106,8 +106,7 @@ def analyze(query: str) -> QueryAnalysis:
         f"Query: {query}"
     )
     try:
-        llm = get_structured_llm("analyzer", Entity,
-    QueryAnalysis, attempts=2)
+        llm = get_structured_llm("analyzer", QueryAnalysis, attempts=2)
         analysis = llm.invoke(prompt)
         from ..tools.base import resolve_ticker_info
         from ..llm_mock import KNOWN_COMPANIES

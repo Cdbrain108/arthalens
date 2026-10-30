@@ -107,30 +107,40 @@ def is_financial_or_stock_query(text: str) -> bool:
     if not lower:
         return True
 
+    # Strip leading emojis, bullet points, numbers, punctuation
+    cleaned_lower = re.sub(r"^[^\w]+", "", lower).strip()
+    if not cleaned_lower:
+        return True
+
     if re.search(
         r"^(?:hi|hello|hey|help|thanks|thank you|bye|goodbye|who are you|what can you do|"
         r"how are you|what is artha(?:lens| ai)?|how does this work)\b",
-        lower,
+        cleaned_lower,
     ):
         return True
 
-    is_irrelevant = any(re.search(pat, lower) for pat in NON_FINANCIAL_PATTERNS)
     has_market_angle = bool(re.search(
         r"\b(stock|stocks|share|shares|ticker|listed|listing|exchange|public company|"
-        r"publicly traded|invest|investment|valuation|revenue|profit|margin|ipo|ipos)\b",
+        r"publicly traded|invest|investment|investor|investing|valuation|revenue|profit|"
+        r"margin|margins|ipo|ipos|financial|earnings|dividend|equity|equities|quarter|"
+        r"fiscal|fund|market|markets|buy|sell|hold|portfolio|balance sheet|pe|roe|opm)\b",
         lower,
     ))
+    if has_market_angle:
+        return True
 
-    # Explicit non-financial query (e.g. recipe, dating, weather, coding tutorial)
-    if is_irrelevant and not has_market_angle:
+    is_irrelevant = any(re.search(pat, cleaned_lower) for pat in NON_FINANCIAL_PATTERNS)
+    # Explicit non-financial query without market angle
+    if is_irrelevant:
         return False
 
     has_finance = any(re.search(pat, lower) for pat in FINANCIAL_PATTERNS)
     if has_finance:
         return True
 
-    # Single ticker or symbol (e.g. HAL, BEL, NTPC, TRENT, AAPL, RELIANCE.NS, TCS.BO)
-    if re.match(r"^[A-Za-z0-9_&.-]{1,25}(\.[A-Za-z]{2,4})?$", raw):
+    # Single ticker or symbol (e.g. HAL, BEL, NTPC, TRENT, AAPL, RELIANCE.NS, TCS.BO, JPL)
+    clean_symbol = re.sub(r"^[^\w]+|[^\w.]+$", "", raw)
+    if re.match(r"^[A-Za-z0-9_&.-]{1,25}(\.[A-Za-z]{2,4})?$", clean_symbol):
         return True
 
     # Short query (1 to 4 words) that is not non-financial (e.g. "HAL vs BEL", "Tata Motors DVR")
