@@ -42,7 +42,8 @@ class Settings(BaseSettings):
     # --- SOTA Tier 2: InceptionLabs (ultra-fast Mercury-2.5) ---
     inception_api_keys: str = ""
     inception_base_url: str = "https://api.inceptionlabs.ai/v1"
-    inception_model: str = "mercury-2.5"
+    inception_model: str = "mercury-3"
+    inception_model_fallback: str = "mercury-2.5"
 
     # --- SOTA Tier 1: Groq (Ultra-Fast LPUs, ~0.8s) ---
     groq_api_keys: str = ""

@@ -364,9 +364,11 @@ class MultiProviderFallbackChatModel(BaseChatModel):
             # Tier 1B: Groq fallback model qwen3.8
             if settings.groq_model_fallback:
                 factories.append(("Groq (qwen3.8)", lambda: _groq_chat(settings.groq_model_fallback, self.temperature)))
-        # Tier 2: InceptionLabs mercury-2.5
+        # Tier 2: InceptionLabs mercury-3 (with mercury-2.5 fallback)
         if inception_keys():
-            factories.append(("InceptionLabs (mercury-2.5)", lambda: _inception_chat(model=settings.inception_model, temperature=self.temperature)))
+            factories.append(("InceptionLabs (mercury-3)", lambda: _inception_chat(model=settings.inception_model, temperature=self.temperature)))
+            if getattr(settings, "inception_model_fallback", None):
+                factories.append(("InceptionLabs (mercury-2.5)", lambda: _inception_chat(model=settings.inception_model_fallback, temperature=self.temperature)))
         # Tier 3: Google Gemini
         if gemini_keys():
             gem_m = _role_model(self.role) or settings.gemini_model
