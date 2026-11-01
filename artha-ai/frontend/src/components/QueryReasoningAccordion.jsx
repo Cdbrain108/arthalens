@@ -98,14 +98,21 @@ export default function QueryReasoningAccordion({ query, job, isRunning, isDone 
     return () => clearInterval(interval)
   }, [fullText])
 
-  // Freeze the elapsed reading when the run finishes. The displayed number is
-  // the real elapsed time — it used to be capped at 4s regardless.
+  const isQueryDone = Boolean(
+    isDone ||
+    (job?.current_node && job.current_node !== 'analyze_query') ||
+    entities.length > 0 ||
+    selectedAgents.length > 0 ||
+    job?.steps?.find(s => s.node === 'analyze_query')?.state === 'done'
+  )
+  const isQueryActive = !isQueryDone && isRunning
+
   useEffect(() => {
-    if (isDone && finalSeconds.current === null) {
-      finalSeconds.current = elapsedSeconds
+    if (isQueryDone && finalSeconds.current === null) {
+      finalSeconds.current = Math.max(1, elapsedSeconds)
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [isDone, elapsedSeconds])
+  }, [isQueryDone, elapsedSeconds])
 
   const shownSeconds = finalSeconds.current ?? elapsedSeconds
 
@@ -125,7 +132,7 @@ export default function QueryReasoningAccordion({ query, job, isRunning, isDone 
               <span className="font-sans text-[13px] font-semibold text-[#f1f3f4]">
                 Query Understanding Agent
               </span>
-              {isTyping || isRunning ? (
+              {isQueryActive || isTyping ? (
                 <span className="flex animate-pulse items-center gap-1 rounded-full bg-[#4285f4]/20 px-2 py-0.5 font-mono text-[10px] text-[#8ab4f8]">
                   <Sparkles size={10} className="animate-spin text-[#8ab4f8]" />
                   <span>Routing...</span>
@@ -143,7 +150,7 @@ export default function QueryReasoningAccordion({ query, job, isRunning, isDone 
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 font-mono text-[11px] text-[#9aa0a6]">
             <Clock size={12} />
-            <span>{isDone ? `Ran for ${shownSeconds}s` : `${shownSeconds}s elapsed`}</span>
+            <span>{isQueryDone ? `Ran for ${shownSeconds}s` : `${shownSeconds}s elapsed`}</span>
           </span>
           <span className="rounded-md border border-white/10 bg-white/5 p-1 text-[#9aa0a6] hover:text-[#f1f3f4]">
             {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}

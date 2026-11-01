@@ -80,7 +80,9 @@ class NativeFunctionTool(BaseTool):
 
             if owner:
                 break
-            event.wait()
+            waited = event.wait(timeout=10.0)
+            if not waited:
+                break
 
         try:
             value = fn()
@@ -329,6 +331,25 @@ def resolve_ticker_info(ticker: str | None, exchange: str | None = None) -> dict
     with _TICKER_CACHE_LOCK:
         if cache_key in _TICKER_CACHE:
             return _TICKER_CACHE[cache_key]
+
+    # Instant in-memory resolution for known equities (<0.01ms)
+    try:
+        from ..llm_mock import KNOWN_COMPANIES
+        meta = KNOWN_COMPANIES.get(base)
+        if meta and meta.get("exchange"):
+            m_ex = meta["exchange"].upper()
+            suffix = EXCHANGE_CODE_MAP.get(m_ex, "")
+            info = {
+                "symbol": meta.get("ticker", base) + suffix,
+                "ticker": meta.get("ticker", base),
+                "exchange": m_ex,
+                "name": base,
+            }
+            with _TICKER_CACHE_LOCK:
+                _TICKER_CACHE[cache_key] = info
+            return info
+    except Exception:
+        pass
 
     # Dynamic search via Yahoo Finance search endpoint
     headers = {"User-Agent": "Mozilla/5.0"}

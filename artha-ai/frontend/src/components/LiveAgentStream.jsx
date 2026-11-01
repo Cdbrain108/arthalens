@@ -33,7 +33,7 @@ export default function LiveAgentStream({ job, running = false, title = 'Multi-a
       {!agents.length && <p className="text-xs text-[#bdc1c6]">{running ? 'Waiting for the router to select relevant specialists…' : 'No specialist agents were dispatched for this query.'}</p>}
       {agents.map(name => {
         const recorded = job?.steps?.find(step => step.node === `${name}_agent`)
-        const status = job?.agent_statuses?.[name] || (job?.failed_agents?.includes(name) ? 'failed' : job?.completed_agents?.includes(name) ? 'completed' : recorded?.state === 'running' ? 'running' : 'queued')
+        const status = job?.agent_statuses?.[name] || (job?.failed_agents?.includes(name) ? 'failed' : job?.completed_agents?.includes(name) ? 'completed' : (recorded?.state === 'running' && running && job?.status !== 'succeeded') ? 'running' : job?.status === 'succeeded' ? 'completed' : 'queued')
         const isRunning = status === 'running'
         const details = job?.agent_details?.[name]
         const Icon = isRunning ? Loader2 : status === 'queued' ? Clock : status === 'completed' ? CheckCircle2 : AlertTriangle

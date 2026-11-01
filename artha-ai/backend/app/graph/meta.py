@@ -45,6 +45,19 @@ def _balanced_evidence(evidence, per_agent=2):
 
 def _try_single_ticker_resolution(query: str) -> QueryAnalysis | None:
     q = query.strip()
+    q_low = q.lower()
+    GREETING_WORDS = {
+        "hi", "hello", "hey", "help", "who", "what", "how", "why", "when",
+        "thanks", "thank", "bye", "goodbye", "ok", "yes", "no", "test", "who are you", "what can you do"
+    }
+    if q_low in GREETING_WORDS or any(q_low.startswith(g + " ") for g in ("hi", "hello", "hey", "who are you", "what can you do")):
+        return QueryAnalysis(
+            entities=[],
+            intent="conversational",
+            time_horizon=None,
+            compare_mode=False,
+            reasoning="Greeting or conversational inquiry."
+        )
     # Check if query is a single ticker or symbol like RELIANCE.NS, TCS.BO, INFY, NVDA, AAPL
     if re.match(r"^[A-Za-z0-9_&-]+(\.[A-Za-z]{2,4})?$", q, re.IGNORECASE):
         from ..tools.base import resolve_ticker_info
@@ -106,14 +119,14 @@ def analyze(query: str) -> QueryAnalysis:
         f"Query: {query}"
     )
     try:
-        llm = get_structured_llm("analyzer", QueryAnalysis, attempts=2)
+        llm = get_structured_llm("analyzer", QueryAnalysis)
         analysis = llm.invoke(prompt)
         from ..tools.base import resolve_ticker_info
         from ..llm_mock import KNOWN_COMPANIES
         for ent in analysis.entities:
             # Fast in-memory resolution for known equities (<0.1ms)
-            name_key = (ent.name or "").lower().strip()
-            ticker_key = (ent.ticker or "").lower().strip()
+            name_key = (ent.name or "").upper().strip()
+            ticker_key = (ent.ticker or "").upper().strip()
             matched_info = KNOWN_COMPANIES.get(name_key) or KNOWN_COMPANIES.get(ticker_key)
             if matched_info:
                 if not ent.ticker:
@@ -142,11 +155,29 @@ def analyze(query: str) -> QueryAnalysis:
             filtered_entities.append(ent)
         analysis.entities = filtered_entities or analysis.entities[:1]
 
-        # Safeguard against hallucinated extra entities from suffixes like .NS / .BO or non-comparison queries
-        is_explicit_compare = any(w in query.lower() for w in (" vs ", " vs. ", " versus ", " compare ", " between ", " better ", " which one "))
-        if not is_explicit_compare and len(analysis.entities) > 1:
-            analysis.entities = [analysis.entities[0]]
-            analysis.compare_mode = False
+        # Guardrail: Fallback to in-memory entity resolution if LLM returned 0 entities
+        if not analysis.entities:
+            fallback = mock_analyze(query)
+            if fallback.get("entities"):
+                analysis.entities = [Entity(**e) for e in fallback["entities"]]
+                if not analysis.intent or analysis.intent == "conversational":
+                    analysis.intent = fallback.get("intent", "general")
+                analysis.compare_mode = fallback.get("compare_mode", len(analysis.entities) > 1)
+
+        # Deduplicate and validate multi-entity comparisons
+        if len(analysis.entities) > 1:
+            distinct_ents = []
+            seen_keys = set()
+            for ent in analysis.entities:
+                k = (ent.ticker or ent.name or "").upper().strip()
+                if k and k not in seen_keys:
+                    seen_keys.add(k)
+                    distinct_ents.append(ent)
+            analysis.entities = distinct_ents
+            if len(distinct_ents) > 1:
+                analysis.compare_mode = True
+                if analysis.intent not in ("news", "document"):
+                    analysis.intent = "compare"
         return analysis
     except Exception:
         from ..llm_mock import mock_analyze
@@ -181,7 +212,7 @@ def plan(query: str, analysis: QueryAnalysis) -> ResearchPlan:
         f"Analysis: {analysis.model_dump_json()}"
     )
     try:
-        llm = get_structured_llm("planner", ResearchPlan, attempts=2)
+        llm = get_structured_llm("planner", ResearchPlan)
         return llm.invoke(prompt)
     except Exception:
         return ResearchPlan.model_validate(mock_plan(analysis.intent, analysis.compare_mode))
@@ -266,7 +297,7 @@ def synthesize(state: dict[str, Any]) -> ReportJSON:
         "Use NOT ASSESSED unless the collected financial, valuation and risk evidence supports a balanced assessment.\n"
         f"Context: {json.dumps(context, default=str)}"
     )
-    llm = get_structured_llm("synthesizer", SynthesisNarrative, attempts=1)
+    llm = get_structured_llm("synthesizer", SynthesisNarrative)
     try:
         narrative: SynthesisNarrative = llm.invoke(prompt)
     except Exception as e:

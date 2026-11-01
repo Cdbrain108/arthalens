@@ -156,9 +156,10 @@ export default function AgentChatWorkspace({ job, query, onNewResearch, running,
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {AGENT_META.map((agent) => {
               const Icon = agent.icon
-              const isAgentDone = completedAgents.includes(agent.key)
-              const isAgentFailed = failedAgents.includes(agent.key)
-              const isCurrent = job?.current_node === `${agent.key}_agent`
+              const status = job?.agent_statuses?.[agent.key]
+              const isAgentDone = completedAgents.includes(agent.key) || status === 'completed' || status === 'partial' || isDone
+              const isAgentFailed = failedAgents.includes(agent.key) || status === 'failed' || status === 'timed_out'
+              const isCurrent = (job?.current_node === `${agent.key}_agent` || status === 'running') && !isDone
 
               return (
                 <div

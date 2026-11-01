@@ -39,3 +39,5 @@ artha-ai/frontend/test-results/
 *.bak
 vite.config.js.timestamp*
 artha-ai/scratch/
+chrome_profile/
+resume/

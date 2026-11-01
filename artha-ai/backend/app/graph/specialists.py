@@ -79,7 +79,7 @@ def run_specialist_live(name, state, base_result=None):
         'Never infer missing values, sector benchmarks or financial arithmetic.\n'
         f'Evidence: {json.dumps(concise_packet, default=str)}\nGaps: {base_result.data_gaps}')
     try:
-        proposed = get_structured_llm('specialist', SpecialistFindings, attempts=1).invoke(prompt)
+        proposed = get_structured_llm('specialist', SpecialistFindings).invoke(prompt)
     except Exception as e:
         base_result.data_gaps.append(f'Specialist explanation skipped: {e}')
         return _normalize_result(base_result, name, state)
@@ -120,7 +120,7 @@ async def run_all_specialists(state, emit=None):
     completed, failed, errors = [], [], []
     gaps = list(state.get('evidence_gaps') or [])
     semaphore = asyncio.Semaphore(settings.agent_concurrency)
-    timeout_s = min(settings.agent_timeout_s, 90)
+    timeout_s = min(settings.agent_timeout_s, 45)
     async def run_one(name):
         async with semaphore:
             if emit:
@@ -142,9 +142,10 @@ async def run_all_specialists(state, emit=None):
                 if emit:
                     emit('agent_status', {'agent': name, 'status': res.status, 'evidence_count': len(res.evidence), 'data_gaps': res.data_gaps})
             except Exception as exc:
-                # Attempt graceful deterministic fallback so live provider latency doesn't fail the job
+                # Attempt graceful deterministic fallback in threadpool so event loop is never blocked
                 try:
-                    res = run_specialist_mock(name, deepcopy(state))
+                    fallback_future = asyncio.get_running_loop().run_in_executor(_POOL, run_specialist_mock, name, deepcopy(state))
+                    res = await asyncio.wait_for(fallback_future, timeout=10.0)
                     res.data_gaps.append(f"Live provider timed out ({exc}); real evidence recovered.")
                     res.status = 'completed' if len(res.evidence) >= 2 else 'partial'
                     results[name] = res.model_dump()
@@ -156,11 +157,11 @@ async def run_all_specialists(state, emit=None):
                         emit('agent_done', name)
                         emit('agent_status', {'agent': name, 'status': res.status, 'evidence_count': len(res.evidence), 'data_gaps': res.data_gaps})
                 except Exception:
-                    message = f'timed out after {timeout_s}s' if isinstance(exc, TimeoutError) else str(exc)
+                    message = f'timed out after {timeout_s}s' if isinstance(exc, (TimeoutError, asyncio.TimeoutError)) else str(exc)
                     error = {'agent': name, 'error': message}
                     failed.append(name)
                     errors.append(error)
-                    statuses[name] = 'timed_out' if isinstance(exc, TimeoutError) else 'failed'
+                    statuses[name] = 'timed_out' if isinstance(exc, (TimeoutError, asyncio.TimeoutError)) else 'failed'
                     gaps.append(f"agent '{name}' failed: {message}")
                     if emit:
                         emit('agent_failed', error)

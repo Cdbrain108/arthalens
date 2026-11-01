@@ -186,13 +186,25 @@ def gemini_slot() -> None:
         time.sleep(min(wait, 0.2))
 
 
-def _gemini_chat(model: str, temperature: float = 0.0):
-    """Rate-limited ChatGoogleGenerativeAI with a round-robin key."""
+def _single_gemini_chat(api_key: str, model: str, temperature: float = 0.0):
     cls = _rate_limited_gemini_class()
     return cls(
         model=model,
-        google_api_key=next_gemini_key(),
+        google_api_key=api_key,
         temperature=temperature,
+    )
+
+
+def _gemini_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
+    keys = gemini_keys()
+    if not keys:
+        raise RuntimeError("gemini provider selected but no usable key is set")
+    if len(keys) == 1:
+        return _single_gemini_chat(keys[0], model=model, temperature=temperature)
+    return KeyRotatingChatModel(
+        provider_name="gemini",
+        keys=keys,
+        factory=lambda k: _single_gemini_chat(k, model=model, temperature=temperature)
     )
 
 
@@ -220,16 +232,97 @@ def _rate_limited_gemini_class():
     return _rate_limited_cls
 
 
-def _nvidia_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+class KeyRotatingChatModel(BaseChatModel):
+    """Rotates seamlessly across all configured API keys for a provider when one fails or hits rate limits."""
+
+    provider_name: str
+    keys: list[str]
+    factory: object = None
+
+    @property
+    def _llm_type(self) -> str:
+        return f"{self.provider_name}-key-rotator"
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager=None,
+        **kwargs
+    ) -> ChatResult:
+        keys = self.keys
+        if not keys:
+            raise RuntimeError(f"No keys configured for {self.provider_name}")
+        start_idx = _next_rr_index(self.provider_name) % len(keys)
+        last_exc = None
+        for i in range(len(keys)):
+            current_key = keys[(start_idx + i) % len(keys)]
+            try:
+                model = self.factory(current_key)
+                return model._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "Key %d/%d for %s encountered issue (%s). Seamlessly routing to next key...",
+                    i + 1, len(keys), self.provider_name, str(exc)[:150]
+                )
+                continue
+        raise last_exc
+
+    def _stream(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager=None,
+        **kwargs
+    ):
+        keys = self.keys
+        if not keys:
+            raise RuntimeError(f"No keys configured for {self.provider_name}")
+        start_idx = _next_rr_index(self.provider_name) % len(keys)
+        last_exc = None
+        for i in range(len(keys)):
+            current_key = keys[(start_idx + i) % len(keys)]
+            try:
+                model = self.factory(current_key)
+                yield from model._stream(messages, stop=stop, run_manager=run_manager, **kwargs)
+                return
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "Key %d/%d for %s failed during stream (%s). Seamlessly routing to next key...",
+                    i + 1, len(keys), self.provider_name, str(exc)[:150]
+                )
+                continue
+        raise last_exc
+
+    def with_structured_output(self, schema, **kwargs):
+        return _RobustStructured(role="specialist", schema=schema)
+
+
+def _single_nvidia_chat(api_key: str, model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
         model=model or settings.nvidia_model,
-        api_key=next_nvidia_key(),
+        api_key=api_key,
         base_url=settings.nvidia_base_url,
         temperature=temperature,
-        max_retries=1,
+        max_retries=0,
         timeout=10,
         default_headers={"X-Title": "Bullseye"},
+    )
+
+
+def _nvidia_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+    keys = nvidia_keys()
+    if not keys:
+        raise RuntimeError("nvidia provider selected but no usable key is set")
+    if len(keys) == 1:
+        return _single_nvidia_chat(keys[0], model=model, temperature=temperature)
+    return KeyRotatingChatModel(
+        provider_name="nvidia",
+        keys=keys,
+        factory=lambda k: _single_nvidia_chat(k, model=model, temperature=temperature)
     )
 
 
@@ -248,42 +341,90 @@ def _vyce_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatMo
     )
 
 
-def _inception_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+def _single_inception_chat(api_key: str, model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
         model=model or settings.inception_model,
-        api_key=next_inception_key(),
+        api_key=api_key,
         base_url=settings.inception_base_url,
         temperature=temperature,
-        max_retries=1,
+        max_retries=0,
         timeout=8,
         default_headers={"X-Title": "ArthaLens"},
     )
 
 
-def _groq_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+def _inception_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+    keys = inception_keys()
+    if not keys:
+        raise RuntimeError("inception provider selected but no usable key is set")
+    if len(keys) == 1:
+        return _single_inception_chat(keys[0], model=model, temperature=temperature)
+    return KeyRotatingChatModel(
+        provider_name="inception",
+        keys=keys,
+        factory=lambda k: _single_inception_chat(k, model=model, temperature=temperature)
+    )
+
+
+def _single_groq_chat(api_key: str, model: str | None = None, temperature: float = 0.0, max_tokens: int | None = None) -> BaseChatModel:
     from langchain_openai import ChatOpenAI
+    selected_model = model or settings.groq_model
+    if max_tokens is None:
+        if "qwen" in selected_model.lower():
+            max_tokens = 600
+        elif selected_model == settings.groq_model_fast:
+            max_tokens = 800
+        else:
+            max_tokens = 2500
     return ChatOpenAI(
-        model=model or settings.groq_model,
-        api_key=next_groq_key(),
+        model=selected_model,
+        api_key=api_key,
         base_url=settings.groq_base_url,
         temperature=temperature,
-        max_retries=1,
-        timeout=8,
+        max_tokens=max_tokens,
+        max_retries=0,
+        timeout=10,
         default_headers={"X-Title": "Artha AI Copilot", "User-Agent": "Mozilla/5.0"},
     )
 
 
-def _openrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
+def _groq_chat(model: str | None = None, temperature: float = 0.0, max_tokens: int | None = None) -> BaseChatModel:
+    keys = groq_keys()
+    if not keys:
+        raise RuntimeError("groq provider selected but no usable key is set")
+    if len(keys) == 1:
+        return _single_groq_chat(keys[0], model=model, temperature=temperature, max_tokens=max_tokens)
+    return KeyRotatingChatModel(
+        provider_name="groq",
+        keys=keys,
+        factory=lambda k: _single_groq_chat(k, model=model, temperature=temperature, max_tokens=max_tokens)
+    )
+
+
+def _single_openrouter_chat(api_key: str, model: str, temperature: float = 0.0) -> BaseChatModel:
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
         model=model,
-        api_key=next_openrouter_key(),
+        api_key=api_key,
         base_url=settings.openrouter_base_url,
         temperature=temperature,
-        max_retries=1,  # fast-fail; wrapper retries rotate keys AND models
+        max_retries=0,
         timeout=10,
         default_headers={"X-Title": "Bullseye"},
+    )
+
+
+def _openrouter_chat(model: str, temperature: float = 0.0) -> BaseChatModel:
+    keys = openrouter_keys()
+    if not keys:
+        raise RuntimeError("openrouter provider selected but no usable key is set")
+    if len(keys) == 1:
+        return _single_openrouter_chat(keys[0], model=model, temperature=temperature)
+    return KeyRotatingChatModel(
+        provider_name="openrouter",
+        keys=keys,
+        factory=lambda k: _single_openrouter_chat(k, model=model, temperature=temperature)
     )
 
 
@@ -319,16 +460,29 @@ def _mistral_chat(model: str | None = None, temperature: float = 0.0) -> BaseCha
     )
 
 
-def _cloudflare_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+def _single_cloudflare_chat(url: str, model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
         model=model or settings.cloudflare_model,
         api_key="dummy_cf_key",
-        base_url=next_cloudflare_url(),
+        base_url=url,
         temperature=temperature,
-        max_retries=1,
+        max_retries=0,
         timeout=8,
         default_headers={"X-Title": "Artha AI Copilot", "User-Agent": "Mozilla/5.0"},
+    )
+
+
+def _cloudflare_chat(model: str | None = None, temperature: float = 0.0) -> BaseChatModel:
+    urls = cloudflare_urls()
+    if not urls:
+        raise RuntimeError("cloudflare provider selected but no URL configured")
+    if len(urls) == 1:
+        return _single_cloudflare_chat(urls[0], model=model, temperature=temperature)
+    return KeyRotatingChatModel(
+        provider_name="cloudflare",
+        keys=urls,
+        factory=lambda u: _single_cloudflare_chat(u, model=model, temperature=temperature)
     )
 
 
@@ -357,13 +511,15 @@ class MultiProviderFallbackChatModel(BaseChatModel):
 
     def get_tier_factories(self):
         factories = []
-        # Tier 1A: Groq gpt-oss-120b
+        # Tier 1A: Groq primary
         if groq_keys():
             groq_m = _role_model(self.role) or settings.groq_model
-            factories.append(("Groq (gpt-oss-120b)", lambda: _groq_chat(groq_m, self.temperature)))
-            # Tier 1B: Groq fallback model qwen3.8
-            if settings.groq_model_fallback:
-                factories.append(("Groq (qwen3.8)", lambda: _groq_chat(settings.groq_model_fallback, self.temperature)))
+            factories.append(("Groq (primary)", lambda: _groq_chat(groq_m, self.temperature)))
+            # Tier 1B: Groq fast model
+            if settings.groq_model_fast and settings.groq_model_fast != groq_m:
+                factories.append(("Groq (fast)", lambda: _groq_chat(settings.groq_model_fast, self.temperature, max_tokens=800)))
+            if settings.groq_model_fallback and settings.groq_model_fallback not in (groq_m, settings.groq_model_fast):
+                factories.append(("Groq (fallback)", lambda: _groq_chat(settings.groq_model_fallback, self.temperature)))
         # Tier 2: InceptionLabs mercury-3 (with mercury-2.5 fallback)
         if inception_keys():
             factories.append(("InceptionLabs (mercury-3)", lambda: _inception_chat(model=settings.inception_model, temperature=self.temperature)))
@@ -447,39 +603,22 @@ _TIER_ROTATOR = itertools.count()
 
 
 class _RobustStructured:
-    """Structured invoke that survives provider flakiness with automated multi-tier rotation."""
+    """Structured invoke that survives provider flakiness with automated multi-tier key & provider rotation."""
 
     _RETRY_AFTER = re.compile(r"retry in ([0-9.]+)\s*s", re.I)
 
     def __init__(self, role: str, schema, attempts: int | None = None):
         self._role = role
         self._schema = schema
-        if attempts is not None:
-            self._attempts = max(1, attempts)
-        elif role in FAST_ROLES:
-            self._attempts = 1
-        else:
-            self._attempts = 2
+        self._attempts = attempts
 
     @classmethod
     def _backoff_seconds(cls, exc: Exception) -> float:
         """Seconds to wait after a rate-limit rejection (0 for other errors)."""
         text = str(exc)
         if "429" in text or "RESOURCE_EXHAUSTED" in text or "quota" in text.lower():
-            return 0.5
+            return 0.3
         return 0.0
-
-    def _get_base_llm(self, attempt: int) -> BaseChatModel:
-        if attempt == 1 and (self._role in FAST_ROLES or self._role == "specialist") and groq_keys():
-            # Dedicated Groq LPU ultra-fast engine (<0.3s)
-            groq_m = settings.groq_model_fast or "qwen/qwen3.8-27b"
-            return _groq_chat(model=groq_m, temperature=0.0)
-        rotator = MultiProviderFallbackChatModel(role=self._role)
-        factories = rotator.get_tier_factories()
-        if not factories:
-            return get_llm(self._role)
-        name, factory = factories[(attempt - 1) % len(factories)]
-        return factory()
 
     def _extract_via_json_prompt(self, base_llm: BaseChatModel, prompt, config=None, **kwargs):
         import json
@@ -525,35 +664,57 @@ class _RobustStructured:
         return self._schema.model_validate_json(clean_json)
 
     def invoke(self, prompt, config=None, **kwargs):
+        rotator = MultiProviderFallbackChatModel(role=self._role)
+        factories = rotator.get_tier_factories()
+
+        # Build candidate base LLM providers in preferred priority order:
+        providers_to_try: list[tuple[str, Any]] = []
+        if (self._role in FAST_ROLES or self._role == "specialist") and groq_keys():
+            groq_m = settings.groq_model_fast or "openai/gpt-oss-20b"
+            providers_to_try.append(("Groq (fast LPU)", lambda: _groq_chat(model=groq_m, temperature=0.0, max_tokens=800)))
+
+        for name, factory in factories:
+            if not any(name == p[0] for p in providers_to_try):
+                providers_to_try.append((name, factory))
+
+        if not providers_to_try:
+            providers_to_try = [("Default", lambda: get_llm(self._role))]
+
+        max_attempts = self._attempts if self._attempts is not None else len(providers_to_try)
         last_error = None
-        for attempt in range(1, self._attempts + 1):
+
+        for attempt, (tier_name, tier_factory) in enumerate(providers_to_try[:max_attempts], 1):
             started = time.time()
             try:
-                base_llm = self._get_base_llm(attempt)
-                # First try direct prompt-injected JSON extraction (most reliable across Vyce, Inception, Nvidia)
+                base_llm = tier_factory()
+                # 1. Prompt-injected JSON extraction
                 try:
                     result = self._extract_via_json_prompt(base_llm, prompt, config, **kwargs)
                     if result is not None:
                         return result
                 except Exception as extract_err:
                     last_error = extract_err
-                    logger.debug("Prompt extraction failed (%s)", extract_err)
+                    logger.debug("Prompt extraction via %s failed: %s", tier_name, extract_err)
 
-                # Fallback to with_structured_output only on Gemini (which supports native AFC)
-                if "gemini" in type(base_llm).__name__.lower():
+                # 2. Native AFC structured output fallback on Gemini
+                if "gemini" in type(base_llm).__name__.lower() or "gemini" in tier_name.lower():
                     try:
                         structured = base_llm.with_structured_output(self._schema)
                         result = structured.invoke(prompt, config, **kwargs)
                         if result is not None:
                             return result
-                    except Exception:
-                        pass
-                last_error = ValueError("model returned no structured output")
+                    except Exception as afc_err:
+                        last_error = afc_err
+
+                last_error = ValueError(f"{tier_name} returned no valid structured output")
             except Exception as exc:
                 last_error = exc
-            logger.warning("structured attempt %d/%d failed after %.0fs: %s",
-                           attempt, self._attempts, time.time() - started,
-                           str(last_error)[:200])
+
+            logger.warning(
+                "Structured attempt %d/%d (%s) failed after %.1fs: %s. Routing to next fallback tier...",
+                attempt, max_attempts, tier_name, time.time() - started,
+                str(last_error)[:180]
+            )
             delay = self._backoff_seconds(last_error)
             if delay:
                 time.sleep(delay)
@@ -590,7 +751,7 @@ class _RobustStructured:
             logger.warning("Mock fallback failed: %s", mock_exc)
 
         raise RuntimeError(
-            f"structured output failed after {self._attempts} attempts: {last_error}")
+            f"structured output failed after {max_attempts} attempts: {last_error}")
 
 
 def get_structured_llm(role: str, schema, attempts: int | None = None):

@@ -18,17 +18,17 @@ def _confidence_level(value: Any) -> str:
 _INTENT_ALIASES = {
     "conversational": {"conversational", "greeting", "hello", "hi", "hey", "help", "who are you", "what can you do", "chat"},
     "price_move": {"price_move", "price_movement", "explain_stock_price_move",
-                   "stock_move", "intraday", "today_move"},
+                   "stock_move", "intraday", "today_move", "price", "rally", "surge", "plunge", "crash", "tumble"},
     "long_term": {"long_term", "long-term", "buy", "hold", "sell", "invest",
-                  "long_term_investment", "multi_year"},
-    "hiring": {"hiring", "jobs", "careers", "layoffs", "headcount"},
+                  "long_term_investment", "multi_year", "recommend", "recommendation", "target_price"},
+    "hiring": {"hiring", "jobs", "careers", "layoffs", "headcount", "recruitment", "recruiting"},
     "compare": {"compare", "comparison", "versus", "vs"},
-    "document": {"document", "filing", "report", "transcript", "pdf"},
+    "document": {"document", "filing", "filings", "report", "transcript", "transcripts", "pdf", "10k", "10q", "prospectus"},
     # A news-only ask is its own intent: it routes to the news specialist alone
     # instead of falling through to "general" (market + news + financial).
     "news": {"news", "news_only", "headlines", "latest_news", "recent_news",
              "updates", "recent_updates", "announcements", "events",
-             "news_flow", "developments", "press"},
+             "news_flow", "developments", "press", "press_releases"},
 }
 
 
@@ -96,7 +96,33 @@ class ResearchPlan(BaseModel):
                 if values.get(alias):
                     agents = values[alias]
                     break
-        values["selected_agents"] = [str(a) for a in (agents or [])]
+        raw_agents = [str(a) for a in (agents or [])]
+        canonical_map = {
+            "financial": "financial", "valuation": "valuation", "market": "market",
+            "news": "news", "growth": "growth", "risk": "risk", "workforce": "workforce",
+            "social": "social", "document": "document", "industry": "industry", "management": "management"
+        }
+        normalized = []
+        for a in raw_agents:
+            cleaned = a.strip().lower().replace("-", "_").replace(" ", "")
+            matched = None
+            for can, target in canonical_map.items():
+                if can in cleaned:
+                    matched = target
+                    break
+            if not matched:
+                if "hiring" in cleaned or "job" in cleaned:
+                    matched = "workforce"
+                elif "filing" in cleaned:
+                    matched = "document"
+                elif "sentiment" in cleaned:
+                    matched = "social"
+                elif "governance" in cleaned:
+                    matched = "management"
+                elif "peer" in cleaned or "sector" in cleaned:
+                    matched = "industry"
+            normalized.append(matched or a)
+        values["selected_agents"] = normalized
         if not isinstance(values.get("steps"), list):
             values["steps"] = []
         if not isinstance(values.get("required_evidence"), list):

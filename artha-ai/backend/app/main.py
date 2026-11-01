@@ -1,3 +1,5 @@
+import socket
+socket.setdefaulttimeout(15.0)
 """Bullseye FastAPI application — Research Beyond the Noise."""
 import logging
 from contextlib import asynccontextmanager

@@ -279,7 +279,7 @@ def _render_pdf_browser(html_content: str, output_path: Path, browser_exe: str) 
             f"--print-to-pdf={output_path.resolve()}",
             str(temp_html.resolve()),
         ]
-        subprocess.run(cmd, capture_output=True, text=True, timeout=4)
+        subprocess.run(cmd, capture_output=True, text=True, timeout=12)
         return output_path.exists() and output_path.stat().st_size > 5000
     except Exception as e:
         logger.warning("Browser PDF generation failed: %s", e)

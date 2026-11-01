@@ -93,13 +93,13 @@ KNOWN_COMPANIES = {
     "PLTR": {"ticker": "PLTR", "exchange": "NYSE"},
 }
 INTENT_RULES = [
-    (r"\b(compare|comparison|vs|versus|difference\s+b(?:etween|tw)|which\s+(?:is\s+)?better)\b", "compare"),
-    (r"\b(hiring|hire|jobs?|careers?|headcount|layoffs?)\b", "hiring"),
-    (r"\b(annual report|filing|transcript|10-?k|document|prospectus)\b", "document"),
-    (r"\b(should\s+i\s+(?:buy|sell|hold)|buy\s+or\s+sell|hold\s+or\s+sell|whether\s+to\s+buy|buy|hold|sell|invest|long.term|recommend)\b", "long_term"),
+    (r"\b(compare|comparison|versus|\bvs\b|difference\s+b(?:etween|tw)|which\s+(?:is\s+)?(?:better|winner|pick))\b", "compare"),
+    (r"\b(hiring|hire|jobs?|careers?|headcount|layoffs?|recruitment|recruiting)\b", "hiring"),
+    (r"\b(annual report|filing|filings|transcript|transcripts|10-?k|10-?q|document|documents|prospectus|drhp|rhp)\b", "document"),
+    (r"\b(should\s+i\s+(?:buy|sell|hold)|buy\s+or\s+sell|hold\s+or\s+sell|whether\s+to\s+buy|buy|hold|sell|invest|long.term|recommend|recommendation|target\s*price)\b", "long_term"),
     (r"\b(fundamentals?|valuation|financials?)\b", "general"),
-    (r"\b(price|moved?|intraday|why.*(?:fall|rise|drop))\b", "price_move"),
-    (r"\b(news|headlines?|latest|updates?|announcements?|happened|developments?)\b", "news"),
+    (r"\b(price|pricing|mov\w*|intraday|rally(?:ing|ied)?|surge|surging|surged|plunge|plunging|plunged|crash(?:ing|ed)?|tumble|tumbling|tumbled|tank(?:ing|ed)?|fall|falling|fallen|drop(?:ping|ped)?|rise|rising|risen|jump(?:ing|ed)?|down\s+today|up\s+today|why.*(?:fall|rise|drop|crash|tank|surge|jump|plunge|move|down|up))\b", "price_move"),
+    (r"\b(news|headlines?|latest|updates?|announcements?|happened|developments?|press\s*releases?)\b", "news"),
 ]
 MOCK_PLAN = {
     "conversational": [], "price_move": ["market", "news"],
@@ -112,6 +112,12 @@ MOCK_PLAN = {
 
 def mock_analyze(query: str) -> dict:
     upper, lower = query.upper(), query.lower().strip()
+    GREETINGS = {
+        "hi", "hello", "hey", "help", "who are you", "what can you do", "how are you",
+        "thanks", "thank you", "bye", "goodbye", "ok", "yes", "no"
+    }
+    if lower in GREETINGS or any(lower.startswith(g + " ") for g in ("hi", "hello", "hey", "who are you", "what can you do")):
+        return {"entities": [], "intent": "conversational", "time_horizon": None, "compare_mode": False}
     entities, seen = [], set()
     for name, info in KNOWN_COMPANIES.items():
         if re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", upper) and info["ticker"] not in seen:
@@ -132,7 +138,7 @@ def mock_analyze(query: str) -> dict:
         "NASDAQ", "USD", "INR", "REPORT", "AUDIT", "FULL", "AI", "ANALYZE", "VS",
         "IPO", "IPOS", "FPO", "FPOS", "NFO", "ETF", "ETFS", "PE", "EPS", "ROE",
         "ROCE", "OPM", "NPM", "PB", "DCF", "FCF", "CAGR", "EBITDA", "DRHP", "RHP",
-        "GMP", "CEO", "CFO", "SEC", "RBI", "SEBI", "NS", "BO", "NSC"
+        "GMP", "CEO", "CFO", "SEC", "RBI", "SEBI", "NS", "BO", "NSC", "HI", "HELLO", "HEY", "HELP", "THANKS", "BYE", "OK", "GOOD", "BEST"
     }
     for word in re.findall(r"\b([A-Z]{2,6})\b", query):
         w_up = word.upper()
@@ -195,16 +201,19 @@ def mock_analyze(query: str) -> dict:
                 {"name": "Tata Motors", "ticker": "TATAMOTORS", "exchange": "NSE", "confidence": "high"}
             ]
             intent = "compare"
-        elif re.search(r"\b(who are you|what can you do|hi|hello|hey|help)\b", lower):
+        elif re.search(r"\b(who are you|what can you do|hi|hello|hey|help)\b", lower) or any(c in lower for c in ("what is", "explain", "define", "how to", "meaning of")):
             intent = "conversational"
         else:
             intent = next((label for pattern, label in INTENT_RULES if re.search(pattern, lower)), "general")
     else:
         intent = next((label for pattern, label in INTENT_RULES if re.search(pattern, lower)), "general")
     horizon = re.search(r"(\d+)\s*-?\s*years?", lower)
+    compare_mode = intent == "compare" or len(entities) > 1
+    if len(entities) > 1 and intent not in ("news", "document"):
+        intent = "compare"
     return {"entities": entities, "intent": intent,
             "time_horizon": f"{horizon[1]}y" if horizon else "5y" if "five year" in lower else None,
-            "compare_mode": intent == "compare" or len(entities) > 1}
+            "compare_mode": compare_mode}
 
 
 def mock_plan(intent: str, compare_mode: bool = False) -> dict:
