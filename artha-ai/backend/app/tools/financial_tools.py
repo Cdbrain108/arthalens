@@ -13,6 +13,27 @@ from pydantic import BaseModel, Field
 
 from .base import NativeFunctionTool
 
+import threading
+import time
+
+_FT_CACHE = {}
+_FT_CACHE_LOCK = threading.Lock()
+
+def _get_ft_cache(key):
+    with _FT_CACHE_LOCK:
+        if key in _FT_CACHE:
+            val, exp = _FT_CACHE[key]
+            if time.time() < exp:
+                return val
+            del _FT_CACHE[key]
+    return None
+
+def _set_ft_cache(key, val, ttl_s=900.0):
+    if isinstance(val, dict) and val.get("ok"):
+        with _FT_CACHE_LOCK:
+            _FT_CACHE[key] = (val, time.time() + ttl_s)
+
+
 
 def _source(title: str, provider: str = "yfinance", url: str | None = None) -> dict:
     return {"title": title, "url": url, "provider": provider,
@@ -137,6 +158,10 @@ def _resolve_symbol(ticker: str, exchange: str | None = None) -> str:
 
 def _get_financials(ticker: str, statement: str = "income", period: str = "annual",
                     exchange: str | None = None) -> dict:
+    _ckey = ("financials", str(ticker).upper().strip(), str(statement).lower().strip(), str(period).lower().strip(), str(exchange or "").upper().strip())
+    _cval = _get_ft_cache(_ckey)
+    if _cval is not None:
+        return _cval
     """Get normalized financial statements (income|balance|cashflow, annual|quarterly).
 
     Normalization (Framework §P): currency, units, fiscal period, consolidated vs
@@ -184,17 +209,23 @@ def _get_financials(ticker: str, statement: str = "income", period: str = "annua
             currency = t.info.get("financialCurrency")
         except Exception:
             currency = None
-        return {"ok": True, "data": {"ticker": ticker, "statement": statement,
+        _res = {"ok": True, "data": {"ticker": ticker, "statement": statement,
                 "period": period, "currency": currency,
                 "basis": "provider-reported", "line_items": data},
                 "source": _source(f"yfinance {statement} statement {ticker}", url=f'https://finance.yahoo.com/quote/{symbol}/financials/'),
                 "error": None}
+        _set_ft_cache(_ckey, _res, ttl_s=3600.0)
+        return _res
     except Exception as exc:
         return {"ok": False, "error": str(exc), "data": None,
                 "source": _source(f"yfinance {statement} statement {ticker}")}
 
 
 def _get_company_metrics(ticker: str, exchange: str | None = None) -> dict:
+    _mkey = ("metrics", str(ticker).upper().strip(), str(exchange or "").upper().strip())
+    _mval = _get_ft_cache(_mkey)
+    if _mval is not None:
+        return _mval
     """Get company-level metrics: shares outstanding, market cap, book value, EPS."""
     try:
         import yfinance as yf
@@ -219,7 +250,7 @@ def _get_company_metrics(ticker: str, exchange: str | None = None) -> dict:
             return {"ok": False, "error": "metrics unavailable (provider returned no company)",
                     "data": {"ticker": ticker},
                     "source": _source(f"yfinance info {ticker}")}
-        return {"ok": True, "data": {
+        _mres = {"ok": True, "data": {
             "ticker": ticker,
             "currency": info.get("financialCurrency") or info.get("currency"),
             "market_cap": info.get("marketCap"),
@@ -234,9 +265,6 @@ def _get_company_metrics(ticker: str, exchange: str | None = None) -> dict:
             "eps_growth_pct": info.get("earningsGrowth"),
             "total_debt": info.get("totalDebt"),
             "equity": info.get("totalStockholderEquity"),
-            # Keep the provider fields needed by the report in the shared
-            # metrics envelope. This lets report assembly reuse the cached
-            # adapter response instead of opening another yfinance request.
             "return_on_equity": info.get("returnOnEquity"),
             "operating_margin": info.get("operatingMargins"),
             "profit_margin": info.get("profitMargins"),
@@ -245,6 +273,8 @@ def _get_company_metrics(ticker: str, exchange: str | None = None) -> dict:
             "sector": info.get("sector"), "industry": info.get("industry"),
         }, "source": _source(f"yfinance info {ticker}", url=f'https://finance.yahoo.com/quote/{symbol}/key-statistics/'),
             "error": None}
+        _set_ft_cache(_mkey, _mres, ttl_s=1800.0)
+        return _mres
     except Exception as exc:
         return {"ok": False, "error": str(exc), "data": {"ticker": ticker},
                 "source": _source(f"yfinance info {ticker}")}

@@ -9,6 +9,27 @@ from pydantic import BaseModel
 
 from .base import NativeFunctionTool
 
+import threading
+import time
+
+_MT_CACHE = {}
+_MT_CACHE_LOCK = threading.Lock()
+
+def _get_mt_cache(key):
+    with _MT_CACHE_LOCK:
+        if key in _MT_CACHE:
+            val, exp = _MT_CACHE[key]
+            if time.time() < exp:
+                return val
+            del _MT_CACHE[key]
+    return None
+
+def _set_mt_cache(key, val, ttl_s=300.0):
+    if isinstance(val, dict) and val.get("ok"):
+        with _MT_CACHE_LOCK:
+            _MT_CACHE[key] = (val, time.time() + ttl_s)
+
+
 
 def _envelope(data, source_title, source_url=None, ok=True, error=None):
     now = datetime.now(timezone.utc).isoformat()
@@ -58,6 +79,10 @@ def _suffix(ticker: str, exchange: str | None = None) -> str:
 
 
 def _get_quote(ticker: str, exchange: str | None = None) -> dict:
+    _qkey = ("quote", str(ticker).upper().strip(), str(exchange or "").upper().strip())
+    _qval = _get_mt_cache(_qkey)
+    if _qval is not None:
+        return _qval
     """Get the latest price quote for a ticker."""
     try:
         import yfinance as yf
