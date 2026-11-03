@@ -205,10 +205,7 @@ def _get_financials(ticker: str, statement: str = "income", period: str = "annua
         data = {str(col.date()): {str(k): (float(v) if v == v else None)
                                   for k, v in stmt[col].items()}
                 for col in stmt.columns}
-        try:
-            currency = t.info.get("financialCurrency")
-        except Exception:
-            currency = None
+        currency = getattr(getattr(t, "fast_info", None), "currency", None) or ("INR" if str(symbol).endswith((".NS", ".BO")) else "USD")
         _res = {"ok": True, "data": {"ticker": ticker, "statement": statement,
                 "period": period, "currency": currency,
                 "basis": "provider-reported", "line_items": data},
@@ -231,16 +228,26 @@ def _get_company_metrics(ticker: str, exchange: str | None = None) -> dict:
         import yfinance as yf
         symbol = _resolve_symbol(ticker, exchange)
         info = {}
+        def _fetch_info(sym):
+            try:
+                return yf.Ticker(sym).info or {}
+            except Exception:
+                return {}
+
+        from concurrent.futures import ThreadPoolExecutor
         try:
-            info = yf.Ticker(symbol).info or {}
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                info = pool.submit(_fetch_info, symbol).result(timeout=4.0)
         except Exception:
-            pass
+            info = {}
+
         if not info.get("longName") and not info.get("shortName"):
             alt_symbol = (ticker.split(".")[0].strip().upper() if symbol.endswith((".NS", ".BO"))
                           else (symbol + ".NS" if "." not in symbol else None))
             if alt_symbol:
                 try:
-                    alt_info = yf.Ticker(alt_symbol).info or {}
+                    with ThreadPoolExecutor(max_workers=1) as pool:
+                        alt_info = pool.submit(_fetch_info, alt_symbol).result(timeout=3.0)
                     if alt_info.get("longName") or alt_info.get("shortName"):
                         info = alt_info
                         symbol = alt_symbol

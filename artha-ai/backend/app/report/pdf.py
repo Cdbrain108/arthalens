@@ -297,6 +297,11 @@ def render_pdf(report: ReportJSON, job_id: str) -> str:
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{job_id}.pdf"
 
+    # 1. On Cloud Run Linux container, prefer ultra-fast fpdf2 to avoid 1-vCPU browser rendering overhead and font indexing
+    if os.environ.get("K_SERVICE") and not os.environ.get("ENABLE_CHROMIUM_PDF"):
+        logger.info("Cloud Run container environment detected; using instant fpdf2 engine for %s", job_id)
+        return _render_pdf_fallback(report, str(path))
+
     charts = {}
     try:
         from .charts import generate_report_charts
@@ -307,11 +312,6 @@ def render_pdf(report: ReportJSON, job_id: str) -> str:
         logger.warning("Failed to generate report charts: %s", exc)
 
     html_content = render_html(report, charts=charts)
-
-    # 1. On Cloud Run Linux container, prefer ultra-fast fpdf2 to avoid 1-vCPU browser rendering overhead
-    if os.environ.get("K_SERVICE") and not os.environ.get("ENABLE_CHROMIUM_PDF"):
-        logger.info("Cloud Run container environment detected; using instant fpdf2 engine for %s", job_id)
-        return _render_pdf_fallback(report, str(path))
 
     # 2. On Windows or dedicated environments, use headless Chrome/Edge directly (fast & pixel-perfect)
     browser = _find_chromium_browser()

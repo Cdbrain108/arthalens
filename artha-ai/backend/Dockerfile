@@ -26,6 +26,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-warm Matplotlib font cache during build so runtime never blocks on font scanning
+RUN python -c "import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt; fig, ax = plt.subplots(); plt.close(fig)"
+
 # Copy application code
 COPY app/ ./app/
 
