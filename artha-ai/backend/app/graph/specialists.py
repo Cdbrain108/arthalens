@@ -82,7 +82,7 @@ def run_specialist_live(name, state, base_result=None):
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=1) as _exp_pool:
             _exp_fut = _exp_pool.submit(get_structured_llm('specialist', SpecialistFindings).invoke, prompt)
-            proposed = _exp_fut.result(timeout=18.0)
+            proposed = _exp_fut.result(timeout=12.0)
     except Exception as e:
         base_result.data_gaps.append(f'Specialist explanation skipped: {e}')
         return _normalize_result(base_result, name, state)
@@ -123,7 +123,7 @@ async def run_all_specialists(state, emit=None):
     completed, failed, errors = [], [], []
     gaps = list(state.get('evidence_gaps') or [])
     semaphore = asyncio.Semaphore(settings.agent_concurrency)
-    timeout_s = min(settings.agent_timeout_s, 90)
+    timeout_s = min(settings.agent_timeout_s, 22)
     async def run_one(name):
         async with semaphore:
             if emit:
@@ -148,7 +148,7 @@ async def run_all_specialists(state, emit=None):
                 # Attempt graceful deterministic fallback in threadpool so event loop is never blocked
                 try:
                     fallback_future = asyncio.get_running_loop().run_in_executor(_POOL, run_specialist_mock, name, deepcopy(state))
-                    res = await asyncio.wait_for(fallback_future, timeout=30.0)
+                    res = await asyncio.wait_for(fallback_future, timeout=10.0)
                     res.data_gaps.append(f"Live provider timed out ({exc}); real evidence recovered.")
                     res.status = 'completed' if len(res.evidence) >= 2 else 'partial'
                     results[name] = res.model_dump()

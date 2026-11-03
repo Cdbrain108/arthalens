@@ -374,7 +374,7 @@ def _single_groq_chat(api_key: str, model: str | None = None, temperature: float
         if "qwen" in selected_model.lower():
             max_tokens = 600
         elif selected_model == settings.groq_model_fast:
-            max_tokens = 800
+            max_tokens = 2200
         else:
             max_tokens = 2500
     return ChatOpenAI(
@@ -511,15 +511,10 @@ class MultiProviderFallbackChatModel(BaseChatModel):
 
     def get_tier_factories(self):
         factories = []
-        # Tier 1A: Groq primary
+        # Tier 1: Groq LPU (prefer fast model for fast roles & specialists)
         if groq_keys():
             groq_m = _role_model(self.role) or settings.groq_model
-            factories.append(("Groq (primary)", lambda: _groq_chat(groq_m, self.temperature)))
-            # Tier 1B: Groq fast model
-            if settings.groq_model_fast and settings.groq_model_fast != groq_m:
-                factories.append(("Groq (fast)", lambda: _groq_chat(settings.groq_model_fast, self.temperature, max_tokens=800)))
-            if settings.groq_model_fallback and settings.groq_model_fallback not in (groq_m, settings.groq_model_fast):
-                factories.append(("Groq (fallback)", lambda: _groq_chat(settings.groq_model_fallback, self.temperature)))
+            factories.append(("Groq LPU", lambda: _groq_chat(groq_m, self.temperature, max_tokens=2200)))
         # Tier 2: InceptionLabs mercury-3 (with mercury-2.5 fallback)
         if inception_keys():
             factories.append(("InceptionLabs (mercury-3)", lambda: _inception_chat(model=settings.inception_model, temperature=self.temperature)))
@@ -668,14 +663,7 @@ class _RobustStructured:
         factories = rotator.get_tier_factories()
 
         # Build candidate base LLM providers in preferred priority order:
-        providers_to_try: list[tuple[str, Any]] = []
-        if (self._role in FAST_ROLES or self._role == "specialist") and groq_keys():
-            groq_m = settings.groq_model_fast or "openai/gpt-oss-20b"
-            providers_to_try.append(("Groq (fast LPU)", lambda: _groq_chat(model=groq_m, temperature=0.0, max_tokens=800)))
-
-        for name, factory in factories:
-            if not any(name == p[0] for p in providers_to_try):
-                providers_to_try.append((name, factory))
+        providers_to_try: list[tuple[str, Any]] = list(factories)
 
         if not providers_to_try:
             providers_to_try = [("Default", lambda: get_llm(self._role))]
@@ -733,6 +721,9 @@ class _RobustStructured:
             elif schema_name == "ChallengeOutput":
                 logger.info("Using mock fallback for ChallengeOutput")
                 return self._schema.model_validate(llm_mock.mock_challenge([], ""))
+            elif schema_name == "SpecialistFindings":
+                logger.info("Using clean structured fallback for SpecialistFindings")
+                return self._schema(findings=[], positive_signals=[], negative_signals=[], risks=[])
             elif schema_name == "SynthesisNarrative":
                 logger.info("Using robust fallback for SynthesisNarrative")
                 return self._schema(
@@ -757,5 +748,5 @@ class _RobustStructured:
 def get_structured_llm(role: str, schema, attempts: int | None = None):
     """Structured-output helper: guarantees Pydantic-shaped responses."""
     if attempts is None:
-        attempts = 2
+        attempts = 4
     return _RobustStructured(role, schema, attempts=attempts)

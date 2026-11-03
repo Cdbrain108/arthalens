@@ -87,7 +87,7 @@ def _resolve_url(link: str) -> str:
         if "PYTEST_CURRENT_TEST" in os.environ or getattr(httpx.get, "__module__", "") != "httpx":
             # Test monkeypatched httpx.get
             httpx.get(link)
-        with _http().stream("GET", link, timeout=6) as resp:
+        with _http().stream("GET", link, timeout=3.0) as resp:
             final = str(getattr(resp, "url", "") or link)
         return final if final.startswith("http") else link
     except Exception:
@@ -128,7 +128,7 @@ def _rss_search(query: str, limit: int = 8, resolve_urls: bool = True) -> list[d
 
 # Resolving redirect blobs costs one request each, so only the articles the
 # agent is realistically going to open are resolved.
-_RESOLVE_LIMIT = 14
+_RESOLVE_LIMIT = 5
 
 
 def _clean_search_subject(query: str) -> str:

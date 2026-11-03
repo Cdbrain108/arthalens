@@ -51,17 +51,25 @@ export function createResearchJob(client, onChange, schedule = setTimeout, unsch
               // Ignore failure; ReportPreview will also attempt fetch
             }
           }
-          update({ job: enrichedJob, polling: !isTerminalJob(next) })
+          update({ job: enrichedJob, polling: !isTerminalJob(next), error: null })
         } else if (isTerminalJob(next)) {
           // Keep the terminal polling flag correct even if a caller restored a
           // snapshot that already matched the first server response.
-          update({ polling: false })
+          update({ polling: false, error: null })
         }
         // Schedule only after the response: slow requests must never overlap.
         if (!isTerminalJob(next)) timer = schedule(poll, pollInterval)
       } catch (error) {
         if (owner !== generation) return
         update({ error: `Status updates paused: ${error.message}`, polling: false })
+        // Resilient auto-recovery: auto-schedule a retry so temporary network glitches never permanently freeze the UI
+        if (state.job && !isTerminalJob(state.job)) {
+          timer = schedule(() => {
+            if (owner === generation && state.job && !isTerminalJob(state.job) && !state.polling) {
+              monitor(state.job)
+            }
+          }, pollInterval)
+        }
       }
     }
     void poll()

@@ -516,9 +516,13 @@ export default function ArthaReasoningBlock({
 
                   const Icon = meta.icon
                   const agentStatus = job?.agent_statuses?.[agentKey]
-                  const isAgentCompleted = agentStatus === 'completed' || job?.completed_agents?.includes(agentKey) || isDone
+                  const isPastSpecialistPhase = Boolean(
+                    allAgentsDone ||
+                    ['validate_evidence', 'challenge_thesis', 'synthesize_report', 'build_report', 'generate_pdf', 'done'].includes(job?.current_node)
+                  )
                   const isAgentFailed = agentStatus === 'failed' || job?.failed_agents?.includes(agentKey)
-                  const isAgentActive = !isPlanning && (agentStatus === 'running' || (active && !isAgentCompleted && !isAgentFailed))
+                  const isAgentCompleted = agentStatus === 'completed' || job?.completed_agents?.includes(agentKey) || isDone || (isPastSpecialistPhase && !isAgentFailed)
+                  const isAgentActive = !isPlanning && !isPastSpecialistPhase && (agentStatus === 'running' || (active && !isAgentCompleted && !isAgentFailed))
 
                   return (
                     <div
