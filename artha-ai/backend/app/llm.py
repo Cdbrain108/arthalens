@@ -371,10 +371,10 @@ def _single_groq_chat(api_key: str, model: str | None = None, temperature: float
     from langchain_openai import ChatOpenAI
     selected_model = model or settings.groq_model
     if max_tokens is None:
-        if "qwen" in selected_model.lower():
-            max_tokens = 600
-        elif selected_model == settings.groq_model_fast:
+        if selected_model == settings.groq_model_fast:
             max_tokens = 2200
+        elif "qwen" in selected_model.lower():
+            max_tokens = 2000
         else:
             max_tokens = 2500
     return ChatOpenAI(
