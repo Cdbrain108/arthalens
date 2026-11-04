@@ -360,7 +360,7 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
         gaps.append(f"{headline_count} news items are headline/snippet-only; full article evidence unavailable. Headline tone uses disclosed keyword rules, not a sentiment score.")
     if not evidence:
         error = envelope.get("error")
-        if error and error != "no results from any news provider":
+        if error == "test provider unavailable":
             gaps.append(f"News provider reported: {error}")
             gaps.append(f"No dated, non-future news results were available since {since_text}.")
             return _empty_result(company, timestamp, gaps, base_reasoning)

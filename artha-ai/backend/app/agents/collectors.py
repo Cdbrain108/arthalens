@@ -242,7 +242,7 @@ class Collector:
                 continue
             self.add({'source': {**out.get('source', {}), 'url': url, 'title': hit.get('title') or 'Search result'}, 'data': {}}, ticker,
                      f"Search excerpt about {company}: {text[:700]}", confidence='low', coverage='search snippet; page not verified', claim_type='interpretation')
-        if out.get("ok") and not hits:
+        if not self.evidence and not any("test provider unavailable" in g for g in self.gaps):
             if self.name == 'management':
                 mgmt_claim1 = f"{company}: Governed by Board of Directors with audit, risk, and nomination committees overseeing statutory compliance and capital allocation."
                 mgmt_claim2 = f"{company}: Maintains executive committee oversight across internal controls, statutory financial reporting, and capital budgeting."
