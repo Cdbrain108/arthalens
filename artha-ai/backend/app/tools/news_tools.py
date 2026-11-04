@@ -87,7 +87,7 @@ def _resolve_url(link: str) -> str:
         if "PYTEST_CURRENT_TEST" in os.environ or getattr(httpx.get, "__module__", "") != "httpx":
             # Test monkeypatched httpx.get
             httpx.get(link)
-        with _http().stream("GET", link, timeout=3.0) as resp:
+        with _http().stream("GET", link, timeout=1.8) as resp:
             final = str(getattr(resp, "url", "") or link)
         return final if final.startswith("http") else link
     except Exception:
@@ -100,9 +100,9 @@ def _rss_search(query: str, limit: int = 8, resolve_urls: bool = True) -> list[d
     url = (f"https://news.google.com/rss/search?q={quote_plus(query)}"
            f"&hl=en-IN&gl=IN&ceid=IN:en")
     if "PYTEST_CURRENT_TEST" in os.environ or getattr(httpx.get, "__module__", "") != "httpx":
-        resp = httpx.get(url, timeout=20)
+        resp = httpx.get(url, timeout=8.0)
     else:
-        resp = _http().get(url, timeout=20)
+        resp = _http().get(url, timeout=8.0)
     resp.raise_for_status()
     root = ET.fromstring(resp.text)
     items = []

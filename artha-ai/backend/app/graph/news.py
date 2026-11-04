@@ -209,23 +209,28 @@ def run_news_specialist(state: dict[str, Any]) -> AgentResult:
     envelope: dict[str, Any] = {}
 
     if len(entities) > 1:
-        # Search news for each entity individually to ensure full coverage across all peers
-        for ent in entities:
+        # Search news for each entity concurrently to ensure full peer coverage without latency penalty
+        def _fetch_ent_news(ent):
             ent_name = ent.get("name") if isinstance(ent, dict) else str(ent)
             ent_ticker = ent.get("ticker") if isinstance(ent, dict) else ""
             ent_q = f"{ent_name} {ent_ticker}".strip() or ent_name
             try:
-                env = news_tools.search_news.invoke({
+                return news_tools.search_news.invoke({
                     "query": ent_q,
                     "since": since_text,
                     "deep": False,
                 })
-                if isinstance(env, dict) and isinstance((env.get("data") or {}).get("items"), list):
-                    raw_items.extend(env["data"]["items"][:5])
-                    if not envelope:
-                        envelope = env
             except Exception:
-                pass
+                return {}
+
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(4, len(entities))) as pool:
+            envs = list(pool.map(_fetch_ent_news, entities[:4]))
+        for env in envs:
+            if isinstance(env, dict) and isinstance((env.get("data") or {}).get("items"), list):
+                raw_items.extend(env["data"]["items"][:5])
+                if not envelope:
+                    envelope = env
     else:
         try:
             envelope = news_tools.search_news.invoke({

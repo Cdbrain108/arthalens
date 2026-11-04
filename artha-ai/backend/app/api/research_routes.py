@@ -914,11 +914,10 @@ async def copilot_chat(req: ChatRequest):
         )
         suggested_tickers = _extract_tickers_from_text(combined_text)
 
-    # For educational queries with no specific company: search for context
+    # For educational queries with no specific company: answer directly via financial LLM without blocking on web search
     elif is_educational and not suggested_tickers:
-        search_query = f"{message} Indian stock market NSE" if has_india_context else f"{message} stock market finance"
-        search_results = await asyncio.to_thread(_chat_web_search, search_query)
-        search_used = bool(search_results)
+        search_results = []
+        search_used = False
 
     # Default / corporate / listing / product inquiries (e.g. "Does F-16 jet company is listed in Stock Market?")
     else:
