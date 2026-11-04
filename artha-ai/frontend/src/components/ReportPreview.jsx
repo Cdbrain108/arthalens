@@ -666,14 +666,11 @@ function FormattedCardBody({ text, pill, headerTitle, sources }) {
 export function SynthesisNarrativeBlock({ text, sources = [] }) {
   if (!text) return null
 
-  // Normalize: ensure any bullet or uppercase heading starts on its own line dynamically
+  // Normalize: ensure top-level bullets start on their own lines cleanly without breaking parentheticals
   const normalized = String(text)
+    .replace(/\r\n/g, '\n')
     .replace(/\s*•\s*/g, '\n• ')
-    .replace(/\s*[*•-]\s*([A-Z][A-Z0-9\s()–-]{2,}:)/g, '\n• $1')
-    .replace(/\s+([A-Z][A-Z\s()–-]{3,}:)/g, (match, p1) => {
-      // Don't split "PE:" or short acronyms unless preceded by a space or sentence end
-      return p1.startsWith('HTTP') || p1.startsWith('URL') ? match : `\n• ${p1}`
-    })
+    .replace(/(?:^|\n)\s*[*•-]\s*/g, '\n• ')
 
   const rawLines = normalized.split('\n').map((l) => l.trim()).filter(Boolean)
   const introBlocks = []
@@ -687,7 +684,7 @@ export function SynthesisNarrativeBlock({ text, sources = [] }) {
 
       const firstColon = clean.indexOf(':')
       if (firstColon !== -1) {
-        const headerTitle = clean.substring(0, firstColon).trim()
+        let headerTitle = clean.substring(0, firstColon).trim()
         let remainder = clean.substring(firstColon + 1).trim()
 
         // Strip accidental double-heading like "WHAT EXISTING SHAREHOLDERS SHOULD DO: WHAT EXISTING SHAREHOLDERS SHOULD DO"
@@ -695,13 +692,36 @@ export function SynthesisNarrativeBlock({ text, sources = [] }) {
           remainder = remainder.substring(headerTitle.length).replace(/^[:\s-]+/, '').trim()
         }
 
-        const secondColon = remainder.indexOf(':')
         let pill = ''
         let body = remainder
-        if (secondColon !== -1 && secondColon < 75) {
-          pill = remainder.substring(0, secondColon).trim()
-          body = remainder.substring(secondColon + 1).trim()
+
+        // For TIME HORIZON, keep the full text together so FormattedCardBody renders the 2-column comparative outlook
+        const isTimeHorizon = headerTitle.toUpperCase().includes('HORIZON')
+
+        if (!isTimeHorizon) {
+          const parenMatch = remainder.match(/^\(([^)]+)\)\s*:?\s*(.*)$/)
+          const bracketMatch = remainder.match(/^\[([^\]]+)\]\s*:?\s*(.*)$/)
+
+          if (parenMatch && parenMatch[1].length <= 50 && !parenMatch[1].includes('.')) {
+            pill = parenMatch[1].trim()
+            body = parenMatch[2].trim()
+          } else if (bracketMatch && bracketMatch[1].length <= 50 && !bracketMatch[1].includes('.')) {
+            pill = bracketMatch[1].trim()
+            body = bracketMatch[2].trim()
+          } else {
+            const secondColon = remainder.indexOf(':')
+            if (secondColon !== -1 && secondColon <= 50) {
+              const candidatePill = remainder.substring(0, secondColon).trim()
+              if (!candidatePill.includes('.') && candidatePill.length <= 40) {
+                pill = candidatePill
+                body = remainder.substring(secondColon + 1).trim()
+              }
+            }
+          }
+        } else {
+          pill = '3–5+ YR HORIZON'
         }
+
         if (headerTitle || body) {
           bulletCards.push({ headerTitle, pill, body, raw: clean })
         }
@@ -2602,7 +2622,7 @@ export default function ReportPreview({
           </p>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
           {/* Buy is defensible when */}
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3.5 sm:p-4">
             <div className="flex items-center gap-1.5 font-semibold text-emerald-400 text-[12.5px]">
@@ -3805,7 +3825,7 @@ export default function ReportPreview({
                   </div>
                 )}
 
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                   {/* Buy is defensible when */}
                   <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3.5 sm:p-4">
                     <div className="flex items-center gap-1.5 font-semibold text-emerald-400 text-[12.5px]">

@@ -1583,7 +1583,7 @@ def _build_single_peer_benchmarks(ticker):
     }
 
 
-def _build_decision_framework(company_name, classification, is_comparison=False, comp_data=None, comparison_verdict=None, action_decision=None, discovery_portfolio=None, query_str=None):
+def _build_decision_framework(company_name, classification, is_comparison=False, comp_data=None, comparison_verdict=None, action_decision=None, discovery_portfolio=None, query_str=None, metrics=None):
     q_lower = (query_str or "").lower()
     is_sell_query = any(k in q_lower for k in ["sell", "exit", "book profit", "trim", "liquidat", "dump", "cut loss"]) and not any(k in q_lower for k in ["buy", "invest", "entry"])
     is_buy_query = any(k in q_lower for k in ["buy", "invest", "entry", "cheap", "undervalued", "max profit", "maximum profit", "performing well"]) and not is_sell_query
@@ -1682,30 +1682,38 @@ def _build_decision_framework(company_name, classification, is_comparison=False,
             ]
         }
     if action_decision:
+        c_name = company_name or "the company"
+        try:
+            opm_val = (metrics or {}).get("opm_pct", "20.0%")
+            opm_num = float(re.sub(r"[^\d.]", "", str(opm_val)))
+            sell_margin = max(8.0, opm_num - 4.0)
+        except Exception:
+            opm_val = "20.0%"
+            sell_margin = 14.0
+        de_val = (metrics or {}).get("debt_equity", "0.20x")
+
         return {
             "base_stance": action_decision.get("headline"),
             "action_decision": action_decision,
             "buy_when": [
-                action_decision.get("fresh_buyers"),
-                action_decision.get("long_term_directive"),
-                "Valuation multiple trades at reasonable levels relative to operational earnings growth.",
-                "Deploying new capital using staggered 2–3 tranches on market pullback days to maximize IRR."
+                f"Valuation contracts near historical baseline support with healthy operating margins ({opm_val}).",
+                "Deploying fresh capital in 2–3 staggered tranches on market pullbacks to maximize long-term IRR.",
+                "Free cash flow conversion exceeds 80%+ with clean balance sheet leverage."
             ],
             "hold_when": [
-                action_decision.get("existing_holders"),
-                action_decision.get("long_term_directive"),
-                "Balance sheet debt obligations remain conservative with clean cash-flow backing.",
-                "Order bookings and customer renewals translate predictably into billable revenue."
+                f"Core operating revenue and quarterly margin momentum ({opm_val}) remain resilient across cycles.",
+                f"Balance sheet maintains conservative leverage (Debt/Equity {de_val}) with strong debt servicing capacity.",
+                "Long-term competitive moat and industry market share remain intact."
             ],
             "reduce_when": [
-                "Position represents an outsized concentration (>15-20%) in your overall investment portfolio.",
-                "You require short-term capital liquidity within the next 6-12 months.",
+                f"{c_name} represents an outsized concentration (>15–20%) in your overall investment portfolio.",
+                "You require short-term capital liquidity within the next 6–12 months.",
                 "Valuation multiples re-rate aggressively ahead of underlying earnings growth."
             ],
             "sell_when": [
-                action_decision.get("sell_triggers"),
-                "Structural operating margin erosion damages economic moat.",
-                "Major corporate governance failures, severe litigation, or balance-sheet distress occur."
+                f"Real operating profit margin drops below {sell_margin:.1f}% for two consecutive quarters.",
+                "Total company sales start contracting compared to last year.",
+                "Major corporate governance failures, severe regulatory penalties, or balance-sheet distress occur."
             ]
         }
     name = company_name or "the company"
@@ -2458,7 +2466,7 @@ def assemble_report(report: dict, state: dict) -> ReportJSON:
                 company.get("name"), classification, is_comparison=is_comparison,
                 comp_data=comp_data, comparison_verdict=comparison_verdict,
                 action_decision=action_decision, discovery_portfolio=discovery_portfolio,
-                query_str=query_str
+                query_str=query_str, metrics=metrics
             )
             r.valuation_scenarios = _build_valuation_scenarios(price_val, pe_val, currency_val, is_comparison=is_comparison, comp_data=comp_data)
             r.monitoring_indicators = _build_monitoring_indicators(company.get("name"))
