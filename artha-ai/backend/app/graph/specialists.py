@@ -123,7 +123,7 @@ async def run_all_specialists(state, emit=None):
     completed, failed, errors = [], [], []
     gaps = list(state.get('evidence_gaps') or [])
     semaphore = asyncio.Semaphore(settings.agent_concurrency)
-    timeout_s = min(settings.agent_timeout_s, 22)
+    timeout_s = min(settings.agent_timeout_s, 35)
     async def run_one(name):
         async with semaphore:
             if emit:
