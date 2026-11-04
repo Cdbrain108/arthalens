@@ -87,14 +87,14 @@ def _resolve_url(link: str) -> str:
         if "PYTEST_CURRENT_TEST" in os.environ or getattr(httpx.get, "__module__", "") != "httpx":
             # Test monkeypatched httpx.get
             httpx.get(link)
-        with _http().stream("GET", link, timeout=1.8) as resp:
+        with _http().stream("GET", link, timeout=1.2) as resp:
             final = str(getattr(resp, "url", "") or link)
         return final if final.startswith("http") else link
     except Exception:
         return link
 
 
-def _rss_search(query: str, limit: int = 8, resolve_urls: bool = True) -> list[dict]:
+def _rss_search(query: str, limit: int = 8, resolve_urls: bool = False) -> list[dict]:
     from urllib.parse import quote_plus
     import httpx, os
     url = (f"https://news.google.com/rss/search?q={quote_plus(query)}"
@@ -117,18 +117,16 @@ def _rss_search(query: str, limit: int = 8, resolve_urls: bool = True) -> list[d
                           "publication_date": _parse_date(pub),
                           "source": source, "provider": "google_news_rss"})
     if resolve_urls and items:
-        # Concurrently, because one redirect hop per headline in series was the
-        # shallow path's whole latency budget.
-        with ThreadPoolExecutor(max_workers=min(8, len(items))) as pool:
-            resolved = list(pool.map(lambda i: _resolve_url(i["url"]), items))
-        for item, final in zip(items, resolved):
+        to_resolve = items[:2]
+        with ThreadPoolExecutor(max_workers=min(2, len(to_resolve))) as pool:
+            resolved = list(pool.map(lambda i: _resolve_url(i["url"]), to_resolve))
+        for item, final in zip(to_resolve, resolved):
             item["url"] = final
     return items
 
 
-# Resolving redirect blobs costs one request each, so only the articles the
-# agent is realistically going to open are resolved.
-_RESOLVE_LIMIT = 5
+# Resolving redirect blobs costs one request each, so keep bounded to 2 items max
+_RESOLVE_LIMIT = 2
 
 
 def _clean_search_subject(query: str) -> str:
@@ -136,7 +134,8 @@ def _clean_search_subject(query: str) -> str:
         r"(?i)\b(should|i|hold|or|sell|buy|stock|stocks|share|shares|price|target|analysis|analyze|invest|in|what|is|the|about)\b",
         "", query
     ).strip()
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    words = list(dict.fromkeys(cleaned.split()))
+    cleaned = " ".join(words[:4]) if len(words) > 4 else " ".join(words)
     return cleaned if len(cleaned) >= 3 else query
 
 

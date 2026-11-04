@@ -33,7 +33,7 @@ def _search_ddg_lite(query: str, max_results: int = 8) -> list[dict]:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
-        resp = httpx.post(url, data={"q": query}, headers=headers, timeout=3.5, follow_redirects=True)
+        resp = httpx.post(url, data={"q": query}, headers=headers, timeout=4.5, follow_redirects=True)
         if resp.status_code == 200:
             html = resp.text
             link_matches = list(re.finditer(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*class=[\'"]result-link[\'"][^>]*>(.*?)</a>', html, re.DOTALL))
@@ -66,7 +66,7 @@ def _search_web(query: str) -> dict:
     if not hits:
         try:
             from ddgs import DDGS
-            with DDGS(timeout=3.5) as ddgs:
+            with DDGS(timeout=4.5) as ddgs:
                 hits = list(ddgs.text(query, max_results=8)) or []
         except Exception:
             pass
