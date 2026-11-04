@@ -259,7 +259,7 @@ def _get_company_metrics(ticker: str, exchange: str | None = None) -> dict:
                     "source": _source(f"yfinance info {ticker}")}
         _mres = {"ok": True, "data": {
             "ticker": ticker,
-            "currency": info.get("financialCurrency") or info.get("currency"),
+            "currency": info.get("currency") or info.get("financialCurrency"),
             "market_cap": info.get("marketCap"),
             "shares_outstanding": info.get("sharesOutstanding"),
             "eps_trailing": info.get("trailingEps"),
