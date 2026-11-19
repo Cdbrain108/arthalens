@@ -5,14 +5,31 @@ const rawBase = (
   (env.PROD ? 'https://bullseye-backend-rhl4mlewsa-uc.a.run.app' : '') ||
   ''
 ).trim().replace(/\/+$/, '')
-const BASE = rawBase ? (rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`) : '/api'
+let BASE = rawBase ? (rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`) : '/api'
+
+const CANONICAL_BACKEND = 'https://bullseye-backend-rhl4mlewsa-uc.a.run.app'
+
+async function executeFetch(url, options = {}) {
+  try {
+    return await fetch(url, options)
+  } catch (netErr) {
+    const canonicalBase = `${CANONICAL_BACKEND}/api`
+    if (BASE !== canonicalBase && typeof window !== 'undefined') {
+      console.warn(`[ArthaLens API] Endpoint ${BASE} unreachable (${netErr.message}). Failing over to ${canonicalBase}...`)
+      BASE = canonicalBase
+      const fallbackUrl = url.replace(/^https?:\/\/[^/]+(\/api)?/, canonicalBase)
+      return await fetch(fallbackUrl, options)
+    }
+    throw netErr
+  }
+}
 
 async function request(path, options = {}, responseType = 'json') {
   const headers = { ...(options.headers || {}) }
   if (options.body != null && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json'
   }
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await executeFetch(`${BASE}${path}`, {
     ...options,
     headers,
   })
@@ -70,7 +87,7 @@ export const api = {
     const form = new FormData()
     form.append('file', file)
     Object.entries(meta).forEach(([k, v]) => v && form.append(k, v))
-    return fetch(`${BASE}/documents`, { method: 'POST', body: form }).then(async (res) => {
+    return executeFetch(`${BASE}/documents`, { method: 'POST', body: form }).then(async (res) => {
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
         const detail = Array.isArray(body?.detail)
