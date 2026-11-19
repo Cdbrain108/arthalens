@@ -2,7 +2,7 @@
 const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {}
 const rawBase = (
   env.VITE_API_URL ||
-  (env.PROD ? 'https://bullseye-backend-923160450523.us-central1.run.app' : '') ||
+  (env.PROD ? 'https://bullseye-backend-rhl4mlewsa-uc.a.run.app' : '') ||
   ''
 ).trim().replace(/\/+$/, '')
 const BASE = rawBase ? (rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`) : '/api'
